@@ -1,0 +1,5 @@
+ALTER TABLE "User"
+  DROP COLUMN IF EXISTS "paypalSubId";
+
+ALTER TABLE "Payment"
+  DROP COLUMN IF EXISTS "paypalSubId";

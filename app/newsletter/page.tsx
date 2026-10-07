@@ -1,0 +1,3 @@
+import NewsletterForm from './NewsletterForm';
+export const metadata={title:'Wazap newsletter — Product news & business tips',description:'Subscribe to Wazap product updates and practical business tips.'};
+export default function NewsletterPage(){return <main className="max-w-xl mx-auto px-5 py-20"><p className="wp-eyebrow">STAY IN THE LOOP</p><h1 className="text-4xl font-semibold mt-4">Better conversations.<br/>Useful updates.</h1><p className="text-slate-400 mt-5 leading-7">Product news, practical WhatsApp workflows and ideas for growing your business. Choose to subscribe, confirm by email, and unsubscribe whenever you wish.</p><NewsletterForm/></main>;}

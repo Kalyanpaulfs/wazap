@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <!-- Green rounded square background -->
+  <rect width="64" height="64" rx="14" fill="#25D366"/>
+  <!-- White speech bubble -->
+  <path d="M32 10C20.954 10 12 18.954 12 30c0 3.386.902 6.566 2.483 9.3L12 52l12.7-2.483A19.907 19.907 0 0032 50c11.046 0 20-8.954 20-20S43.046 10 32 10z" fill="white"/>
+  <!-- Green lightning bolt (Zap) inside bubble -->
+  <path d="M35 20L25 33h8L30 44L42 31h-8z" fill="#25D366"/>
+</svg>

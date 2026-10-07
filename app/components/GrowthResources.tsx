@@ -1,0 +1,6 @@
+import Link from "next/link";
+import { ArrowUpRight } from "lucide-react";
+import { growthArticles, growthPath } from "@/lib/growth-content";
+import './growth-resources.css';
+const featured=[{slug:'real-estate',title:'Real estate teams',type:'USE CASE'},{slug:'agencies',title:'Marketing agencies',type:'USE CASE'},{slug:'whatsapp-round-robin-routing',title:'Routing, explained',type:'QUICK GUIDE'},{slug:'router-vs-shared-inbox',title:'Router or shared inbox?',type:'COMPARISON'}];
+export default function GrowthResources(){return <section className="wz-guide-preview" aria-labelledby="guide-preview-heading"><div className="wz-guide-container"><header><div><p className="wz-guide-eyebrow">THE WAZAP GUIDE</p><h2 id="guide-preview-heading">Built for your workflow.</h2></div><Link className="wz-guide-all" href="/resources">View all guides <ArrowUpRight size={17}/></Link></header><div className="wz-guide-grid">{featured.map((item,index)=>{const article=growthArticles.find(a=>a.slug===item.slug);if(!article)return null;return <Link key={item.slug} href={growthPath(article)} className="wz-guide-card" aria-label={article.title}><span className="wz-guide-number">0{index+1}</span><div><small>{item.type}</small><h3>{item.title}</h3></div><ArrowUpRight size={20}/></Link>;})}</div></div></section>;}

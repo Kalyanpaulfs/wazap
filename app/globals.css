@@ -1,0 +1,52 @@
+@import "tailwindcss";
+
+body {
+  background: #0a0f0a;
+  color: #e2e8f0;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+a, button {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.gradient-text {
+  background: linear-gradient(135deg, #25D366, #34eb70);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.hero-bg {
+  background: radial-gradient(ellipse at 50% 0%, rgba(37, 211, 102, 0.12) 0%, transparent 70%),
+              radial-gradient(ellipse at 80% 50%, rgba(18, 140, 126, 0.07) 0%, transparent 60%),
+              #0a0f0a;
+}
+/* Keep secondary copy legible against Wazap's dark surfaces. */
+body main .text-slate-500,
+body main .text-slate-600,
+body footer.text-slate-500,
+body footer .text-slate-500,
+body footer .text-slate-600 {
+  color: #94a3b8;
+}
+
+/* Country defaults are overrideable; preserve contact identifiers in either direction. */
+.wazap-language-picker{display:inline-flex;align-items:center;gap:.3rem;max-width:150px;font-size:.8rem;color:#e2e8f0}
+.wazap-language-picker select{background:#101810;border:1px solid #24422c;border-radius:999px;padding:.4rem .5rem;max-width:125px;cursor:pointer;color:inherit}
+html[dir="rtl"] input[type="email"],html[dir="rtl"] input[type="tel"],html[dir="rtl"] input[type="url"]{direction:ltr;text-align:start}
+html[dir="rtl"] .wz-home,html[dir="rtl"] footer{text-align:start}
+@media(max-width:400px){.wazap-language-picker{max-width:106px}.wazap-language-picker select{max-width:85px;font-size:.72rem}}
+.wazap-translation-note{margin:0;padding:1rem;text-align:center;font-size:.75rem;color:#94a3b8;background:#0a0f0a}
+html[dir="rtl"] .wz-home h1,html[dir="rtl"] .wz-home h2,html[dir="rtl"] .wz-home h3{letter-spacing:normal;line-height:1.3}
+html[dir="rtl"] .wz-eyebrow,html[dir="rtl"] .wz-number,html[dir="rtl"] .wz-demo-tag{letter-spacing:normal}
+html:not([lang="en"]) .wz-button{white-space:normal;max-width:100%;text-align:start}
+html[dir="rtl"] .wz-industry-visual>svg{transform:scaleX(-1)}

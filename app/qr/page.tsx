@@ -1,0 +1,201 @@
+import QRGenerator from "./QRGenerator";
+import { Download, Link2, MessageSquareText, QrCode, ScanLine } from "lucide-react";
+import Link from "next/link";
+import type { Metadata } from "next";
+import { getServerSession } from "next-auth";
+import { authOptions, getQrLimit, isTrialActive, TRIAL_DAYS } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "SoftwareApplication",
+      name: "WhatsApp QR Code Generator",
+      applicationCategory: "BusinessApplication",
+      url: "https://wazap.lt/qr",
+      operatingSystem: "Web",
+      description: "Create a free WhatsApp QR code with an optional pre-filled message and download it as a PNG.",
+      offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+    },
+    {
+      "@type": "HowTo",
+      name: "How to create a WhatsApp QR code",
+      description: "Create and download a WhatsApp QR code for your phone number with Wazap.",
+      totalTime: "PT1M",
+      step: [
+        { "@type": "HowToStep", position: 1, name: "Enter your number", text: "Choose your country code and enter the WhatsApp number customers should contact." },
+        { "@type": "HowToStep", position: 2, name: "Add a message", text: "Optionally add the message that should be ready when the customer opens WhatsApp." },
+        { "@type": "HowToStep", position: 3, name: "Customize the QR code", text: "Choose a colour and preview the QR code before using it." },
+        { "@type": "HowToStep", position: 4, name: "Download the PNG", text: "Download the QR code as a high-quality PNG and test it before printing or publishing." },
+      ],
+    },
+  ],
+};
+
+export const metadata: Metadata = {
+  title: "WhatsApp QR Code Generator — Free PNG Download",
+  description: "Create a free WhatsApp QR code for any number with an optional pre-filled message. Customize the color, preview it instantly and download a PNG.",
+  keywords: ["whatsapp qr code generator", "whatsapp qr code", "wa.me qr code", "whatsapp scan qr", "whatsapp business qr code", "free qr code generator"],
+  alternates: { canonical: "https://wazap.lt/qr" },
+  openGraph: {
+    title: "Free WhatsApp QR Code Generator — Wazap",
+    description: "Create a custom WhatsApp QR code. Choose colour, add message, download PNG. Perfect for business cards and websites.",
+    url: "https://wazap.lt/qr",
+  },
+};
+
+function today() { return new Date().toISOString().slice(0, 10); }
+
+export default async function QRPage() {
+  const session = await getServerSession(authOptions);
+  const isLoggedIn = !!session?.user;
+  const userId = (session?.user as any)?.id ?? null;
+  const plan = (session?.user as any)?.plan ?? "free";
+
+  let qrLimit = 0;
+  let qrUsed = 0;
+  let trialActive = false;
+  let trialDaysLeft = 0;
+
+  if (isLoggedIn && userId) {
+    const [user, usage] = await Promise.all([
+      prisma.user.findUnique({ where: { id: userId }, select: { createdAt: true } }),
+      prisma.dailyUsage.findUnique({ where: { userId_date: { userId, date: today() } } }),
+    ]);
+    if (user) {
+      qrLimit = getQrLimit(plan, user.createdAt);
+      trialActive = plan === "free" ? isTrialActive(user.createdAt) : true;
+      const trialEnd = new Date(user.createdAt);
+      trialEnd.setDate(trialEnd.getDate() + TRIAL_DAYS);
+      trialDaysLeft = Math.max(0, Math.ceil((trialEnd.getTime() - Date.now()) / 86400000));
+    }
+    qrUsed = usage?.qrDownloads ?? 0;
+  }
+
+  const status: "guest" | "trial_active" | "trial_expired" | "paid" = !isLoggedIn
+    ? "guest"
+    : plan !== "free"
+    ? "paid"
+    : trialActive
+    ? "trial_active"
+    : "trial_expired";
+
+  return (
+    <>
+      <script id="qr-jsonld" type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }} />
+      <section className="hero-bg px-4 pt-16 pb-10 text-center">
+        <div className="mx-auto max-w-2xl">
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-green-500/10 border border-green-500/20 mb-5">
+            <QrCode className="h-7 w-7 text-[#25D366]" />
+          </div>
+          <h1 className="text-3xl sm:text-5xl font-bold text-white mb-4">
+            WhatsApp <span className="gradient-text">QR Code</span> Generator
+          </h1>
+          <p className="text-slate-400 text-lg">
+            Create a QR code for your WhatsApp number. Put it on your website, business card, or shop — anyone scans it and opens a chat with you instantly.
+          </p>
+          {status === "trial_active" && (
+            <p className="text-sm text-amber-400 mt-3">{trialDaysLeft} days left on your free trial · <Link href="/pricing" className="underline hover:text-amber-300">Upgrade for more</Link></p>
+          )}
+        </div>
+      </section>
+
+      <section className="px-4 pb-20">
+        <QRGenerator status={status} qrLimit={qrLimit === Infinity ? null : qrLimit} qrUsed={qrUsed} />
+      </section>
+
+      <section className="border-t border-slate-800/60 px-4 py-16">
+        <div className="mx-auto max-w-4xl">
+          <div className="max-w-2xl mx-auto text-center mb-10">
+            <h2 className="text-2xl sm:text-3xl font-bold text-white mb-3">Create and download your WhatsApp QR code</h2>
+            <p className="text-slate-400 leading-relaxed">Turn your number into a scan-to-chat QR code in about a minute. The optional message helps customers start with the right question, order, or enquiry.</p>
+          </div>
+          <ol className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {[
+              { icon: <MessageSquareText className="h-6 w-6" />, title: "1. Enter your number", text: "Select the country code and enter the WhatsApp or WhatsApp Business number customers should reach." },
+              { icon: <Link2 className="h-6 w-6" />, title: "2. Add a message", text: "Pre-fill a greeting, product enquiry, booking request, or any useful opening message." },
+              { icon: <QrCode className="h-6 w-6" />, title: "3. Customize it", text: "Choose a colour and preview the code so it fits your brand and remains easy to scan." },
+              { icon: <Download className="h-6 w-6" />, title: "4. Download PNG", text: "Save the finished QR code as a PNG, test it with a phone, and add it to digital or printed materials." },
+            ].map((step) => (
+              <li key={step.title} className="rounded-2xl border border-slate-800 bg-[#111811] p-5">
+                <div className="text-[#25D366] mb-4">{step.icon}</div>
+                <h3 className="font-semibold text-white mb-2">{step.title}</h3>
+                <p className="text-sm text-slate-400 leading-relaxed">{step.text}</p>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </section>
+
+      <section className="border-t border-slate-800/60 px-4 py-16 bg-[#0b100b]">
+        <div className="mx-auto max-w-4xl grid lg:grid-cols-[1.1fr_.9fr] gap-8 items-center">
+          <div>
+            <h2 className="text-2xl font-bold text-white mb-4">What happens when someone scans it?</h2>
+            <p className="text-slate-400 leading-relaxed mb-4">The QR code contains a WhatsApp click-to-chat link for your number. Scanning it opens the conversation in WhatsApp with your optional message ready to send. The customer does not need to save your number first.</p>
+            <p className="text-slate-400 leading-relaxed">Because the number and message are encoded in the QR code, the code continues to work unless you change or disconnect that WhatsApp number. Always scan-test the downloaded image before printing a large batch.</p>
+          </div>
+          <div className="rounded-2xl border border-green-500/20 bg-green-500/5 p-6">
+            <ScanLine className="h-8 w-8 text-[#25D366] mb-4" />
+            <h3 className="text-lg font-semibold text-white mb-3">Make every scan useful</h3>
+            <ul className="space-y-3 text-sm text-slate-300">
+              <li>Use a short pre-filled message that identifies the campaign or location.</li>
+              <li>Leave clear white space around the QR code when placing it in a design.</li>
+              <li>Print it large enough to scan comfortably from the expected distance.</li>
+              <li>Keep strong contrast between the QR code and its background.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section className="border-t border-slate-800/60 px-4 py-16 bg-[#0d110d]">
+        <div className="mx-auto max-w-4xl">
+          <h2 className="text-xl font-bold text-white text-center mb-8">Where to use your QR code</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
+            {[
+              {
+                label: "Shop signage",
+                icon: <svg width="32" height="32" viewBox="0 0 32 32" fill="none"><rect x="4" y="4" width="24" height="18" rx="3" stroke="#25D366" strokeWidth="1.8"/><path d="M10 22v6M22 22v6M7 28h18" stroke="#25D366" strokeWidth="1.8" strokeLinecap="round"/><path d="M10 13h12M10 17h8" stroke="#25D366" strokeWidth="1.8" strokeLinecap="round"/></svg>
+              },
+              {
+                label: "Business card",
+                icon: <svg width="32" height="32" viewBox="0 0 32 32" fill="none"><rect x="2" y="8" width="28" height="16" rx="3" stroke="#25D366" strokeWidth="1.8"/><circle cx="10" cy="16" r="3.5" stroke="#25D366" strokeWidth="1.8"/><path d="M16 13h10M16 17h8" stroke="#25D366" strokeWidth="1.8" strokeLinecap="round"/></svg>
+              },
+              {
+                label: "Website",
+                icon: <svg width="32" height="32" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="12" stroke="#25D366" strokeWidth="1.8"/><ellipse cx="16" cy="16" rx="5" ry="12" stroke="#25D366" strokeWidth="1.8"/><path d="M4 16h24M5 10h22M5 22h22" stroke="#25D366" strokeWidth="1.8" strokeLinecap="round"/></svg>
+              },
+              {
+                label: "Packaging",
+                icon: <svg width="32" height="32" viewBox="0 0 32 32" fill="none"><path d="M4 10l12-6 12 6v12l-12 6-12-6V10z" stroke="#25D366" strokeWidth="1.8" strokeLinejoin="round"/><path d="M16 4v24M4 10l12 6 12-6" stroke="#25D366" strokeWidth="1.8" strokeLinecap="round"/></svg>
+              },
+            ].map((item) => (
+              <div key={item.label} className="rounded-2xl border border-slate-800 bg-[#111811] p-5">
+                <div className="flex justify-center mb-3">{item.icon}</div>
+                <p className="text-sm text-slate-300">{item.label}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="border-t border-slate-800/60 px-4 py-14">
+        <div className="mx-auto max-w-4xl">
+          <h2 className="text-2xl font-bold text-white text-center mb-8">More free WhatsApp business tools</h2>
+          <div className="grid sm:grid-cols-3 gap-4">
+            {[
+              { href: "/tools/link", title: "Click-to-chat link", text: "Create and share the WhatsApp link behind your QR code." },
+              { href: "/tools/vcard", title: "Digital business card", text: "Package your contact details and WhatsApp access in one vCard." },
+              { href: "/tools/widget", title: "Website chat widget", text: "Add a WhatsApp contact button to your website." },
+            ].map((tool) => (
+              <Link key={tool.href} href={tool.href} className="rounded-2xl border border-slate-800 bg-[#111811] p-5 transition-colors hover:border-green-500/40">
+                <h3 className="font-semibold text-white mb-2">{tool.title}</h3>
+                <p className="text-sm text-slate-400 leading-relaxed">{tool.text}</p>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+    </>
+  );
+}

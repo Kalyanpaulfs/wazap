@@ -1,0 +1,17 @@
+{
+  "name": "Wazap — WhatsApp Business Tools",
+  "short_name": "Wazap",
+  "description": "WhatsApp business tools, lead routing, CRM workflows, and analytics.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#050b07",
+  "theme_color": "#25D366",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

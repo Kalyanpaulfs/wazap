@@ -1,0 +1,16 @@
+import {NextResponse} from 'next/server';
+import {createHash} from 'node:crypto';
+import {prisma} from '@/lib/prisma';
+import {unsubscribeLead} from '@/lib/crm-marketing';
+export const dynamic='force-dynamic';
+type BrevoEvent={event?:string;email?:string;reason?:string;'message-id'?:string;messageId?:string;'X-Mailin-custom'?:string;ts_event?:number};
+export async function POST(req:Request){
+ if(!process.env.BREVO_WEBHOOK_SECRET||new URL(req.url).searchParams.get('key')!==process.env.BREVO_WEBHOOK_SECRET)return NextResponse.json({error:'Unauthorized'},{status:401});
+ const event=await req.json().catch(()=>null) as BrevoEvent|null;if(!event)return NextResponse.json({error:'Invalid callback.'},{status:400});const messageId=event['message-id']||event.messageId;if(!messageId)return NextResponse.json({received:true});const kind=(event.event||'').toLowerCase();const delivered=kind==='delivered',deferred=['deferred','soft_bounce'].includes(kind),failed=['hard_bounce','blocked','invalid','error','spam'].includes(kind);
+ await prisma.$transaction(async tx=>{
+ if(delivered||deferred||failed)await tx.outboundEmail.updateMany({where:{providerMessageId:messageId},data:delivered?{status:'delivered',deliveredAt:new Date(),lastError:null}:deferred?{status:'deferred',lastError:event.reason||'Provider deferred delivery'}:{status:'failed',lastError:event.reason||`Provider reported ${kind}`}});
+ const custom=event['X-Mailin-custom']?.match(/^crm-recipient:([a-zA-Z0-9]+)$/)?.[1];let row=await tx.crmCampaignRecipient.findUnique({where:{providerMessageId:messageId}});if(!row&&custom)row=await tx.crmCampaignRecipient.findUnique({where:{id:custom}});if(row&&event.email&&row.email.toLowerCase()!==event.email.toLowerCase())row=null;
+ if(row){const terminal=['bounced','complained','cancelled'];const status=kind==='spam'?'complained':kind==='hard_bounce'||kind==='invalid'?'bounced':kind==='unsubscribed'?'cancelled':delivered&&!terminal.includes(row.status)?'delivered':deferred&&!terminal.includes(row.status)?'deferred':failed&&!terminal.includes(row.status)?'failed':undefined;await tx.crmCampaignRecipient.update({where:{id:row.id},data:{providerMessageId:messageId,...(status?{status}:{}),...(delivered?{deliveredAt:new Date()}:{}),...(['opened','unique_opened','proxy_open'].includes(kind)&&!row.openedAt?{openedAt:new Date()}:{}),...(['click','clicked'].includes(kind)&&!row.clickedAt?{clickedAt:new Date()}:{}),lastError:failed?event.reason||`Provider reported ${kind}`:row.lastError}});const key=createHash('sha256').update(`${messageId}:${kind}`).digest('hex');await tx.crmActivity.upsert({where:{sourceKey:`email-event:${key}`},create:{leadId:row.leadId,kind:'email',body:`Campaign email event: ${kind}.`,sourceKey:`email-event:${key}`},update:{}});}
+ if(['hard_bounce','invalid','spam','unsubscribed'].includes(kind)&&event.email){const lead=await tx.crmLead.findUnique({where:{email:event.email.toLowerCase()}});if(lead){await unsubscribeLead(tx,lead.id,`Provider reported ${kind}. Newsletter outreach stopped.`);if(kind!=='unsubscribed')await tx.crmLead.update({where:{id:lead.id},data:{emailSuppressedAt:new Date(),suppressionReason:kind}});}await tx.user.updateMany({where:{email:{equals:event.email,mode:'insensitive'}},data:{marketingOptOutAt:new Date()}});}
+ });return NextResponse.json({received:true});
+}

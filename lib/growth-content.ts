@@ -1,0 +1,354 @@
+export type GrowthArticle = { category: string; slug: string; title: string; description: string; sections: { heading: string; paragraphs: string[] }[]; related: string[]; sources: { label: string; url: string }[] };
+export const growthArticles: GrowthArticle[] = [
+  {
+    "category": "solutions",
+    "slug": "real-estate",
+    "title": "WhatsApp Lead Routing for Real Estate Teams",
+    "description": "Give property enquiries one WhatsApp entry point, distribute handoffs across agents, and measure the path from campaign to qualified viewing.",
+    "sections": [
+      {
+        "heading": "One public number link for your property campaigns",
+        "paragraphs": [
+          "A listing, property brochure or social advertisement can send interested buyers to one routing link. Wazap rotates handoffs across the WhatsApp numbers you configure, so you can share a common entry point rather than maintain separate links for every agent.",
+          "Use separate rotators for materially different teams, such as commercial leasing and residential sales. Keep the destination list limited to agents who can handle that campaign. Rotation does not check calendars, languages, property knowledge or whether an agent is online."
+        ]
+      },
+      {
+        "heading": "Set up an accountable enquiry workflow",
+        "paragraphs": [
+          "Start with one campaign and two or three agents. Enter numbers with country codes, create the rotator, and test the public link before changing an advertisement. Ask each agent to confirm the destination team and agree how received enquiries will be identified in your CRM. The router does not attach a campaign message or verify receipt.",
+          "Record a qualified viewing, appointment or deal in your CRM as a separate outcome. A routing event only shows a handoff attempt. It does not prove that a WhatsApp message was sent, that the contact was unique, or that an agent replied."
+        ]
+      },
+      {
+        "heading": "Use a real estate scorecard",
+        "paragraphs": [
+          "Review campaign visits, routed handoffs, confirmed enquiries, qualified viewings and attributable commissions separately. Compare the share of handoffs reaching each agent with the share of confirmed enquiries and completed appointments.",
+          "Measure response time from the actual received message using your operational process. If routing looks balanced but appointments are concentrated with one agent, review agent coverage, qualifications and follow-up before buying more traffic."
+        ]
+      },
+      {
+        "heading": "Run a small pilot before expanding",
+        "paragraphs": [
+          "Use your first 25 routed handoffs per account to validate the setup. The allowance spans all your rotators and does not reset daily. Public paid routing plans start at Solo $9/month; Growth is $19/month and Agency is $49/month.",
+          "The 14-day Growth workspace trial is a separate product entitlement. Connected inbox workflows can store conversation data; simple link routing does not read the WhatsApp messages. Decide which workflow your team actually needs before connecting a channel."
+        ]
+      }
+    ],
+    "related": [
+      "/guides/one-whatsapp-link-multiple-numbers",
+      "/guides/whatsapp-campaign-tracking",
+      "/solutions/agencies"
+    ],
+    "sources": []
+  },
+  {
+    "category": "solutions",
+    "slug": "agencies",
+    "title": "WhatsApp Lead Routing for Marketing Agencies",
+    "description": "Build a trackable click-to-WhatsApp handoff for client campaigns and report qualified outcomes separately from routing activity.",
+    "sections": [
+      {
+        "heading": "A campaign link your client can keep using",
+        "paragraphs": [
+          "Create a routing link for an agreed destination team, then use it in the client’s landing page, QR material or campaign. Keep a clear record of the client, campaign, account owner and numbers responsible for enquiries.",
+          "Changing the configured destination list can avoid replacing the public campaign URL. Test the updated list before publishing it and retain the previous configuration in your own change log."
+        ]
+      },
+      {
+        "heading": "Separate campaigns that need different handling",
+        "paragraphs": [
+          "Give different sales teams or offers distinct links when they need different destinations or reporting. Agree with the client who owns the Wazap account and which staff are allowed to change routing.",
+          "Do not put access tokens, sensitive client information or personal customer details in UTM tags. Use stable campaign names in your web acquisition links. The router does not automatically turn URL tags into a received WhatsApp enquiry record."
+        ]
+      },
+      {
+        "heading": "Report performance the client can act on",
+        "paragraphs": [
+          "Show landing visits and routed handoffs as acquisition activity. Ask the client to reconcile received enquiries, qualified appointments and sales with their CRM or connected messaging workflow. These are separate stages, and the counts will not automatically match.",
+          "A repeated click, preview or abandoned WhatsApp handoff can inflate routing totals. Your report should say which events were counted and which outcomes were confirmed. Optimize for cost per qualified appointment and retained paying client, rather than a high click total."
+        ]
+      },
+      {
+        "heading": "Choose a plan for the workflow you manage",
+        "paragraphs": [
+          "The public plans are Solo $9/month, Growth $19/month and Agency $49/month. Agency includes unlimited rotators and a shared workspace for up to five members; confirm current details on the pricing page before proposing a package.",
+          "The free router allowance is 25 handoffs per account across all rotators, for the lifetime of the allowance. The separate 14-day workspace trial does not grant unlimited router handoffs. Never promise a client autonomous message sending or delivery confirmation from a simple routing link."
+        ]
+      }
+    ],
+    "related": [
+      "/guides/whatsapp-campaign-tracking",
+      "/compare/linkly",
+      "/compare/wasepje"
+    ],
+    "sources": []
+  },
+  {
+    "category": "guides",
+    "slug": "one-whatsapp-link-multiple-numbers",
+    "title": "How to Use One WhatsApp Link for Multiple Numbers",
+    "description": "Choose between a customer-selected team page and an automatically rotating WhatsApp link, then test the handoff before publishing.",
+    "sections": [
+      {
+        "heading": "Choose who decides the destination",
+        "paragraphs": [
+          "A direct wa.me link has one destination number. To offer several numbers, you need an intermediate page or router. Wazap’s Linktree lets customers select a contact or department; its Link Rotator chooses a configured destination for the handoff.",
+          "Use customer selection when visitors know whether they need sales, support or billing. Use rotation when the same enquiry can be handled by any member of a destination team. A router cannot determine specialist suitability or real-time availability."
+        ]
+      },
+      {
+        "heading": "Create and test the shared link",
+        "paragraphs": [
+          "Sign in to Wazap and open the Link Rotator. Add the team’s international-format WhatsApp numbers, review the list and create the rotator. Copy the generated public URL rather than guessing a route or sending the dashboard address.",
+          "Open the public link from a phone and a desktop browser. Check the destination number before sending anything. The basic rotator redirects to the number; it does not provide a message composer. Repeat carefully across the destination list, remembering that genuine handoff tests can consume the free routing allowance."
+        ]
+      },
+      {
+        "heading": "Publish it in the right places",
+        "paragraphs": [
+          "Use the verified public URL on the campaign landing page, business profile or printed QR code. Keep one person responsible for the destination list and test it after an agent leaves or a number changes.",
+          "For a departmental selection page, use the Linktree tool instead and label each contact clearly. Do not use an automatic sales rotator for emergencies or enquiries that require a specific named adviser."
+        ]
+      },
+      {
+        "heading": "Know what the activity means",
+        "paragraphs": [
+          "A routed handoff is an attempt to open a destination in WhatsApp, not a confirmed sent message or customer response. Keep messaging and sales outcomes separate.",
+          "Wazap provides 25 routed handoffs free per account across all rotators. Paid routing starts at $9/month. Simple routing does not require connecting a WhatsApp Business API channel, but shared inbox delivery workflows are a separate integration choice."
+        ]
+      }
+    ],
+    "related": [
+      "/guides/whatsapp-round-robin-routing",
+      "/guides/router-vs-shared-inbox",
+      "/solutions/real-estate"
+    ],
+    "sources": []
+  },
+  {
+    "category": "guides",
+    "slug": "whatsapp-round-robin-routing",
+    "title": "WhatsApp Round-Robin Routing: How It Works and What to Check",
+    "description": "Understand rotation across configured WhatsApp numbers, its limits, and a practical validation checklist for your sales team.",
+    "sections": [
+      {
+        "heading": "Rotation distributes handoff attempts",
+        "paragraphs": [
+          "A round-robin router cycles through a list of destination numbers. For example, sequential handoffs can visit Agent A, then B, then C before returning to A. This is useful when the team handles the same type of enquiry.",
+          "Distribution of handoff attempts does not guarantee equal sales, equal workloads or equal received messages. Customers may abandon the handoff, click more than once, or choose not to send the prefilled message."
+        ]
+      },
+      {
+        "heading": "Configured is different from available",
+        "paragraphs": [
+          "Wazap’s link router selects from configured numbers. It does not inspect a WhatsApp agent’s online status, calendar or capacity. If an agent is unavailable, the team needs an operational process to update the destination list.",
+          "Treat simultaneous traffic as a separate validation case. The current router does not offer a guarantee of strict ordering under concurrent requests. Test your actual peak traffic pattern before relying on exact equality in every short interval."
+        ]
+      },
+      {
+        "heading": "Validate a small controlled run",
+        "paragraphs": [
+          "Prepare a dedicated test rotator with numbers you control. Verify each number’s country code, note the initial destination order, and open the link sequentially without sending messages. Record the observed destinations rather than assuming the expected result.",
+          "Next, check representative phone and desktop handoffs. Review the reported event count and your quota. Avoid testing a live customer link repeatedly because that changes its activity totals and can consume its allowance."
+        ]
+      },
+      {
+        "heading": "Use rotation inside a wider sales process",
+        "paragraphs": [
+          "Assign coverage hours, agree response expectations and record confirmed enquiries in a CRM. Use appointment and sales outcomes to judge the workflow. If you need assignment after messages arrive, conversation ownership or delivery receipts, evaluate a connected shared inbox.",
+          "The free allowance is 25 handoffs per account, not per link or per day. The 14-day Growth workspace trial is separate. Paid routing plans start at $9/month; see pricing for current limits."
+        ]
+      }
+    ],
+    "related": [
+      "/guides/one-whatsapp-link-multiple-numbers",
+      "/guides/router-vs-shared-inbox",
+      "/guides/whatsapp-campaign-tracking"
+    ],
+    "sources": []
+  },
+  {
+    "category": "guides",
+    "slug": "router-vs-shared-inbox",
+    "title": "WhatsApp Link Router vs Shared Inbox: Which Do You Need?",
+    "description": "Compare a lightweight click-to-chat router with a connected team inbox, including message access, attribution and delivery evidence.",
+    "sections": [
+      {
+        "heading": "Start with the moment you need to control",
+        "paragraphs": [
+          "A link router makes a decision before the conversation: which configured WhatsApp number should receive this handoff? It is useful for a shared campaign entry point and rotation across existing numbers.",
+          "A shared inbox manages conversation work after messages enter a connected channel. Depending on the supported integration, it can provide shared history, assignments, internal notes and delivery evidence. Connection requirements and permissions matter."
+        ]
+      },
+      {
+        "heading": "Compare the data each workflow needs",
+        "paragraphs": [
+          "Simple routing records destination and handoff activity. It does not read the content a customer sends inside WhatsApp. A connected inbox can store messages and conversation records so authorized team members can work together.",
+          "Before connecting a channel, read the privacy policy, check who can access messages and choose a retention and permission process appropriate for your business. Do not describe every Wazap feature as storing no conversations."
+        ]
+      },
+      {
+        "heading": "Do not confuse a recorded action with delivery",
+        "paragraphs": [
+          "Opening WhatsApp is a handoff. A manually recorded reply is a team record. A confirmed sent or delivered message requires evidence from a supported messaging provider. These are different events.",
+          "Wazap’s AI and inbox workflows require the corresponding provider and workspace controls for autonomous sending. A draft, approval or queued action is not proof that a customer received a message."
+        ]
+      },
+      {
+        "heading": "Choose the smaller workflow that solves the problem",
+        "paragraphs": [
+          "Choose a router if you need one campaign link distributing interest across existing numbers. Choose a connected inbox if the team needs to manage conversation history and ownership in one workspace. Start with a small operational pilot and measure confirmed outcomes.",
+          "The router offers 25 free lifetime handoffs per account. The 14-day Growth workspace trial is separate and does not make routing unlimited. Check current pricing and supported connections before committing to a rollout."
+        ]
+      }
+    ],
+    "related": [
+      "/guides/whatsapp-round-robin-routing",
+      "/whatsapp-team-inbox",
+      "/privacy"
+    ],
+    "sources": []
+  },
+  {
+    "category": "guides",
+    "slug": "whatsapp-campaign-tracking",
+    "title": "How to Track WhatsApp Campaigns Without Confusing Clicks with Leads",
+    "description": "Build a practical measurement path from campaign visit to routed handoff, received enquiry, qualified appointment and sale.",
+    "sections": [
+      {
+        "heading": "Give every campaign a stable identity",
+        "paragraphs": [
+          "Use a consistent source, medium and campaign naming convention on links that lead to your Wazap landing or signup journey. Wazap’s Ad Builder helps create campaign-tagged links. Keep names readable and avoid personal information in URL parameters.",
+          "UTM tags on a web link do not automatically become a confirmed customer record inside a WhatsApp conversation. A prefilled message can give an agent campaign context, but the customer can edit or omit it. Verify the complete path you intend to measure."
+        ]
+      },
+      {
+        "heading": "Define the funnel before buying traffic",
+        "paragraphs": [
+          "Measure five stages separately: campaign visit, routed handoff, confirmed received enquiry, qualified appointment and sale. Use your CRM or a verified connected messaging workflow for the later stages.",
+          "A routing count can include repeated or abandoned clicks. Referral labels are observed sources, not proof of unique people, a search ranking or incremental advertising impact. Document the exact counting rule in each report."
+        ]
+      },
+      {
+        "heading": "Test source persistence with one controlled journey",
+        "paragraphs": [
+          "Open a tagged campaign link in a new browser session, continue to signup and check the recorded acquisition source in the authorized reporting view. Test each signup method separately; email signup and Google signup may not preserve attribution in the same way.",
+          "Then create a dedicated test routing link and confirm its destination and reported handoff. Do not label a purchase or subscription as confirmed until the payment provider evidence supports it. Redact personal data from any shared test record."
+        ]
+      },
+      {
+        "heading": "Make decisions from qualified outcomes",
+        "paragraphs": [
+          "Review cost per qualified appointment, activation rate, confirmed paid conversion and retained subscribers by source. Pause spend if acquisition produces handoffs without confirmed useful outcomes, or if setup and response issues prevent activation.",
+          "For an initial Wazap growth experiment, define activation as creation of a rotator plus genuine non-test handoff activity. Track retained paid accounts separately. Use click counts as diagnostic information rather than the main commercial goal."
+        ]
+      }
+    ],
+    "related": [
+      "/solutions/agencies",
+      "/solutions/real-estate",
+      "/tools/ad-builder"
+    ],
+    "sources": []
+  },
+  {
+    "category": "compare",
+    "slug": "linkly",
+    "title": "Wazap vs Linkly for WhatsApp Lead Routing",
+    "description": "Compare Wazap’s focused WhatsApp workflow with Linkly’s link-management approach, using vendor-documented routing behavior.",
+    "sections": [
+      {
+        "heading": "Match the routing behavior to your requirement",
+        "paragraphs": [
+          "Linkly documents a WhatsApp rotator that distributes traffic proportionally and randomly, rather than strict sequential round robin. Wazap’s router cycles through configured WhatsApp numbers for sequential handoffs. Neither description alone proves equal completed conversations.",
+          "Wazap does not guarantee exact ordering under concurrent requests or check agent availability. If exact distribution matters, run a controlled test at your expected traffic level before selecting either product."
+        ]
+      },
+      {
+        "heading": "Compare the workflow around the link",
+        "paragraphs": [
+          "Wazap combines a focused router with WhatsApp links, QR codes and optional workspace workflows. Simple routing does not require a connected WhatsApp Business API channel and does not read messages sent in WhatsApp.",
+          "Linkly positions its product as a broader link-management service. Review its current documentation and plan page for the link features you need, especially branding, reporting, limits and routing controls."
+        ]
+      },
+      {
+        "heading": "Compare total cost using the same assumptions",
+        "paragraphs": [
+          "Wazap’s public monthly plans are Solo $9, Growth $19 and Agency $49. The free router allowance is 25 lifetime handoffs per account. The separate Growth workspace trial does not make routing unlimited.",
+          "Calculate the cost for your actual number of links, destinations, traffic and collaborators. This page does not reproduce a changing Linkly price table; open the vendor’s current pricing before deciding."
+        ]
+      },
+      {
+        "heading": "Use a short evaluation checklist",
+        "paragraphs": [
+          "Test phone and desktop handoffs, the expected distribution method, destination changes, campaign reporting and what happens at your traffic limit. Confirm account ownership and who can edit a client’s links.",
+          "Choose based on the tested workflow and confirmed outcomes. Wazap is an independent product; this comparison does not imply a partnership with or endorsement by Linkly. Vendor facts were reviewed on 7 October 2026."
+        ]
+      }
+    ],
+    "related": [
+      "/guides/whatsapp-round-robin-routing",
+      "/solutions/agencies",
+      "/compare/wasepje"
+    ],
+    "sources": [
+      {
+        "label": "Linkly WhatsApp rotator documentation",
+        "url": "https://linkly.so/support/whatsapp-rotator"
+      },
+      {
+        "label": "Linkly pricing",
+        "url": "https://linkly.so/pricing"
+      }
+    ]
+  },
+  {
+    "category": "compare",
+    "slug": "wasepje",
+    "title": "Wazap vs WasepJe for WhatsApp Routing",
+    "description": "Compare free routing allowances, paid plans and the workflow you need before choosing a WhatsApp link rotator.",
+    "sections": [
+      {
+        "heading": "Start with the free allowance",
+        "paragraphs": [
+          "WasepJe advertises a free tier with unlimited phone numbers, number weightage and a link click count. Wazap’s free router allowance is 25 routed handoffs per account across all rotators, for the lifetime of the allowance. If unrestricted free routing is your main criterion, this is a material difference.",
+          "Verify current vendor terms before selecting a plan. A generous routing allowance does not establish how many enquiries are received or which workflow produces more qualified appointments."
+        ]
+      },
+      {
+        "heading": "Compare paid plans and the operational workflow",
+        "paragraphs": [
+          "At review, WasepJe advertised Pro at $7.50 per month when billed annually at $90. Wazap’s public monthly plans are Solo $9, Growth $19 and Agency $49. Compare billing intervals and cancellation terms rather than treating these headline prices as identical offers.",
+          "For Wazap, evaluate the router alongside links, QR codes and optional workspace workflows. Agency includes unlimited rotators and a shared workspace for up to five members. Choose additional features only when you need them."
+        ]
+      },
+      {
+        "heading": "Test behavior rather than assuming equivalence",
+        "paragraphs": [
+          "Confirm destination editing, distribution controls, mobile and desktop handoffs, reporting and limits on the plan you are evaluating. Record observed results from a dedicated test link.",
+          "Wazap rotates sequential handoffs across configured numbers, does not check agent availability and does not promise strict ordering under concurrent requests. Its routing events are handoffs, not confirmed messages or unique leads."
+        ]
+      },
+      {
+        "heading": "Choose on evidence from your team",
+        "paragraphs": [
+          "Use a small campaign pilot to compare setup time, confirmed enquiries, appointment quality and the effort required to keep numbers current. A cheaper plan can be right when the routing workflow alone meets your needs.",
+          "This is an independent comparison, not a claim that Wazap is better for every business. WasepJe’s public offer was reviewed on 7 October 2026 and can change; verify it on the vendor site."
+        ]
+      }
+    ],
+    "related": [
+      "/compare/linkly",
+      "/guides/whatsapp-campaign-tracking",
+      "/solutions/agencies"
+    ],
+    "sources": [
+      {
+        "label": "WasepJe official site and plans",
+        "url": "https://wasepje.com/"
+      }
+    ]
+  }
+];
+export const growthPath = (article: GrowthArticle) => `/${article.category}/${article.slug}`;

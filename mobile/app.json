@@ -1,0 +1,31 @@
+{
+  "expo": {
+    "name": "Wazap",
+    "slug": "wazap",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#0a0f0a",
+    "splash": {
+      "backgroundColor": "#0a0f0a",
+      "resizeMode": "contain"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "it.wazap.app",
+      "buildNumber": "1"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#25D366",
+        "foregroundImage": "./assets/icon.png"
+      },
+      "package": "it.wazap.app",
+      "versionCode": 1
+    },
+    "web": {
+      "favicon": "./assets/icon.png"
+    }
+  }
+}

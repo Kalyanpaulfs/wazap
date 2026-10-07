@@ -1,0 +1,197 @@
+"use client";
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { MessageCircle, Copy, Check, Code } from "lucide-react";
+import { COUNTRIES } from "@/lib/countries";
+
+export default function WidgetGeneratorPage() {
+  const [dial, setDial] = useState("971");
+  const [number, setNumber] = useState("");
+  const [message, setMessage] = useState("Hello! I'd like to get in touch.");
+  const [position, setPosition] = useState("bottom-right");
+  const [color, setColor] = useState("#25D366");
+  const [size, setSize] = useState("60");
+  const [label, setLabel] = useState("Chat with us");
+  const [showLabel, setShowLabel] = useState(true);
+  const [copied, setCopied] = useState(false);
+  const [remaining, setRemaining] = useState<number | null>(null);
+  const [plan, setPlan] = useState("free");
+  const [limitError, setLimitError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/tools/use?tool=widget")
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d) { setRemaining(d.remaining === -1 ? null : d.remaining); setPlan(d.plan); } })
+      .catch(() => {});
+  }, []);
+
+  const fullNumber = dial + number.replace(/\D/g, "");
+  const waUrl = message.trim()
+    ? `https://wa.me/${fullNumber}?text=${encodeURIComponent(message)}`
+    : `https://wa.me/${fullNumber}`;
+
+  const positionStyle = position === "bottom-right"
+    ? "bottom:24px;right:24px;"
+    : position === "bottom-left"
+    ? "bottom:24px;left:24px;"
+    : "top:24px;right:24px;";
+
+  const embedCode = `<!-- Wazap WhatsApp Widget -->
+<div id="wazap-widget" style="position:fixed;${positionStyle}z-index:9999;display:flex;flex-direction:column;align-items:${position.includes("right") ? "flex-end" : "flex-start"};gap:8px;">
+  ${showLabel ? `<div style="background:#1f2937;color:#fff;padding:8px 14px;border-radius:999px;font-size:13px;font-family:sans-serif;font-weight:600;box-shadow:0 4px 12px rgba(0,0,0,0.3);white-space:nowrap;">${label}</div>` : ""}
+  <a href="${waUrl}" target="_blank" rel="noopener noreferrer"
+    style="display:flex;align-items:center;justify-content:center;width:${size}px;height:${size}px;background:${color};border-radius:50%;box-shadow:0 4px 16px rgba(0,0,0,0.3);transition:transform 0.2s;"
+    onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">
+    <svg width="${Math.round(parseInt(size) * 0.48)}" height="${Math.round(parseInt(size) * 0.48)}" viewBox="0 0 24 24" fill="white">
+      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+      <path d="M13.5 2C7.149 2 2 7.149 2 13.5c0 2.027.54 3.927 1.483 5.565L2 22l3.094-1.455A11.43 11.43 0 0013.5 22C19.851 22 25 16.851 25 10.5S19.851 2 13.5 2z"/>
+    </svg>
+  </a>
+  <div style="text-align:center;font-size:9px;color:#64748b;font-family:sans-serif;">
+    <a href="https://wazap.lt" target="_blank" style="color:#64748b;text-decoration:none;">Powered by Wazap</a>
+  </div>
+</div>
+<!-- End Wazap Widget -->`;
+
+  const atLimit = remaining !== null && remaining <= 0;
+
+  async function copy() {
+    setLimitError(null);
+    const res = await fetch("/api/tools/use", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tool: "widget", count: 1 }),
+    });
+    const data = await res.json();
+    if (res.status === 429) {
+      setLimitError("Daily limit reached. Resets at midnight.");
+      return;
+    }
+    setRemaining(data.remaining === -1 ? null : data.remaining);
+    navigator.clipboard.writeText(embedCode);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
+  return (
+    <>
+      <div className="border-b border-green-900/20 bg-[#0a0f0a]/90 px-4 h-10 flex items-center gap-3 text-sm">
+        <Link href="/tools" className="text-slate-500 hover:text-white">← Tools</Link>
+        <span className="text-slate-700">/</span>
+        <span className="text-white font-medium">Widget Generator</span>
+      </div>
+
+      <div className="hero-bg px-4 py-12">
+        <div className="mx-auto max-w-5xl min-w-0">
+          <div className="text-center mb-10">
+            <h1 className="text-3xl font-bold text-white mb-2">WhatsApp Widget Generator</h1>
+            <p className="text-slate-400">Paste one line of code on your website. Visitors can chat with you on WhatsApp instantly.</p>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Config */}
+            <div className="space-y-5">
+              <div className="rounded-2xl border border-slate-800 bg-[#111811] p-6 space-y-4">
+                <h2 className="font-semibold text-white">Your WhatsApp Number</h2>
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <select value={dial} onChange={e => setDial(e.target.value)}
+                    className="w-full min-w-0 rounded-xl bg-slate-900 border border-slate-700 px-3 py-2.5 text-sm text-white focus:outline-none focus:border-[#25D366] sm:w-44 sm:shrink-0">
+                    {COUNTRIES.map(c => <option key={c.code} value={c.dial.replace("+","")}>{c.dial} {c.name}</option>)}
+                  </select>
+                  <input type="tel" value={number} onChange={e => setNumber(e.target.value)} placeholder="Phone number"
+                    className="w-full min-w-0 flex-1 rounded-xl bg-slate-900 border border-slate-700 px-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#25D366]" />
+                </div>
+                <div>
+                  <label className="text-xs text-slate-400 block mb-1">Pre-filled message</label>
+                  <input type="text" value={message} onChange={e => setMessage(e.target.value)}
+                    className="w-full rounded-xl bg-slate-900 border border-slate-700 px-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#25D366]" />
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-slate-800 bg-[#111811] p-6 space-y-4">
+                <h2 className="font-semibold text-white">Appearance</h2>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs text-slate-400 block mb-1">Position</label>
+                    <select value={position} onChange={e => setPosition(e.target.value)}
+                      className="w-full rounded-xl bg-slate-900 border border-slate-700 px-3 py-2.5 text-sm text-white focus:outline-none focus:border-[#25D366]">
+                      <option value="bottom-right">Bottom Right</option>
+                      <option value="bottom-left">Bottom Left</option>
+                      <option value="top-right">Top Right</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs text-slate-400 block mb-1">Button Size (px)</label>
+                    <input type="number" value={size} onChange={e => setSize(e.target.value)} min="40" max="100"
+                      className="w-full rounded-xl bg-slate-900 border border-slate-700 px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#25D366]" />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-xs text-slate-400 block mb-2">Button Color</label>
+                  <div className="flex gap-2 flex-wrap">
+                    {["#25D366","#128C7E","#000000","#1a1a2e","#7c3aed","#dc2626","#ea580c","#0070ba"].map(c => (
+                      <button key={c} onClick={() => setColor(c)}
+                        className={`w-8 h-8 rounded-full border-2 transition-all ${color === c ? "border-white scale-110" : "border-transparent"}`}
+                        style={{ backgroundColor: c }} />
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <label className="flex items-center gap-2 cursor-pointer mb-2">
+                    <input type="checkbox" checked={showLabel} onChange={e => setShowLabel(e.target.checked)} className="rounded" />
+                    <span className="text-sm text-slate-300">Show label bubble</span>
+                  </label>
+                  {showLabel && (
+                    <input type="text" value={label} onChange={e => setLabel(e.target.value)}
+                      className="w-full rounded-xl bg-slate-900 border border-slate-700 px-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#25D366]" />
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Preview + Code */}
+            <div className="space-y-5">
+              {/* Preview */}
+              <div className="rounded-2xl border border-slate-800 bg-[#111811] p-6">
+                <h2 className="font-semibold text-white mb-4">Preview</h2>
+                <div className="relative h-48 rounded-xl bg-slate-900 border border-slate-700 overflow-hidden">
+                  <div className="absolute inset-0 flex items-center justify-center text-slate-600 text-sm">Your website here</div>
+                  <div className={`absolute flex flex-col gap-2 ${position === "bottom-right" ? "bottom-4 right-4 items-end" : position === "bottom-left" ? "bottom-4 left-4 items-start" : "top-4 right-4 items-end"}`}>
+                    {showLabel && <div className="bg-gray-800 text-white px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap">{label}</div>}
+                    <div className="rounded-full flex items-center justify-center shadow-lg" style={{ width: `${Math.min(parseInt(size), 52)}px`, height: `${Math.min(parseInt(size), 52)}px`, backgroundColor: color }}>
+                      <MessageCircle className="text-white" style={{ width: `${Math.min(parseInt(size), 52) * 0.48}px`, height: `${Math.min(parseInt(size), 52) * 0.48}px` }} />
+                    </div>
+                    <div className="text-slate-600 text-xs">Powered by Wazap</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Embed code */}
+              <div className="rounded-2xl border border-slate-800 bg-[#111811] p-6">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <Code className="h-4 w-4 text-[#25D366]" />
+                    <h2 className="font-semibold text-white">Embed Code</h2>
+                  </div>
+                  <button onClick={copy} disabled={atLimit}
+                    className="flex items-center gap-1.5 rounded-full border border-slate-700 hover:border-[#25D366] px-3 py-1.5 text-xs text-slate-300 hover:text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+                    {copied ? <Check className="h-3.5 w-3.5 text-[#25D366]" /> : <Copy className="h-3.5 w-3.5" />}
+                    {copied ? "Copied!" : atLimit ? "Limit reached" : "Copy"}
+                  </button>
+                </div>
+                <pre className="text-xs text-slate-400 bg-slate-900 rounded-xl p-4 overflow-x-auto whitespace-pre-wrap font-mono">{embedCode}</pre>
+                {limitError && (
+                  <p className="text-xs text-red-400 mt-2">{limitError} {plan === "free" && <Link href="/pricing" className="underline">Upgrade</Link>}</p>
+                )}
+                {atLimit && !limitError && (
+                  <p className="text-xs text-amber-400 mt-2">Free plan: 1 copy/day. <Link href="/pricing" className="underline">Upgrade for unlimited</Link></p>
+                )}
+                <p className="text-xs text-slate-500 mt-3">Paste this anywhere before <code className="text-slate-400">&lt;/body&gt;</code> on your website.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}

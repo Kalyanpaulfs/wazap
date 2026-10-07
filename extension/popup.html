@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Wazap</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      width: 340px;
+      background: #0a0f0a;
+      color: #e2e8f0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 14px;
+    }
+
+    /* Header */
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 16px 12px;
+      border-bottom: 1px solid #1e2d1e;
+    }
+    .logo-icon {
+      width: 32px;
+      height: 32px;
+      flex-shrink: 0;
+    }
+    .logo-text {
+      font-size: 18px;
+      font-weight: 700;
+      background: linear-gradient(135deg, #25D366, #128C7E);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .tagline {
+      font-size: 11px;
+      color: #64748b;
+      margin-left: auto;
+    }
+
+    /* Body */
+    .body { padding: 14px 16px; }
+
+    /* Phone row */
+    .phone-row {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+    select, input, textarea {
+      background: #111811;
+      border: 1px solid #1e3a1e;
+      border-radius: 10px;
+      color: #e2e8f0;
+      font-size: 13px;
+      padding: 9px 12px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    select:focus, input:focus, textarea:focus {
+      border-color: #25D366;
+    }
+    select {
+      width: 110px;
+      flex-shrink: 0;
+      cursor: pointer;
+    }
+    .phone-input {
+      flex: 1;
+      min-width: 0;
+    }
+
+    textarea {
+      width: 100%;
+      resize: none;
+      height: 70px;
+      margin-bottom: 12px;
+      font-family: inherit;
+    }
+    textarea::placeholder, input::placeholder {
+      color: #334155;
+    }
+
+    /* Open button */
+    .btn-open {
+      width: 100%;
+      padding: 11px;
+      border-radius: 999px;
+      border: none;
+      background: #25D366;
+      color: #000;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: background 0.15s;
+    }
+    .btn-open:hover { background: #1fba58; }
+    .btn-open:disabled { opacity: 0.4; cursor: default; }
+    .btn-open svg { width: 16px; height: 16px; }
+
+    /* Recent */
+    .recent-label {
+      font-size: 11px;
+      color: #475569;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin: 14px 0 8px;
+    }
+    .recent-list {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .recent-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #111811;
+      border: 1px solid #1e2d1e;
+      border-radius: 8px;
+      padding: 7px 10px;
+      cursor: pointer;
+      transition: border-color 0.15s;
+    }
+    .recent-item:hover { border-color: #25D366; }
+    .recent-number {
+      font-size: 13px;
+      color: #cbd5e1;
+      font-family: monospace;
+    }
+    .recent-open {
+      font-size: 11px;
+      color: #25D366;
+      font-weight: 600;
+    }
+    .no-recent {
+      font-size: 12px;
+      color: #334155;
+      text-align: center;
+      padding: 8px 0;
+    }
+
+    /* Footer */
+    .footer {
+      padding: 10px 16px 14px;
+      border-top: 1px solid #1e2d1e;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .footer a {
+      font-size: 11px;
+      color: #25D366;
+      text-decoration: none;
+    }
+    .footer a:hover { text-decoration: underline; }
+    .footer-note {
+      font-size: 11px;
+      color: #334155;
+    }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #25D366;
+      color: #000;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 6px 14px;
+      border-radius: 999px;
+      opacity: 0;
+      transition: opacity 0.2s;
+      pointer-events: none;
+    }
+    .toast.show { opacity: 1; }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <div class="header">
+    <svg class="logo-icon" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect width="64" height="64" rx="14" fill="#25D366"/>
+      <path d="M32 10C20.954 10 12 18.954 12 30c0 3.386.902 6.566 2.483 9.3L12 52l12.7-2.483A19.907 19.907 0 0032 50c11.046 0 20-8.954 20-20S43.046 10 32 10z" fill="white"/>
+      <path d="M35 20L25 33h8L30 44L42 31h-8z" fill="#25D366"/>
+    </svg>
+    <span class="logo-text">Wazap</span>
+    <span class="tagline">No saving needed</span>
+  </div>
+
+  <!-- Body -->
+  <div class="body">
+    <div class="phone-row">
+      <select id="dial">
+        <option value="971">+971 UAE</option>
+        <option value="966">+966 Saudi Arabia</option>
+        <option value="974">+974 Qatar</option>
+        <option value="965">+965 Kuwait</option>
+        <option value="973">+973 Bahrain</option>
+        <option value="968">+968 Oman</option>
+        <option value="962">+962 Jordan</option>
+        <option value="961">+961 Lebanon</option>
+        <option value="964">+964 Iraq</option>
+        <option value="963">+963 Syria</option>
+        <option value="967">+967 Yemen</option>
+        <option value="970">+970 Palestine</option>
+        <option value="44">+44 UK</option>
+        <option value="1">+1 USA / Canada</option>
+        <option value="91">+91 India</option>
+        <option value="92">+92 Pakistan</option>
+        <option value="20">+20 Egypt</option>
+        <option value="234">+234 Nigeria</option>
+        <option value="880">+880 Bangladesh</option>
+        <option value="63">+63 Philippines</option>
+        <option value="62">+62 Indonesia</option>
+        <option value="212">+212 Morocco</option>
+        <option value="27">+27 South Africa</option>
+        <option value="90">+90 Turkey</option>
+        <option value="49">+49 Germany</option>
+        <option value="33">+33 France</option>
+        <option value="55">+55 Brazil</option>
+        <option value="93">+93 Afghanistan</option>
+        <option value="355">+355 Albania</option>
+        <option value="213">+213 Algeria</option>
+        <option value="244">+244 Angola</option>
+        <option value="54">+54 Argentina</option>
+        <option value="374">+374 Armenia</option>
+        <option value="61">+61 Australia</option>
+        <option value="43">+43 Austria</option>
+        <option value="994">+994 Azerbaijan</option>
+        <option value="375">+375 Belarus</option>
+        <option value="32">+32 Belgium</option>
+        <option value="591">+591 Bolivia</option>
+        <option value="387">+387 Bosnia</option>
+        <option value="267">+267 Botswana</option>
+        <option value="359">+359 Bulgaria</option>
+        <option value="855">+855 Cambodia</option>
+        <option value="237">+237 Cameroon</option>
+        <option value="56">+56 Chile</option>
+        <option value="86">+86 China</option>
+        <option value="57">+57 Colombia</option>
+        <option value="243">+243 Congo</option>
+        <option value="506">+506 Costa Rica</option>
+        <option value="385">+385 Croatia</option>
+        <option value="53">+53 Cuba</option>
+        <option value="357">+357 Cyprus</option>
+        <option value="420">+420 Czech Republic</option>
+        <option value="45">+45 Denmark</option>
+        <option value="593">+593 Ecuador</option>
+        <option value="251">+251 Ethiopia</option>
+        <option value="358">+358 Finland</option>
+        <option value="995">+995 Georgia</option>
+        <option value="233">+233 Ghana</option>
+        <option value="30">+30 Greece</option>
+        <option value="502">+502 Guatemala</option>
+        <option value="504">+504 Honduras</option>
+        <option value="852">+852 Hong Kong</option>
+        <option value="36">+36 Hungary</option>
+        <option value="98">+98 Iran</option>
+        <option value="353">+353 Ireland</option>
+        <option value="972">+972 Israel</option>
+        <option value="39">+39 Italy</option>
+        <option value="81">+81 Japan</option>
+        <option value="7">+7 Kazakhstan / Russia</option>
+        <option value="254">+254 Kenya</option>
+        <option value="996">+996 Kyrgyzstan</option>
+        <option value="371">+371 Latvia</option>
+        <option value="218">+218 Libya</option>
+        <option value="370">+370 Lithuania</option>
+        <option value="352">+352 Luxembourg</option>
+        <option value="60">+60 Malaysia</option>
+        <option value="960">+960 Maldives</option>
+        <option value="356">+356 Malta</option>
+        <option value="52">+52 Mexico</option>
+        <option value="373">+373 Moldova</option>
+        <option value="258">+258 Mozambique</option>
+        <option value="95">+95 Myanmar</option>
+        <option value="264">+264 Namibia</option>
+        <option value="977">+977 Nepal</option>
+        <option value="31">+31 Netherlands</option>
+        <option value="64">+64 New Zealand</option>
+        <option value="505">+505 Nicaragua</option>
+        <option value="47">+47 Norway</option>
+        <option value="507">+507 Panama</option>
+        <option value="595">+595 Paraguay</option>
+        <option value="51">+51 Peru</option>
+        <option value="48">+48 Poland</option>
+        <option value="351">+351 Portugal</option>
+        <option value="40">+40 Romania</option>
+        <option value="250">+250 Rwanda</option>
+        <option value="221">+221 Senegal</option>
+        <option value="381">+381 Serbia</option>
+        <option value="65">+65 Singapore</option>
+        <option value="421">+421 Slovakia</option>
+        <option value="386">+386 Slovenia</option>
+        <option value="252">+252 Somalia</option>
+        <option value="82">+82 South Korea</option>
+        <option value="34">+34 Spain</option>
+        <option value="94">+94 Sri Lanka</option>
+        <option value="249">+249 Sudan</option>
+        <option value="46">+46 Sweden</option>
+        <option value="41">+41 Switzerland</option>
+        <option value="886">+886 Taiwan</option>
+        <option value="255">+255 Tanzania</option>
+        <option value="66">+66 Thailand</option>
+        <option value="216">+216 Tunisia</option>
+        <option value="256">+256 Uganda</option>
+        <option value="380">+380 Ukraine</option>
+        <option value="598">+598 Uruguay</option>
+        <option value="998">+998 Uzbekistan</option>
+        <option value="58">+58 Venezuela</option>
+        <option value="84">+84 Vietnam</option>
+        <option value="263">+263 Zimbabwe</option>
+      </select>
+      <input id="number" class="phone-input" type="tel" placeholder="Phone number" autocomplete="off" />
+    </div>
+
+    <textarea id="message" placeholder="Pre-filled message (optional)"></textarea>
+
+    <button class="btn-open" id="openBtn" disabled>
+      <svg viewBox="0 0 24 24" fill="currentColor">
+        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+        <path d="M13.5 2C7.149 2 2 7.149 2 13.5c0 2.027.54 3.927 1.483 5.565L2 22l3.094-1.455A11.43 11.43 0 0013.5 22C19.851 22 25 16.851 25 10.5S19.851 2 13.5 2z"/>
+      </svg>
+      Open WhatsApp
+    </button>
+
+    <!-- Recent -->
+    <div id="recentSection" style="display:none">
+      <div class="recent-label">Recent</div>
+      <div class="recent-list" id="recentList"></div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <a href="https://wazap.lt" target="_blank">wazap.lt — Full features & plans</a>
+    <span class="footer-note">v1.0</span>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

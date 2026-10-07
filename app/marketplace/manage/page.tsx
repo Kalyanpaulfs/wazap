@@ -1,0 +1,2 @@
+import { redirect } from "next/navigation"; import { getServerSession } from "next-auth"; import { authOptions } from "@/lib/auth"; import MarketplaceManager from "./MarketplaceManager";
+export const metadata={title:"Manage Marketplace — Wazap",robots:{index:false,follow:false}}; export default async function Page({searchParams}:{searchParams:Promise<{install?:string}>}){if(!(await getServerSession(authOptions))?.user)redirect("/login");return <MarketplaceManager installId={String((await searchParams).install||"")}/>}

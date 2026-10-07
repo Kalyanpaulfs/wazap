@@ -1,0 +1,111 @@
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { PLAN_PRICES } from "@/lib/billing";
+import { recordFunnelEvent } from "@/lib/funnel";
+
+export const runtime = "nodejs";
+
+const PRODUCT_BY_PLAN: Record<string, string | undefined> = {
+  basic: process.env.DODO_PRODUCT_ID_BASIC,
+  pro: process.env.DODO_PRODUCT_ID_PRO,
+  ultimate: process.env.DODO_PRODUCT_ID_ULTIMATE,
+  business: process.env.DODO_PRODUCT_ID_BUSINESS,
+};
+
+export async function POST(req: Request) {
+  let checkoutUserId: string | null = null;
+  let checkoutPlan: string | null = null;
+  try {
+    const apiKey = process.env.DODO_PAYMENTS_API_KEY;
+    if (!apiKey) {
+      return NextResponse.json({ error: "Dodo payments are being set up." }, { status: 501 });
+    }
+
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      return NextResponse.json({ error: "Create or sign in to your Wazap account before payment." }, { status: 401 });
+    }
+
+    if (
+      process.env.DODO_ENVIRONMENT !== "live_mode" ||
+      process.env.DODO_CHECKOUT_ENABLED !== "true"
+    ) {
+      return NextResponse.json({ error: "Card checkout is not available yet. Please use PayPal." }, { status: 503 });
+    }
+
+    const userId = (session.user as { id?: string }).id;
+    const email = (session.user.email ?? "").toLowerCase();
+    if (!userId) {
+      return NextResponse.json({ error: "Please sign in again before payment." }, { status: 401 });
+    }
+
+    const body = (await req.json().catch(() => ({}))) as { plan?: string };
+    const plan = (body.plan ?? "").toLowerCase();
+    checkoutUserId = userId;
+    checkoutPlan = plan;
+    const productId = PRODUCT_BY_PLAN[plan];
+    if (!productId || !(plan in PLAN_PRICES)) {
+      return NextResponse.json({ error: "This Wazap plan is still being connected to Dodo." }, { status: 501 });
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user || user.email !== email) {
+      return NextResponse.json({ error: "Account not found. Please sign in again." }, { status: 401 });
+    }
+
+    const { default: DodoPayments } = await import("dodopayments");
+    const client = new DodoPayments({
+      bearerToken: apiKey,
+      environment: (process.env.DODO_ENVIRONMENT as "test_mode" | "live_mode") || "test_mode",
+    });
+    const base = process.env.NEXTAUTH_URL ?? "https://wazap.lt";
+    const sessionResponse = await client.checkoutSessions.create({
+      product_cart: [{ product_id: productId, quantity: 1 }],
+      customer: { email, name: user.name || undefined },
+      return_url: `${base}/dashboard?upgraded=1`,
+      metadata: { user_id: user.id, plan, email },
+    });
+    const checkout = sessionResponse as { checkout_url?: string; payment_link?: string; session_id?: string; id?: string };
+    const url = checkout.checkout_url || checkout.payment_link;
+    if (!url) {
+      await recordFunnelEvent("payment_failed", {
+        userId: user.id,
+        source: "dodo_create",
+        metadata: { plan, reason: "missing_checkout_url" },
+      });
+      return NextResponse.json({ error: "Could not start Dodo checkout." }, { status: 502 });
+    }
+
+    await prisma.payment.create({
+      data: {
+        userId: user.id,
+        email: user.email,
+        plan,
+        amount: PLAN_PRICES[plan],
+        method: "dodo",
+        txId: checkout.session_id || checkout.id || null,
+        status: "pending",
+      },
+    });
+    await recordFunnelEvent("checkout_started", {
+      userId: user.id,
+      source: "dodo",
+      metadata: { plan, amount: PLAN_PRICES[plan] },
+    });
+
+    return NextResponse.json({ url });
+  } catch (err) {
+    console.error("[dodo/create]", err);
+    await recordFunnelEvent("payment_failed", {
+      userId: checkoutUserId,
+      source: "dodo_create",
+      metadata: {
+        plan: checkoutPlan,
+        reason: err instanceof Error ? err.message.slice(0, 180) : "unknown_error",
+      },
+    });
+    return NextResponse.json({ error: "Could not start checkout. Please try again." }, { status: 500 });
+  }
+}

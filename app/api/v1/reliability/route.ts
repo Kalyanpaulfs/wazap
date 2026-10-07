@@ -1,0 +1,2 @@
+import{NextResponse}from"next/server";import{authenticateApi,logApiRequest}from"@/lib/developer-platform";import{developerReliability}from"@/lib/developer-reliability";
+export async function GET(req:Request){const auth=await authenticateApi(req,"operations:read");if(!auth.context)return NextResponse.json({error:auth.error},{status:auth.error!.status});const ctx=auth.context,data=await developerReliability(ctx.workspaceId);await logApiRequest(ctx,req,200);return NextResponse.json({data,meta:{requestId:ctx.requestId}})}
