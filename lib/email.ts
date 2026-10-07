@@ -1,15 +1,9 @@
+import { localizeEmail } from './email-localization';
+import { brandEmail, emailIdentity, emailReplyTo, type EmailChannel } from "./email-brand";
 // Lightweight provider failover via HTTP APIs — no SMTP connection is held by
 // the application. Resend is preferred and Brevo is used when configured.
 export function isEmailConfigured(): boolean {
-  return !!(process.env.RESEND_API_KEY || process.env.BREVO_API_KEY);
-}
-
-function senderFromEnv() {
-  const senderId = Number(process.env.BREVO_SENDER_ID);
-  if (Number.isInteger(senderId) && senderId > 0) return { id: senderId };
-  const raw = process.env.EMAIL_FROM || "Wazap <hello@wazap.lt>";
-  const match = raw.match(/^\s*(.*?)\s*<([^>]+)>\s*$/);
-  return match ? { name: match[1] || "Wazap", email: match[2] } : { name: "Wazap", email: raw.trim() };
+  return process.env.EMAIL_AUTOMATION_READY === "true" && !!(process.env.RESEND_API_KEY || process.env.BREVO_API_KEY);
 }
 
 export type EmailSendResult = {
@@ -17,10 +11,16 @@ export type EmailSendResult = {
   provider: "resend" | "brevo" | "not_configured";
   messageId?: string;
   error?: string;
+  uncertain?: boolean;
 };
 
-export async function sendEmail(opts: { to: string; subject: string; html: string }): Promise<EmailSendResult> {
-  const from = process.env.EMAIL_FROM || "Wazap <hello@wazap.lt>";
+export async function sendEmail(opts: { to: string; subject: string; html: string; channel?: EmailChannel; headers?: Record<string, string> }): Promise<EmailSendResult> {
+  const identity = emailIdentity(opts.channel || "support");
+  const from = identity.from;
+  const replyTo = emailReplyTo(opts.channel || "support");
+  let html = brandEmail(opts.html, opts.channel || "support");
+  try { const localized=await localizeEmail(opts.to,opts.subject,html);opts={...opts,subject:localized.subject};html=localized.html; } catch(error) {return {accepted:false,provider:"not_configured",error:error instanceof Error?error.message:"Email translation unavailable"};}
+  if (process.env.EMAIL_AUTOMATION_READY !== "true") return { accepted: false, provider: "not_configured", error: "Email activation pending: verify mailboxes, provider and delivery before enabling automation." };
   const resendKey = process.env.RESEND_API_KEY;
   const brevoKey = process.env.BREVO_API_KEY;
   if (!resendKey && !brevoKey) return { accepted: false, provider: "not_configured", error: "Email provider is not configured" };
@@ -30,23 +30,23 @@ export async function sendEmail(opts: { to: string; subject: string; html: strin
       ? await fetch("https://api.resend.com/emails", {
           method: "POST",
           headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
-          body: JSON.stringify({ from, to: opts.to, subject: opts.subject, html: opts.html }),
+          body: JSON.stringify({ from, to: opts.to, subject: opts.subject, html, reply_to: replyTo.email, headers: opts.headers }),
           signal: AbortSignal.timeout(10000),
         })
       : await fetch("https://api.brevo.com/v3/smtp/email", {
           method: "POST",
           headers: { "api-key": brevoKey!, "Content-Type": "application/json", Accept: "application/json" },
-          body: JSON.stringify({ sender: senderFromEnv(), to: [{ email: opts.to }], subject: opts.subject, htmlContent: opts.html }),
+          body: JSON.stringify({ sender: { name: identity.name, email: identity.email }, to: [{ email: opts.to }], subject: opts.subject, htmlContent: html, replyTo, headers: opts.headers }),
           signal: AbortSignal.timeout(10000),
         });
     const payload = await res.json().catch(() => ({})) as { id?: string; messageId?: string; message?: string; code?: string };
     const messageId = payload.id || payload.messageId;
     if (!res.ok) {
-      return { accepted: false, provider, error: payload.message || payload.code || `Provider returned HTTP ${res.status}` };
+      return { accepted: false, provider, uncertain: res.status >= 500, error: payload.message || payload.code || `Provider returned HTTP ${res.status}` };
     }
     return { accepted: true, provider, messageId };
   } catch (error) {
-    return { accepted: false, provider: resendKey ? "resend" : "brevo", error: error instanceof Error ? error.message : "Provider request failed" };
+    return { accepted: false, provider: resendKey ? "resend" : "brevo", uncertain: true, error: error instanceof Error ? error.message : "Provider request failed" };
   }
 }
 
@@ -260,7 +260,7 @@ export function renderSupportReplyEmail(opts: {
 }
 
 export function renderExpiryEmail(name: string | null, planLabel: string, days: number, base: string): string {
-  const hi = name ? `Hi ${name},` : "Hi,";
+  const hi = name ? `Hi ${escapeHtml(name)},` : "Hi,";
   const when = days <= 0 ? "today" : `in ${days} day${days !== 1 ? "s" : ""}`;
   return `
   <div style="font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;max-width:520px;margin:0 auto;background:#0e140e;border-radius:16px;overflow:hidden;border:1px solid #1e2a1e">
@@ -269,7 +269,7 @@ export function renderExpiryEmail(name: string | null, planLabel: string, days: 
     </div>
     <div style="padding:24px;color:#cbd5e1;font-size:14px;line-height:1.6">
       <p style="margin:0 0 12px">${hi}</p>
-      <p style="margin:0 0 12px">Your <b style="color:#fff">${planLabel}</b> plan expires <b style="color:#fbbf24">${when}</b>. Renew now to keep uninterrupted access to every Wazap tool — widgets, linktree, rotator, QR and more.</p>
+      <p style="margin:0 0 12px">Your <b style="color:#fff">${escapeHtml(planLabel)}</b> plan expires <b style="color:#fbbf24">${when}</b>. Renew now to keep uninterrupted access to every Wazap tool — widgets, linktree, rotator, QR and more.</p>
       <p style="margin:20px 0">
         <a href="${base}/pricing" style="display:inline-block;background:#25D366;color:#000;text-decoration:none;font-weight:600;padding:12px 22px;border-radius:999px;font-size:14px">Renew my plan →</a>
       </p>
@@ -289,15 +289,15 @@ export function renderPaidReceiptEmail(opts: {
   paidAt?: Date;
   base: string;
 }): string {
-  const hi = opts.name ? `Hi ${opts.name},` : "Hi,";
-  const planLabel = opts.plan.charAt(0).toUpperCase() + opts.plan.slice(1);
+  const hi = opts.name ? `Hi ${escapeHtml(opts.name)},` : "Hi,";
+  const planLabel = ({ basic: "Solo", pro: "Growth", ultimate: "Agency", business: "Business" } as Record<string, string>)[opts.plan] || opts.plan.charAt(0).toUpperCase() + opts.plan.slice(1);
   const date = (opts.paidAt || new Date()).toLocaleDateString("en-US", {
     year: "numeric",
     month: "long",
     day: "numeric",
   });
   const txLine = opts.txId
-    ? `<tr><td style="padding:8px 0;color:#64748b">Transaction ID</td><td style="padding:8px 0;text-align:right;color:#e2e8f0">${opts.txId}</td></tr>`
+    ? `<tr><td style="padding:8px 0;color:#64748b">Transaction ID</td><td style="padding:8px 0;text-align:right;color:#e2e8f0">${escapeHtml(opts.txId)}</td></tr>`
     : "";
 
   return `
@@ -307,7 +307,7 @@ export function renderPaidReceiptEmail(opts: {
     </div>
     <div style="padding:24px;color:#cbd5e1;font-size:14px;line-height:1.6">
       <p style="margin:0 0 12px">${hi}</p>
-      <p style="margin:0 0 16px">Thank you for your payment. Your <b style="color:#fff">${planLabel}</b> plan is active and your account access has been updated.</p>
+      <p style="margin:0 0 16px">Thank you for your payment. Your <b style="color:#fff">${escapeHtml(planLabel)}</b> plan is active and your account access has been updated.</p>
       <table style="width:100%;border-collapse:collapse;background:#0a0f0a;border:1px solid #1e2a1e;border-radius:12px;overflow:hidden;margin:18px 0">
         <tr><td style="padding:8px 0;color:#64748b">Plan</td><td style="padding:8px 0;text-align:right;color:#e2e8f0">${planLabel}</td></tr>
         <tr><td style="padding:8px 0;color:#64748b">Amount paid</td><td style="padding:8px 0;text-align:right;color:#e2e8f0">USD ${opts.amount.toFixed(2)}</td></tr>

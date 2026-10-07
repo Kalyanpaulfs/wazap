@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { extendPlanExpiry, planExpiry, PLAN_PRICES } from "@/lib/billing";
 import { getPlanFromPayPalPlanId, paypalRequest } from "@/lib/paypal";
-import { renderPaidReceiptEmail, sendEmail } from "@/lib/email";
+import { queueBillingNotice, queuePaidReceipt } from "@/lib/billing-email";
 import { recordFunnelEvent } from "@/lib/funnel";
 import { markPartnerCustomer } from "@/lib/partners";
 
@@ -150,6 +150,7 @@ export async function POST(req: Request) {
   if (!user) return NextResponse.json({ ok: true, note: "user not found" });
 
   if (DEACTIVATE_EVENTS.has(type)) {
+    await queueBillingNotice({key:`paypal:${event.id||req.headers.get("paypal-transmission-id")}`,userId:user.id,email:user.email,name:user.name,plan,state:type==="BILLING.SUBSCRIPTION.PAYMENT.FAILED"?"failed":type==="BILLING.SUBSCRIPTION.EXPIRED"?"expired":type==="BILLING.SUBSCRIPTION.SUSPENDED"?"paused":"cancelled",accessUntil:user.planExpiresAt});
     if (END_ACCESS_EVENTS.has(type)) {
       await prisma.user.update({
         where: { id: user.id },
@@ -212,7 +213,8 @@ export async function POST(req: Request) {
     ? await prisma.payment.findFirst({ where: { txId, method: "paypal", status: "active" } })
     : null;
   if (!already) {
-    await prisma.payment.create({
+    await prisma.$transaction(async tx => {
+await tx.payment.create({
       data: {
         userId: user.id,
         email: user.email,
@@ -224,17 +226,7 @@ export async function POST(req: Request) {
         activatedAt: new Date(),
       },
     });
-
-    await sendEmail({
-      to: user.email,
-      subject: `Your Wazap ${plan.charAt(0).toUpperCase() + plan.slice(1)} receipt`,
-      html: renderPaidReceiptEmail({
-        name: user.name,
-        plan,
-        amount: moneyAmount(resource, plan),
-        txId: txId || subscriptionId,
-        base: process.env.NEXTAUTH_URL ?? "https://wazap.lt",
-      }),
+    await queuePaidReceipt({key:`paypal:${txId}`,userId:user.id,email:user.email,name:user.name,plan,amount:moneyAmount(resource,plan),txId},tx);
     });
   }
 

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { planExpiry, PLAN_PRICES } from "@/lib/billing";
-import { renderPaidReceiptEmail, sendEmail } from "@/lib/email";
+import { queueBillingNotice, queuePaidReceipt } from "@/lib/billing-email";
 import { recordFunnelEvent } from "@/lib/funnel";
 import { markPartnerCustomer } from "@/lib/partners";
 
@@ -79,6 +79,7 @@ export async function POST(req: Request) {
   if (!user) return NextResponse.json({ ok: true, note: "user not found" });
 
   if (DEACTIVATE_EVENTS.has(type)) {
+    await queueBillingNotice({key:`dodo:${req.headers.get("webhook-id")}`,userId:user.id,email:user.email,name:user.name,plan:resolvedPlan,state:type==="subscription.failed"?"failed":type==="subscription.expired"?"expired":type==="subscription.on_hold"?"paused":"cancelled",accessUntil:user.planExpiresAt});
     if (END_ACCESS_EVENTS.has(type)) {
       await prisma.user.update({
         where: { id: user.id },
@@ -103,7 +104,9 @@ export async function POST(req: Request) {
       : null;
   const periodEnd = providerPeriodEnd && !Number.isNaN(providerPeriodEnd.getTime())
     ? providerPeriodEnd
-    : planExpiry(resolvedPlan);
+    : type === "payment.succeeded" && user.plan === resolvedPlan && user.planExpiresAt && user.planExpiresAt > new Date()
+      ? user.planExpiresAt
+      : planExpiry(resolvedPlan);
   await prisma.user.update({
     where: { id: user.id },
     data: { plan: resolvedPlan, planExpiresAt: periodEnd },
@@ -125,17 +128,18 @@ export async function POST(req: Request) {
     ? await prisma.payment.findFirst({ where: { txId, method: "dodo", status: "active" } })
     : null;
   if (!already) {
-    const pending = await prisma.payment.findFirst({
+    await prisma.$transaction(async tx => {
+const pending = await tx.payment.findFirst({
       where: { userId: user.id, method: "dodo", plan: resolvedPlan, status: "pending" },
       orderBy: { createdAt: "desc" },
     });
     if (pending) {
-      await prisma.payment.update({
+      await tx.payment.update({
         where: { id: pending.id },
         data: { txId: txId || pending.txId, status: "active", activatedAt: new Date() },
       });
     } else {
-      await prisma.payment.create({
+      await tx.payment.create({
         data: {
           userId: user.id,
           email: user.email,
@@ -148,17 +152,7 @@ export async function POST(req: Request) {
         },
       });
     }
-
-    await sendEmail({
-      to: user.email,
-      subject: `Your Wazap ${resolvedPlan.charAt(0).toUpperCase() + resolvedPlan.slice(1)} receipt`,
-      html: renderPaidReceiptEmail({
-        name: user.name,
-        plan: resolvedPlan,
-        amount: PLAN_PRICES[resolvedPlan],
-        txId,
-        base: process.env.NEXTAUTH_URL ?? "https://wazap.lt",
-      }),
+    await queuePaidReceipt({key:`dodo:${txId || req.headers.get("webhook-id")}`,userId:user.id,email:user.email,name:user.name,plan:resolvedPlan,amount:PLAN_PRICES[resolvedPlan],txId},tx);
     });
   }
 

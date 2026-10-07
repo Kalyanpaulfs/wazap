@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useRef, useState } from 'react';
-import { Globe, ChevronDown } from "lucide-react";
+import { Globe, Check, Search } from "lucide-react";
 import "./language-control.css";
 import { usePathname } from 'next/navigation';
 import { SITE_LANGUAGES, NATIVE_LANGUAGE_NAMES, normalizeSiteLanguage, siteDirection, type SiteLanguage } from '@/lib/site-languages';
@@ -92,5 +92,10 @@ export default function SiteLocaleProvider({children}:{children:React.ReactNode}
 
 export function LanguageSelector(){
  const {language,choose,automatic}=useSiteLocale();
- return <label className="wp-language-control" translate="no" title="Choose language"><Globe size={15} aria-hidden="true"/><span aria-hidden="true">{language.toUpperCase()}</span><ChevronDown size={12} aria-hidden="true"/><select aria-label="Choose language" value={automatic?'auto':language} onChange={event=>choose(event.target.value as SiteLanguage|'auto')}><option value="auto">Automatic</option>{SITE_LANGUAGES.map(code=><option key={code} value={code} lang={code}>{NATIVE_LANGUAGE_NAMES[code]}</option>)}</select></label>;
+ const [open,setOpen]=useState(false),[query,setQuery]=useState('');
+ const root=useRef<HTMLDivElement>(null),trigger=useRef<HTMLButtonElement>(null),search=useRef<HTMLInputElement>(null);
+ useEffect(()=>{if(!open)return;search.current?.focus();const outside=(event:PointerEvent)=>{if(!root.current?.contains(event.target as Node))setOpen(false);};const escape=(event:KeyboardEvent)=>{if(event.key==='Escape'){setOpen(false);trigger.current?.focus();}};document.addEventListener('pointerdown',outside);document.addEventListener('keydown',escape);return()=>{document.removeEventListener('pointerdown',outside);document.removeEventListener('keydown',escape);};},[open]);
+ const select=(value:SiteLanguage|'auto')=>{choose(value);setOpen(false);setQuery('');trigger.current?.focus();};
+ const matches=SITE_LANGUAGES.filter(code=>`${code} ${NATIVE_LANGUAGE_NAMES[code]}`.toLowerCase().includes(query.trim().toLowerCase()));
+ return <div className="wp-language" ref={root} translate="no" data-no-localize dir="ltr"><button ref={trigger} type="button" className="wp-language-trigger" aria-label="Choose language" title="Choose language" aria-expanded={open} aria-controls="wazap-language-menu" onClick={()=>{setOpen(!open);setQuery('');}}><Globe size={19}/></button>{open&&<div className="wp-language-menu" id="wazap-language-menu"><div className="wp-language-heading"><strong>Language</strong><span>{automatic?'Automatic':NATIVE_LANGUAGE_NAMES[language]}</span></div><button type="button" className="wp-language-option wp-language-auto" aria-pressed={automatic} onClick={()=>select('auto')}><span><strong>Automatic</strong><small>Use your region and browser</small></span>{automatic&&<Check size={16}/>}</button><label className="wp-language-search"><Search size={15}/><input ref={search} value={query} onChange={event=>setQuery(event.target.value)} aria-label="Search languages" placeholder="Find your language"/></label><div className="wp-language-options">{matches.map(code=><button type="button" key={code} className="wp-language-option" aria-pressed={!automatic&&language===code} onClick={()=>select(code)}><span lang={code}>{NATIVE_LANGUAGE_NAMES[code]}</span><span className="wp-language-code">{!automatic&&language===code?<Check size={16}/>:code.toUpperCase()}</span></button>)}{!matches.length&&<p className="wp-language-empty">No languages found.</p>}</div></div>}</div>;
 }

@@ -50,12 +50,13 @@ export async function GET(req: Request) {
     needReminder++;
     if (!configured) continue; // don't mark as sent — will fire once Resend is set up
 
-    const ok = await sendEmail({
+    const result = await sendEmail({
+      channel: "billing",
       to: u.email,
       subject: `Your Wazap ${label} plan expires in ${days} day${days !== 1 ? "s" : ""}`,
       html: renderExpiryEmail(u.name, label, days, base),
     });
-    if (ok) {
+    if (result.accepted) {
       await prisma.user.update({ where: { id: u.id }, data: { expiryReminderSentFor: u.planExpiresAt } });
       sent++;
     }

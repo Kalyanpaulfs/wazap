@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import {sameSiteRequest} from "@/lib/crm";
 import { prisma } from "@/lib/prisma";
 import { renderSupportReplyEmail, sendEmail } from "@/lib/email";
 
@@ -15,8 +14,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  if(!sameSiteRequest(req))return NextResponse.json({error:"Invalid request origin."},{status:403});
-  const { messageId, reply } = await req.json().catch(()=>({}));
+  const { messageId, reply } = await req.json();
   const cleanReply = cleanText(reply);
   if (!messageId || !cleanReply) {
     return NextResponse.json({ error: "Missing message or reply." }, { status: 400 });
@@ -32,13 +30,11 @@ export async function POST(req: Request) {
     },
   });
 
-  const lead=await prisma.crmLead.findUnique({where:{email:contactMessage.email.toLowerCase()},select:{id:true}});
-  if(lead)await prisma.crmActivity.create({data:{leadId:lead.id,kind:'support_reply',body:`Support reply (${contactMessage.subject}): ${cleanReply}`}});
   const subject = `Wazap support replied: ${contactMessage.subject}`;
   const outbound = await prisma.outboundEmail.create({
     data: {
       recipient: contactMessage.email.toLowerCase(),
-      type: "support_reply",
+      type: contactMessage.subject === "billing" ? "billing_support_reply" : "support_reply",
       subject,
       html: renderSupportReplyEmail({
         name: contactMessage.name,
@@ -48,7 +44,7 @@ export async function POST(req: Request) {
       }),
     },
   });
-  const emailResult = await sendEmail({ to: outbound.recipient, subject: outbound.subject, html: outbound.html });
+  const emailResult = await sendEmail({ to: outbound.recipient, subject: outbound.subject, html: outbound.html, channel: contactMessage.subject === "billing" ? "billing" : "support" });
   await prisma.outboundEmail.update({
     where: { id: outbound.id },
     data: emailResult.accepted

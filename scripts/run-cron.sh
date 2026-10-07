@@ -3,7 +3,7 @@ set -euo pipefail
 
 route="${1:-}"
 case "$route" in
-  email-delivery|expire-plans|expiry-reminders|trial-lifecycle|webhook-delivery|automation-scheduler|operations|whatsapp-campaigns|account-lifecycle) ;;
+  customer-nurture|zoho-inbox|email-delivery|expire-plans|expiry-reminders|trial-lifecycle|webhook-delivery|automation-scheduler|operations|whatsapp-campaigns|account-lifecycle) ;;
   *) echo "Unsupported Wazap cron route" >&2; exit 64 ;;
 esac
 

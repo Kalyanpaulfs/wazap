@@ -1,28 +1,33 @@
-import {processCrmCampaigns} from "@/lib/crm-campaign-worker";
-import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { isEmailConfigured, sendEmail } from "@/lib/email";
-
-export const dynamic = "force-dynamic";
-export const maxDuration = 300;
-
-export async function GET(req: Request) {
-  const auth = req.headers.get("authorization");
-  if (!process.env.CRON_SECRET || auth !== `Bearer ${process.env.CRON_SECRET}`) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (!isEmailConfigured()) return NextResponse.json({ delivered: 0, queued: await prisma.outboundEmail.count({ where: { status: "queued" } }), provider: "not_configured" });
-
-  const messages = await prisma.outboundEmail.findMany({ where: { status: "queued", nextAttemptAt: { lte: new Date() }, attempts: { lt: 8 } }, include: { user: { select: { marketingOptOutAt: true } } }, orderBy: { createdAt: "asc" }, take: 25 });
-  let delivered = 0;
-  for (const message of messages) {
-    if (message.type.startsWith("marketing_") && message.user?.marketingOptOutAt) { await prisma.outboundEmail.update({ where: { id: message.id }, data: { status: "cancelled", lastError: "Recipient opted out of product announcements." } }); continue; }
-    const result = await sendEmail({ to: message.recipient, subject: message.subject, html: message.html });
-    const attempts = message.attempts + 1;
-    await prisma.outboundEmail.update({ where: { id: message.id }, data: result.accepted
-      ? { status: "sent", sentAt: new Date(), attempts, lastError: null, provider: result.provider, providerMessageId: result.messageId || null }
-      : { attempts, nextAttemptAt: new Date(Date.now() + Math.min(24, 2 ** attempts) * 60 * 60 * 1000), lastError: result.error || "Provider request failed" }
-    });
-    if (result.accepted) delivered++;
-  }
-  const campaigns = await processCrmCampaigns();
-  return NextResponse.json({ delivered, attempted: messages.length, campaigns });
+import { NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
+import { isEmailConfigured, sendEmail } from '@/lib/email';
+import { emailChannel } from '@/lib/email-brand';
+import { processCrmCampaigns } from '@/lib/crm-campaign-worker';
+import { nurtureEligibility, reactivationEligible } from '@/lib/customer-nurture';
+import { preferenceUrl } from '@/lib/crm-marketing';
+import { prepareSupportAnswers } from '@/lib/support-email-automation';
+export const dynamic='force-dynamic';
+export const maxDuration=300;
+export async function GET(req:Request){
+ if(!process.env.CRON_SECRET||req.headers.get('authorization')!==`Bearer ${process.env.CRON_SECRET}`)return NextResponse.json({error:'Unauthorized'},{status:401});
+ if(!isEmailConfigured())return NextResponse.json({accepted:0,queued:await prisma.outboundEmail.count({where:{status:'queued'}}),provider:'not_configured'});
+ await prisma.outboundEmail.updateMany({where:{status:'processing',updatedAt:{lt:new Date(Date.now()-10*60000)}},data:{status:'unknown',lastError:'Worker interrupted during send; reconcile provider before resending.'}});
+ const support=await prepareSupportAnswers();
+ const daily=await prisma.outboundEmail.count({where:{sentAt:{gte:new Date(Date.now()-86400000)},status:{in:['accepted','sent','delivered','deferred']}}});
+ const messages=await prisma.outboundEmail.findMany({where:{status:'queued',nextAttemptAt:{lte:new Date()},attempts:{lt:8}},orderBy:{createdAt:'asc'},take:Math.min(20,Math.max(0,250-daily))});
+ let accepted=0;
+ for(const message of messages){
+  const headers:Record<string,string>={'X-Mailin-custom':`outbound-email:${message.id}`,'Auto-Submitted':'auto-replied','X-Auto-Response-Suppress':'All'};
+  const thread=await prisma.crmActivity.findUnique({where:{sourceKey:'inbound-email-reply:'+message.id},select:{body:true}});if(thread&&/^<[^\r\n<>]{1,900}>$/.test(thread.body)){headers['In-Reply-To']=thread.body;headers.References=thread.body;}
+  if(message.type.startsWith('marketing_')&&!message.type.startsWith('marketing_service_')){const check=await nurtureEligibility(message.recipient,message.userId,message.type==='marketing_nurture_feedback');if(!check.ok||(message.type==='marketing_nurture_reactivation'&&(!check.user||!reactivationEligible(check.user)))){await prisma.outboundEmail.updateMany({where:{id:message.id,status:'queued'},data:{status:'cancelled',lastError:check.reason||'Paid access renewed; reactivation held'}});continue;}if(check.lead){headers['List-Unsubscribe']=`<${preferenceUrl(check.lead.id,message.recipient)}>`;headers['List-Unsubscribe-Post']='List-Unsubscribe=One-Click';}}
+  const lead=await prisma.crmLead.findFirst({where:{email:{equals:message.recipient,mode:'insensitive'},emailSuppressedAt:{not:null}},select:{id:true}});
+  if(lead){await prisma.outboundEmail.updateMany({where:{id:message.id,status:'queued'},data:{status:'held',lastError:'Address suppressed by provider; investigate before sending.'}});continue;}
+  const claim=await prisma.outboundEmail.updateMany({where:{id:message.id,status:'queued'},data:{status:'processing',attempts:{increment:1}}});if(!claim.count)continue;
+  const result=await sendEmail({to:message.recipient,subject:message.subject,html:message.html,channel:emailChannel(message.type),headers});
+  const attempts=message.attempts+1;
+  await prisma.outboundEmail.updateMany({where:{id:message.id,status:'processing'},data:result.accepted?{status:'accepted',sentAt:new Date(),attempts,lastError:null,provider:result.provider,providerMessageId:result.messageId||null}:{status:result.uncertain?'unknown':attempts>=8?'failed':'queued',attempts,nextAttemptAt:new Date(Date.now()+Math.min(24,2**attempts)*3600000),lastError:result.error||'Provider request failed'}});
+  if(result.accepted)accepted++;
+ }
+ const campaigns=daily+accepted<240?await processCrmCampaigns():{processed:0,blocked:true};
+ return NextResponse.json({accepted,attempted:messages.length,campaigns,support});
 }

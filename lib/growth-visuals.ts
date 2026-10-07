@@ -5,6 +5,6 @@ export const growthVisuals: Record<string, {title:string; summary:string; kind:s
 'whatsapp-round-robin-routing':{title:'How round-robin works',summary:'See how destinations take turns.',kind:'rotation',label:'ROUTING GUIDE'},
 'router-vs-shared-inbox':{title:'Router or shared inbox?',summary:'Choose the workflow your team needs.',kind:'inbox',label:'WORKFLOW GUIDE'},
 'whatsapp-campaign-tracking':{title:'Track the whole journey',summary:'From campaign visit to confirmed outcome.',kind:'tracking',label:'MEASUREMENT'},
-'linkly':{title:'Wazap vs Linkly',summary:'Compare routing and link management.',kind:'compare',label:'COMPARISON'},
-'wasepje':{title:'Wazap vs Wasepje',summary:'Compare WhatsApp routing workflows.',kind:'compare',label:'COMPARISON'},
+'linkly':{title:'Wazap vs Linkly',summary:'Compare routing and link management.',kind:'compare-linkly',label:'COMPARISON'},
+'wasepje':{title:'Wazap vs Wasepje',summary:'Compare WhatsApp routing workflows.',kind:'compare-wasepje',label:'COMPARISON'},
 };

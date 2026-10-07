@@ -1,11 +1,13 @@
+import { brandEmail, emailIdentity, emailReplyTo } from "./email-brand";
 import {prisma} from './prisma';
 import {marketingReadiness,preferenceUrl,renderCampaign} from './crm-marketing';
 import type {CrmCampaignRecipient,CrmCampaign} from '@prisma/client';
 export type CampaignSend=(row:CrmCampaignRecipient,campaign:CrmCampaign)=>Promise<{status:'sent'|'retry'|'failed'|'unknown';messageId?:string;error?:string}>;
 export async function sendCampaignEmail(row:CrmCampaignRecipient,campaign:CrmCampaign){
- const link=preferenceUrl(row.leadId,row.email);const raw=process.env.EMAIL_FROM||'Wazap <hello@wazap.lt>';const match=raw.match(/^\s*(.*?)\s*<([^>]+)>\s*$/);const senderId=Number(process.env.BREVO_SENDER_ID);const sender=senderId>0?{id:senderId}:match?{name:match[1],email:match[2]}:{name:'Wazap',email:raw};
+ const link=preferenceUrl(row.leadId,row.email);const identity=emailIdentity('marketing');const sender={name:identity.name,email:identity.email};
+ if(process.env.EMAIL_AUTOMATION_READY!=="true")return {status:'failed' as const,error:'Email activation is pending.'};
  try{
- const response=await fetch('https://api.brevo.com/v3/smtp/email',{method:'POST',headers:{'api-key':process.env.BREVO_API_KEY!,'Content-Type':'application/json'},body:JSON.stringify({sender,to:[{email:row.email}],subject:campaign.subject,htmlContent:renderCampaign(campaign,link),headers:{'List-Unsubscribe':`<${link}>`,'List-Unsubscribe-Post':'List-Unsubscribe=One-Click','X-Mailin-custom':`crm-recipient:${row.id}`},tags:['wazap-crm',campaign.id]}),signal:AbortSignal.timeout(10000)});
+ const response=await fetch('https://api.brevo.com/v3/smtp/email',{method:'POST',headers:{'api-key':process.env.BREVO_API_KEY!,'Content-Type':'application/json'},body:JSON.stringify({sender,to:[{email:row.email}],subject:campaign.subject,htmlContent:brandEmail(renderCampaign(campaign,link),"marketing"),replyTo:emailReplyTo("marketing"),headers:{'List-Unsubscribe':`<${link}>`,'List-Unsubscribe-Post':'List-Unsubscribe=One-Click','X-Mailin-custom':`crm-recipient:${row.id}`},tags:['wazap-crm',campaign.id]}),signal:AbortSignal.timeout(10000)});
  const body=await response.json().catch(()=>({}));if(response.ok&&body.messageId)return {status:'sent' as const,messageId:body.messageId};if(response.status===429)return {status:'retry' as const,error:'Provider rate limit. Retry scheduled.'};return {status:response.status>=500?'unknown' as const:'failed' as const,error:`Provider returned HTTP ${response.status}.`};
  }catch{return {status:'unknown' as const,error:'Provider outcome is uncertain. Reconcile provider logs before any resend.'};}
 }

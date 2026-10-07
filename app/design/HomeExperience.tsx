@@ -38,11 +38,9 @@ function RoutingDemo() {
 }
 export default function HomeExperience() {
   const [industry, setIndustry] = useState(0);
-  const [paused, setPaused] = useState(false);
   const root = useRef<HTMLElement>(null);
-  const {enabled, reduced} = useMotion(root, paused);
+  const {enabled} = useMotion(root, false);
   return <main ref={root} className="wz-home" data-motion={enabled ? "active" : "paused"}>
-    <button className="wz-motion-toggle" aria-pressed={paused} onClick={()=>setPaused(p=>!p)}>{reduced ? "Reduced motion" : paused ? "Resume motion" : "Pause motion"}<span>{enabled ? "Ⅱ" : "▷"}</span></button>
     <section className="wz-hero">
       <div className="wz-hero-grid wz-container">
         <div className="wz-hero-copy"><div className="wz-eyebrow"><i /> ONE WHATSAPP LINK. YOUR WHOLE TEAM.</div><h1><span className="wz-title-line">One link.</span><span className="wz-title-line wz-title-green">Every lead.</span><span className="wz-title-line">The right person.</span></h1><p>Turn campaign clicks into team conversations. Share one WhatsApp link, distribute leads fairly, and see where every handoff goes.</p><div className="wz-actions"><Cta /><a className="wz-secondary" href="#demo">Try the live demo <ArrowRight size={17} /></a></div><div className="wz-hero-assurances"><span><Check size={14} /> No API setup</span><span><Check size={14} /> No QR scan</span><span><Check size={14} /> 25 routed leads free</span></div></div>

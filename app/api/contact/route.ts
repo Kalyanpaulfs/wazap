@@ -1,3 +1,4 @@
+import { acknowledgement, customerLanguage } from "@/lib/customer-email";
 import {captureCrmLead} from "@/lib/crm";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
@@ -35,7 +36,15 @@ export async function POST(req: Request) {
 
   const cleanMessage = { name, email, subject, message };
 
-  const created = await prisma.$transaction(async tx=>{const contact=await tx.contactMessage.create({data:cleanMessage});const lead=await captureCrmLead(tx,{name,email,source:"contact_form"});await tx.crmActivity.create({data:{leadId:lead.id,kind:"enquiry",body:`${subject}: ${message}`,sourceKey:`contact:${contact.id}`}});return contact;});
+  const language = await customerLanguage(email);
+  const created = await prisma.$transaction(async tx=>{
+    const contact=await tx.contactMessage.create({data:cleanMessage});
+    const lead=await captureCrmLead(tx,{name,email,source:"contact_form"});
+    await tx.crmActivity.create({data:{leadId:lead.id,kind:"enquiry",body:`${subject}: ${message}`,sourceKey:`contact:${contact.id}`}});
+    const ack=acknowledgement(language,subject==="billing"?"billing":"support",contact.id);
+    await tx.outboundEmail.create({data:{recipient:email,type:subject==="billing"?"billing_support_ack":"support_ack",...ack}});
+    return contact;
+  });
   await notifySupportMessage(cleanMessage);
 
   return NextResponse.json({ ok: true, requestId: created.id }, { status: 201 });

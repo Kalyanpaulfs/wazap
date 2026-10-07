@@ -4,6 +4,8 @@ Private source repository for https://wazap.lt.
 
 Initial source snapshot from the maintained `wazap-production` workspace on 7 October 2026. Historical business-workspace commits, credentials, database contents, backups, installed dependencies and build outputs are excluded. This import is not a production deployment.
 
+Latest source refresh: 8 October 2026. See [developer update](docs/developer-update-20261008.md) for the changes and validation boundaries.
+
 ## Local development
 
 Use Node.js 22 LTS or a version compatible with the pinned Next.js release, npm and an isolated PostgreSQL database.

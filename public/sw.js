@@ -1,38 +1,9 @@
-const CACHE = "wazap-v10-20260709-30-day-expiry";
-const OFFLINE = ["/", "/qr", "/icon.svg", "/manifest.json"];
-
-self.addEventListener("install", e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(OFFLINE)));
-  self.skipWaiting();
-});
-
-self.addEventListener("activate", e => {
-  e.waitUntil(caches.keys().then(keys =>
-    Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
-  ));
-  self.clients.claim();
-});
-
-self.addEventListener("fetch", e => {
-  if (e.request.method !== "GET") return;
-  const url = new URL(e.request.url);
-  if (
-    url.pathname.startsWith("/admin") ||
-    url.pathname.startsWith("/dashboard") ||
-    url.pathname.startsWith("/api") ||
-    url.pathname.startsWith("/login") ||
-    url.pathname.startsWith("/signup")
-  ) {
-    e.respondWith(fetch(e.request));
-    return;
-  }
-  e.respondWith(
-    fetch(e.request)
-      .then(res => {
-        const clone = res.clone();
-        caches.open(CACHE).then(c => c.put(e.request, clone));
-        return res;
-      })
-      .catch(() => caches.match(e.request).then(r => r || caches.match("/")))
-  );
+const CACHE = 'wazap-v11-20261008-public-offline';
+const OFFLINE = ['/', '/qr', '/icon.svg', '/manifest.json'];
+self.addEventListener('install', event => {event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(OFFLINE)));self.skipWaiting();});
+self.addEventListener('activate', event => {event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key.startsWith('wazap-')&&key!==CACHE).map(key=>caches.delete(key)))));self.clients.claim();});
+self.addEventListener('fetch', event => {
+ const url=new URL(event.request.url);
+ if(event.request.method!=='GET'||url.origin!==self.location.origin||!OFFLINE.includes(url.pathname))return;
+ event.respondWith(fetch(event.request).then(response=>{if(response.ok){const copy=response.clone();caches.open(CACHE).then(cache=>cache.put(event.request,copy));}return response;}).catch(async()=>{const saved=await caches.match(event.request);if(saved)return saved;if(event.request.mode==='navigate')return (await caches.match('/'))||Response.error();return Response.error();}));
 });

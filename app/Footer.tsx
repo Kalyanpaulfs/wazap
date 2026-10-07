@@ -1,13 +1,12 @@
+import BrandLogo from "./components/BrandLogo";
 import Link from "next/link";
-import { MessageCircle } from "lucide-react";
 
 export default function Footer() {
   return (
     <footer className="border-t border-slate-800 px-4 py-10 mt-auto">
       <div className="mx-auto max-w-4xl flex flex-col sm:flex-row items-center justify-between gap-4">
         <Link href="/" className="flex items-center gap-2">
-          <MessageCircle className="h-5 w-5 text-[#25D366]" />
-          <span className="font-bold text-white">Wazap</span>
+          <BrandLogo />
         </Link>
         <div className="flex gap-4 text-xs text-slate-500 flex-wrap justify-center">
           <Link href="/pricing" className="hover:text-white transition-colors">Pricing</Link>

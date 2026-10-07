@@ -1,9 +1,10 @@
 "use client";
+import BrandLogo from "./components/BrandLogo";
 
 import { LanguageSelector } from "./localization/SiteLocale";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
-import { MessageCircle, Menu } from "lucide-react";
+import { Menu } from "lucide-react";
 
 const navigation = [
   { label: "Live demo", href: "/#demo" },
@@ -20,8 +21,7 @@ export default function Navbar() {
     <nav aria-label="Main navigation" className="sticky top-0 z-50 border-b border-green-900/20 bg-[#0a0f0a]/92 backdrop-blur-md">
       <div className="mx-auto max-w-6xl px-4 h-14 flex items-center justify-between">
         <Link href="/" aria-label="Wazap home" className="flex items-center gap-2">
-          <MessageCircle className="h-6 w-6 text-[#25D366]" />
-          <span className="text-lg font-bold gradient-text">Wazap</span>
+          <BrandLogo />
         </Link>
         <div className="flex items-center gap-3 sm:gap-6">
         <div className="hidden sm:flex items-center gap-6 text-sm">
