@@ -1,37 +1,49 @@
 import BrandLogo from "./components/BrandLogo";
 import Link from "next/link";
 
+const groups = [
+  { title: "Product", links: [["/tools/rotator", "Lead router"], ["/pricing", "Pricing"], ["/tools", "Free tools"]] },
+  { title: "Help & company", links: [["/resources", "Guides & comparisons"], ["/faq", "FAQ"], ["/contact", "Contact"], ["/about", "About Wazap"], ["/languages", "Languages"]] },
+];
+
+const policies = [["/refund", "Refunds"], ["/cookie", "Cookies"], ["/acceptable-use", "Acceptable use"], ["/api-policy", "API policy"], ["/partner-terms", "Partner terms"]];
+
 export default function Footer() {
   return (
-    <footer className="border-t border-slate-800 px-4 py-10 mt-auto">
-      <div className="mx-auto max-w-4xl flex flex-col sm:flex-row items-center justify-between gap-4">
-        <Link href="/" className="flex items-center gap-2">
-          <BrandLogo />
-        </Link>
-        <div className="flex gap-4 text-xs text-slate-500 flex-wrap justify-center">
-          <Link href="/pricing" className="hover:text-white transition-colors">Pricing</Link>
-          <Link href="/tools/rotator" className="hover:text-white transition-colors">WhatsApp Lead Router</Link>
-          <Link href="/resources" className="hover:text-white transition-colors">Guides &amp; Comparisons</Link>
-          <Link href="/solutions/real-estate" className="hover:text-white transition-colors">Real Estate Teams</Link>
-          <Link href="/solutions/agencies" className="hover:text-white transition-colors">Marketing Agencies</Link>
-          <Link href="/tools" className="hover:text-white transition-colors">Free Tools</Link>
-          <Link href="/api-policy" className="hover:text-white transition-colors">API Policy</Link>
-          <Link href="/partner-terms" className="hover:text-white transition-colors">Partner Terms</Link>
-          <Link href="/tools/ad-builder" className="hover:text-white transition-colors">Ad Tracking</Link>
-          <Link href="/tools/follow-up" className="hover:text-white transition-colors">Lead Follow-Up</Link>
-          <Link href="/about" className="hover:text-white transition-colors">About</Link>
-          <Link href="/faq" className="hover:text-white transition-colors">FAQ</Link>
-          <Link href="/newsletter" className="hover:text-white transition-colors">Newsletter</Link>
-          <Link href="/contact" className="hover:text-white transition-colors">Contact</Link>
-          <Link href="/privacy" className="hover:text-white transition-colors">Privacy</Link>
-          <Link href="/terms" className="hover:text-white transition-colors">Terms</Link>
-          <Link href="/refund" className="hover:text-white transition-colors">Refunds</Link>
-          <Link href="/cookie" className="hover:text-white transition-colors">Cookies</Link>
-          <Link href="/acceptable-use" className="hover:text-white transition-colors">Acceptable Use</Link>
+    <footer className="mt-auto border-t border-white/10 px-6 pt-12 pb-7 sm:px-8">
+      <div className="mx-auto max-w-6xl">
+        <div className="grid grid-cols-2 gap-x-8 gap-y-10 pb-10 md:grid-cols-[minmax(0,1.5fr)_1fr_1fr] md:gap-16">
+          <div className="col-span-2 md:col-span-1">
+            <Link href="/" aria-label="Wazap home" className="inline-flex"><BrandLogo /></Link>
+            <p className="mt-4 max-w-xs text-sm leading-6 text-slate-400">One link. The right conversation.</p>
+          </div>
+          {groups.map(group => (
+            <nav key={group.title} aria-label={`Footer ${group.title}`}>
+              <h2 className="mb-4 text-xs font-semibold uppercase tracking-widest text-slate-300">{group.title}</h2>
+              <ul className="space-y-3">
+                {group.links.map(([href, label]) => (
+                  <li key={href}><Link href={href} className="inline-block py-1 text-sm text-slate-400 transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-emerald-400">{label}</Link></li>
+                ))}
+              </ul>
+            </nav>
+          ))}
         </div>
-        <p className="text-xs text-slate-600 text-center sm:text-right">
-          © 2026 Wazap.lt · Not affiliated with WhatsApp or Meta
-        </p>
+        <div className="flex flex-col gap-5 border-t border-white/10 pt-6 md:flex-row md:items-start md:justify-between">
+          <div className="text-xs leading-5 text-slate-500">
+            <p>© {new Date().getFullYear()} Wazap.lt</p>
+            <p>Independent service. Not affiliated with WhatsApp or Meta.</p>
+          </div>
+          <nav aria-label="Footer legal" className="flex flex-wrap items-start gap-x-6 gap-y-3 text-xs text-slate-400">
+            <Link href="/privacy" className="py-1 hover:text-white">Privacy</Link>
+            <Link href="/terms" className="py-1 hover:text-white">Terms</Link>
+            <details className="max-w-64">
+              <summary className="cursor-pointer py-1 hover:text-white">More policies</summary>
+              <ul className="mt-3 space-y-3 pb-2">
+                {policies.map(([href, label]) => <li key={href}><Link href={href} className="inline-block py-1 hover:text-white">{label}</Link></li>)}
+              </ul>
+            </details>
+          </nav>
+        </div>
       </div>
     </footer>
   );
