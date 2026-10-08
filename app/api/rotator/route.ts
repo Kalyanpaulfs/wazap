@@ -75,8 +75,11 @@ export async function POST(req: Request) {
     }
   }
 
-  const { name, numbers, fallbackNumber } = await req.json();
-  if (!name || !numbers?.length) return NextResponse.json({ error: "Missing fields" }, { status: 400 });
+  const body = await req.json().catch(() => null);
+  if (!body || typeof body !== "object" || typeof body.name !== "string" || !body.name.trim() || !Array.isArray(body.numbers) || !body.numbers.length || body.numbers.some((number: unknown) => typeof number !== "string")) {
+    return NextResponse.json({ error: "Add a router name and a list of WhatsApp numbers." }, { status: 400 });
+  }
+  const { name, numbers, fallbackNumber } = body;
   const cleanNumbers = (numbers as unknown[]).map(number => String(number).replace(/\D/g, "")).filter(number => number.length >= 8).slice(0, 100);
   const cleanFallback = String(fallbackNumber ?? "").replace(/\D/g, "");
   if (!cleanNumbers.length) return NextResponse.json({ error: "Add at least one valid WhatsApp number." }, { status: 400 });
