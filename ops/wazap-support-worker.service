@@ -1,0 +1,23 @@
+[Unit]
+Description=Wazap private Codex OAuth support worker
+After=docker.service network-online.target
+Requires=docker.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/node /opt/wazap-support-worker/codex-support-worker.mjs
+WorkingDirectory=/opt/wazap-support-worker
+EnvironmentFile=/opt/wazap-support-worker/runtime.env
+RuntimeDirectory=wazap-support-worker
+RuntimeDirectoryMode=0700
+UMask=0077
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/wazap-support-worker /run/wazap-support-worker
+
+[Install]
+WantedBy=multi-user.target
