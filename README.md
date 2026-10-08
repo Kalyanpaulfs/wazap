@@ -6,6 +6,8 @@ Initial source snapshot from the maintained `wazap-production` workspace on 7 Oc
 
 Latest source refresh: 8 October 2026. See [developer update](docs/developer-update-20261008.md) for the changes and validation boundaries.
 
+Full live-source reconciliation: see [complete codebase handoff](docs/full-codebase-handoff-20261008.md), including the separately deployed support worker and additional security SQL bootstrap requirements. Source inclusion is not proof of a finished or secure SaaS product.
+
 ## Local development
 
 Use Node.js 22 LTS or a version compatible with the pinned Next.js release, npm and an isolated PostgreSQL database.

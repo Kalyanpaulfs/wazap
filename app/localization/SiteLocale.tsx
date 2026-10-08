@@ -3,7 +3,7 @@
 import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { Globe, Check, Search } from "lucide-react";
 import "./language-control.css";
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { SITE_LANGUAGES, NATIVE_LANGUAGE_NAMES, normalizeSiteLanguage, siteDirection, type SiteLanguage } from '@/lib/site-languages';
 import { SITE_LOCALE_VERSION } from '@/lib/site-locale-version';
 
@@ -22,6 +22,9 @@ export default function SiteLocaleProvider({children}:{children:React.ReactNode}
  const [automatic,setAutomatic]=useState(true);
  const [dictionary,setDictionary]=useState<Record<string,string>>({});
  const path=usePathname();
+ const router=useRouter();
+ const routeLanguage = /^\/languages\/([a-z]+)$/.exec(path)?.[1];
+ const fixedLanguage = normalizeSiteLanguage(routeLanguage);
  const request=useRef(0);
  const originals=useRef(new WeakMap<Text,{source:string;output:string}>());
  const attributes=useRef(new WeakMap<Element,Map<string,{source:string;output:string}>>());
@@ -30,6 +33,7 @@ export default function SiteLocaleProvider({children}:{children:React.ReactNode}
   try{if(value==='auto')localStorage.removeItem('wazap_site_language');else localStorage.setItem('wazap_site_language',JSON.stringify({language:value,expiresAt:Date.now()+31536000000}));}catch{/* Cookie preference still works when browser storage is unavailable. */}
   document.cookie=`wazap_site_language=${value==='auto'?'':value}; Path=/; Max-Age=${value==='auto'?0:31536000}; SameSite=Lax${location.protocol==='https:'?'; Secure':''}`;
   if(value!=='auto')setLanguage(value);
+  if(fixedLanguage)router.push(value==='auto'?'/':`/languages/${value}`);
   const id=++request.current;
   fetch(`/api/site-locale${value==='auto'?'':`?language=${value}`}`,{cache:'no-store'}).then(r=>r.ok?r.json():null).then(data=>{if(id!==request.current||!data)return;const chosen=normalizeSiteLanguage(data.language);if(chosen)setLanguage(chosen);setCountry(data.country||null);}).catch(()=>{});
  }
@@ -49,7 +53,7 @@ export default function SiteLocaleProvider({children}:{children:React.ReactNode}
  },[language]);
  useEffect(()=>{
   const useEnglish=!publicRoutes.has(path);
-  const locale=useEnglish?'en':language;
+  const locale=fixedLanguage||(useEnglish?'en':language);
   document.documentElement.lang=locale;
   document.documentElement.dir=siteDirection(locale);
   const translate=(value:string)=>{if(useEnglish)return value;const key=normalize(value);if(dictionary[key])return dictionary[key];if(key.includes('. ')){const pieces=key.split('. ');const values=pieces.map(part=>dictionary[part]||part);if(values.some((part,index)=>part!==pieces[index]))return values.join('. ');}return value;};
@@ -86,8 +90,8 @@ export default function SiteLocaleProvider({children}:{children:React.ReactNode}
   });
   observer.observe(document.body,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:['placeholder','aria-label','title','alt']});
   return()=>observer.disconnect();
- },[language,dictionary,path]);
- return <Context.Provider value={{language,country,choose,automatic,t:text=>dictionary[normalize(text)]||text}}>{children}{language!=='en'&&!accountRoute.test(path)&&<p className="wazap-translation-note">Translations are provided for convenience. Legal policies and private account pages are available in English.</p>}</Context.Provider>;
+ },[language,dictionary,path,fixedLanguage]);
+ return <Context.Provider value={{language:fixedLanguage||language,country,choose,automatic:fixedLanguage?false:automatic,t:text=>dictionary[normalize(text)]||text}}>{children}{language!=='en'&&!accountRoute.test(path)&&<p className="wazap-translation-note">Translations are provided for convenience. Legal policies and private account pages are available in English.</p>}</Context.Provider>;
 }
 
 export function LanguageSelector(){

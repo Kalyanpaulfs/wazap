@@ -9,10 +9,10 @@ export async function accountClosureBlockers(userId: string) {
     prisma.payment.findFirst({
       where: {
         userId,
-        status: "active",
+        status: { in: ["active", "subscription_active"] },
         txId: { not: null },
         OR: [
-          { method: "dodo" },
+          { method: "dodo", status: "subscription_active" },
           { method: "paypal", txId: { startsWith: "I-" } },
         ],
       },
@@ -56,6 +56,7 @@ export async function permanentlyDeleteAccount(userId: string) {
   const retainedEmail = `deleted+${digest}@wazap.invalid`;
   await prisma.$transaction(async (tx) => {
     await tx.payment.updateMany({ where: { userId: user.id }, data: { email: retainedEmail } });
+    await tx.$executeRaw`UPDATE "SecurityPaymentReconciliation" SET "original" = jsonb_set(jsonb_set("original", '{email}', to_jsonb(${retainedEmail}::text)), '{userId}', 'null'::jsonb) WHERE "original" ->> 'userId' = ${user.id}`;
     await tx.outboundEmail.deleteMany({
       where: { OR: [{ userId: user.id }, { recipient: { equals: user.email, mode: "insensitive" } }] },
     });
@@ -196,7 +197,7 @@ export async function buildAccountExport(userId: string) {
     contactMessages,
     supportConversations,
   ] = await Promise.all([
-    prisma.payment.findMany({ where: { userId }, select: { id: true, plan: true, amount: true, method: true, txId: true, status: true, activatedAt: true, createdAt: true }, orderBy: { createdAt: "asc" } }),
+    prisma.payment.findMany({ where: { userId }, select: { id: true, plan: true, amount: true, currency: true, method: true, txId: true, status: true, activatedAt: true, createdAt: true }, orderBy: { createdAt: "asc" } }),
     prisma.dailyUsage.findMany({ where: { userId }, orderBy: { date: "asc" } }),
     prisma.adLink.findMany({ where: { userId }, include: { clickEvents: true }, orderBy: { createdAt: "asc" } }),
     prisma.rotatorLink.findMany({ where: { userId }, orderBy: { createdAt: "asc" } }),

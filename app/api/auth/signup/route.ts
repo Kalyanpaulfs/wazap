@@ -1,7 +1,7 @@
 import {captureCrmLead} from "@/lib/crm";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { rateLimit } from "@/lib/rate-limit";
+import { sharedRateLimit } from "@/lib/shared-rate-limit";
 import { recordFunnelEvent } from "@/lib/funnel";
 import bcrypt from "bcryptjs";
 import { renderWelcomeEmail } from "@/lib/email";
@@ -32,7 +32,7 @@ function cleanAttribution(value: unknown) {
 export async function POST(req: Request) {
   try {
     const ip = requestIp(req.headers);
-    if (!rateLimit(`signup:${ip}`, 5, 60_000)) {
+    if (!await sharedRateLimit(`signup:${ip}`, 5, 60_000)) {
       return NextResponse.json({ error: "Too many requests. Please wait a minute." }, { status: 429 });
     }
     const { name, email, password, attribution: rawAttribution } = await req.json();

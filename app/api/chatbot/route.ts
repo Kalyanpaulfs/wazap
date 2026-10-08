@@ -3,14 +3,10 @@ import { prisma } from "@/lib/prisma";
 import { rateLimit } from "@/lib/rate-limit";
 import { capturedChat,sameSiteRequest } from "@/lib/crm";
 import { requestIp } from "@/lib/request-ip";
-import { notifySupportChat } from "@/lib/support-notify";
+import { notifySupportChat, queueSupportAlert } from "@/lib/support-notify";
 import { codexSupportAnswer } from "@/lib/codex-support-provider";
+import { rememberChatFallback, chatFallback } from "@/lib/chat-fallback";
 export const runtime = "nodejs";
-
-function unavailableReply(message:string) {
-  if(/[\u0600-\u06ff]/.test(message))return "مساعد Wazap الآلي غير متاح الآن. يمكنك طلب مساعدة بشرية هنا أو التواصل مع جوزيف عبر رابط Tawk.to أدناه. لا يمكنني تأكيد توفره الآن.";
-  return "Wazap's AI assistant is temporarily unavailable. You can request a human reply here or use the Tawk.to link below to contact Joseph. His availability is not confirmed.";
-}
 
 export async function POST(req: Request) {
   if(!sameSiteRequest(req))return NextResponse.json({error:"Invalid request origin."},{status:403});
@@ -23,7 +19,9 @@ export async function POST(req: Request) {
   const previousMessages=await prisma.supportChatMessage.findMany({where:{conversationId:profile.id},orderBy:{createdAt:"desc"},take:8,select:{sender:true,body:true}});
   const history=previousMessages.reverse().map(turn=>({role:turn.sender==="visitor"?"user":"assistant",content:turn.body}));
   const answer=await codexSupportAnswer(message.trim(),history);
-  const reply=answer?.reply||unavailableReply(message);
+  if(answer?.fallback)await rememberChatFallback(visitorId,answer.language,answer.fallback);
+  const fallback=answer?null:await chatFallback(visitorId);
+  const reply=answer?.reply||fallback!.reply;
   const supportRequest=answer?.handoff??true;
 
   const purchasePattern = /price|pricing|cost|pay|paid|buy|purchase|subscribe|subscription|upgrade|business|team|demo|quote|invoice/i;
@@ -41,17 +39,16 @@ export async function POST(req: Request) {
       create: { visitorId: cleanVisitorId, subject: "AI sales chat", status: "ai", intent, leadScore, aiSummary: message.trim().slice(0, 500), lastMessageAt: new Date() },
       update: { ...(supportRequest?{status:"open"}:{}), intent: existing?.intent === "purchase" ? "purchase" : intent, leadScore: Math.max(existing?.leadScore ?? 0, leadScore), aiSummary: message.trim().slice(0, 500), lastMessageAt: new Date() },
     });
-    await tx.supportChatMessage.createMany({ data: [
-      { conversationId: saved.id, sender: "visitor", body: message.trim().slice(0, 4000), readByVisitor: true },
-      { conversationId: saved.id, sender: "bot", body: reply, readByAdmin: false, readByVisitor: true },
-    ] });
+    const incoming = await tx.supportChatMessage.create({data:{conversationId:saved.id,sender:"visitor",body:message.trim().slice(0,4000),readByVisitor:true}});
+    await tx.supportChatMessage.create({data:{conversationId:saved.id,sender:"bot",body:reply,readByAdmin:false,readByVisitor:true}});
+    await queueSupportAlert({eventKey:'chat:'+incoming.id,name:saved.name,email:saved.email,subject:'Wazap live support: new customer message',message:incoming.body,link:`https://wazap.lt/admin/crm/support?chat=${encodeURIComponent(saved.id)}`},tx);
     if(profile.crmLeadId)await tx.crmLead.update({where:{id:profile.crmLeadId},data:{lastActivityAt:new Date()}});
-    return saved;
+    return {...saved,messageId:incoming.id};
     });
-    if ((supportRequest && existing?.status === "ai") || (intent === "purchase" && existing?.intent !== "purchase")) {
-      await notifySupportChat({ name: conversation.name||"Wazap enquiry", email: conversation.email, message: message.trim(), conversationId: conversation.id });
+    {
+      await notifySupportChat({ name: conversation.name||"Wazap enquiry", email: conversation.email, message: message.trim(), conversationId: conversation.id, messageId: conversation.messageId });
     }
   }
 
-  return NextResponse.json({ reply, supportRequest, conversationId:profile.id, intent, language:answer?.language||null, aiAvailable:Boolean(answer) });
+  return NextResponse.json({ reply, supportRequest, conversationId:profile.id, intent, language:answer?.language||fallback?.language||null, aiAvailable:Boolean(answer) });
 }

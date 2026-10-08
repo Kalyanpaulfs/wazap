@@ -1,5 +1,6 @@
 import { MetadataRoute } from "next";
 import { growthArticles, growthPath } from "@/lib/growth-content";
+import { SITE_LANGUAGES, siteHreflang } from "@/lib/site-languages";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -12,7 +13,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     where: { status: "published", pricingModel: "free" },
     select: { slug: true, updatedAt: true },
   });
+  const languageAlternates = Object.fromEntries(SITE_LANGUAGES.map(language => [siteHreflang(language), `${BASE}/languages/${language}`]));
   return [
+    { url: `${BASE}/languages`, lastModified: "2026-10-08", changeFrequency: "monthly", priority: 0.6 },
+    ...SITE_LANGUAGES.map(language => ({ url: `${BASE}/languages/${language}`, lastModified: "2026-10-08", changeFrequency: "monthly" as const, priority: 0.7, alternates: { languages: { ...languageAlternates, "x-default": `${BASE}/languages/en` } } })),
     { url: `${BASE}/resources`, lastModified: "2026-10-07", changeFrequency: "monthly", priority: 0.8 },
     ...growthArticles.map(article => ({ url: `${BASE}${growthPath(article)}`, lastModified: "2026-10-07", changeFrequency: "monthly" as const, priority: 0.75 })),
     { url: BASE, lastModified: "2026-10-07", changeFrequency: "weekly", priority: 1.0 },

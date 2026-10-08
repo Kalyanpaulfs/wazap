@@ -6,3 +6,6 @@ export const SITE_COUNTRY_LANGUAGES:Record<string,SiteLanguage>={US:'en',GB:'en'
 export function normalizeSiteLanguage(raw:unknown):SiteLanguage|null{if(typeof raw!=='string')return null;const base=raw.trim().toLowerCase().split(/[-_,;]/)[0];const alias=base==='tl'?'fil':base;return SITE_LANGUAGES.includes(alias as SiteLanguage)?alias as SiteLanguage:null;}
 export function siteLanguageForCountry(country:string|null,browserLanguage?:string):SiteLanguage{return (country&&SITE_COUNTRY_LANGUAGES[country])||normalizeSiteLanguage(browserLanguage)||'en';}
 export function siteDirection(language:SiteLanguage){return ['ar','fa','ur'].includes(language)?'rtl':'ltr';}
+
+// Google hreflang accepts ISO 639-1; keep the Filipino UI/catalog code stable.
+export function siteHreflang(language: SiteLanguage): string { return language === "fil" ? "tl" : language; }

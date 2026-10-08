@@ -20,9 +20,9 @@ function planDaysLeft(planExpiresAt: string | null) {
   return Math.max(0, Math.ceil((new Date(planExpiresAt).getTime() - Date.now()) / 86_400_000));
 }
 
-interface Payment { id: string; plan: string; amount: number; method: string; txId?: string | null; status: string; createdAt: string; }
+interface Payment { id: string; plan: string; amount: number; currency: string; method: string; txId?: string | null; status: string; createdAt: string; }
 function isReceivedPayment(p: Payment) {
-  return p.status === "active" && !(p.method === "paypal" && p.txId?.startsWith("I-"));
+  return p.currency === "USD" && p.status === "active" && !(p.method === "paypal" && p.txId?.startsWith("I-"));
 }
 interface User {
   id: string; email: string; name: string | null; plan: string; planExpiresAt: string | null;
@@ -631,7 +631,7 @@ export default function AdminDashboard({ data }: {
                                     {p.txId && <span className="ml-2 font-mono text-slate-600">{p.txId.slice(0, 16)}...</span>}
                                   </div>
                                   <div className="flex shrink-0 items-center gap-3">
-                                    <span className="font-bold text-[#25D366]">{p.method === "paypal" && p.txId?.startsWith("I-") ? "Subscription record · not revenue" : `$${p.amount.toFixed(2)}`}</span>
+                                    <span className="font-bold text-[#25D366]">{(p.status.startsWith("subscription_") || (p.method === "paypal" && p.txId?.startsWith("I-"))) ? "Subscription record · not revenue" : `${p.currency} ${p.amount.toFixed(2)}`}</span>
                                     <span className={`rounded-full px-2 py-0.5 ${p.status === "active" ? "bg-[#25D366]/20 text-[#25D366]" : "bg-amber-500/20 text-amber-400"}`}>
                                       {p.status}
                                     </span>

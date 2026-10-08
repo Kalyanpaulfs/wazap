@@ -4,7 +4,7 @@ export const PLAN_PRICES: Record<string, number> = {
   basic: 9,
   pro: 19,
   ultimate: 49,
-  business: 99,
+  business: 149,
 };
 
 export function planExpiry(plan: string) {

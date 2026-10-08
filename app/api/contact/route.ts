@@ -3,7 +3,7 @@ import {captureCrmLead} from "@/lib/crm";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { rateLimit } from "@/lib/rate-limit";
-import { notifySupportMessage } from "@/lib/support-notify";
+import { notifySupportMessage, queueSupportAlert } from "@/lib/support-notify";
 
 const SUBJECTS = new Set(["general", "billing", "account", "tool", "feature", "migration", "integration", "business", "other"]);
 function clean(value: unknown, max: number) {
@@ -43,9 +43,10 @@ export async function POST(req: Request) {
     await tx.crmActivity.create({data:{leadId:lead.id,kind:"enquiry",body:`${subject}: ${message}`,sourceKey:`contact:${contact.id}`}});
     const ack=acknowledgement(language,subject==="billing"?"billing":"support",contact.id);
     await tx.outboundEmail.create({data:{recipient:email,type:subject==="billing"?"billing_support_ack":"support_ack",...ack}});
+    await queueSupportAlert({ eventKey: 'request:' + contact.id, name, email, subject: 'New Wazap support request: ' + subject, message }, tx);
     return contact;
   });
-  await notifySupportMessage(cleanMessage);
+  await notifySupportMessage({...cleanMessage,requestId:created.id});
 
   return NextResponse.json({ ok: true, requestId: created.id }, { status: 201 });
 }

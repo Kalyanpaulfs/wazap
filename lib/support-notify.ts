@@ -1,3 +1,17 @@
+import { prisma } from './prisma';
+import { serviceEmail } from './customer-email';
+import type { Prisma } from '@prisma/client';
+import { createHash, randomUUID } from 'node:crypto';
+
+export async function queueSupportAlert(input: { eventKey: string; name?: string | null; email?: string | null; subject: string; message: string; link?: string }, db: Prisma.TransactionClient = prisma) {
+  const event = createHash('sha256').update(input.eventKey).digest('hex');
+  await db.outboundEmail.createMany({ skipDuplicates: true, data: ['support@wazap.lt', 'joseph@wazap.lt'].map(recipient => ({
+    id: `support_team_${event}_${recipient.split('@')[0]}`, recipient, type: 'support_live_team_alert',
+    subject: input.subject,
+    html: serviceEmail({ subject: input.subject, heading: input.subject, channel: 'support', body: `Name: ${input.name || 'Website visitor'}\nEmail: ${input.email || 'Not provided'}\n\n${input.message}\n\nOpen support: ${input.link || 'https://wazap.lt/admin/crm/support'}` }),
+  })) });
+}
+
 function getTelegramChatIds() {
   return (process.env.SUPPORT_TELEGRAM_CHAT_IDS || process.env.TELEGRAM_ALLOW_USER_IDS || "")
     .split(",")
@@ -14,7 +28,9 @@ export async function notifySupportMessage(input: {
   email: string;
   subject: string;
   message: string;
+  requestId?: string;
 }) {
+  await queueSupportAlert({ eventKey: 'request:' + (input.requestId || randomUUID()), name: input.name, email: input.email, subject: 'New Wazap support request: ' + input.subject, message: input.message });
   const token = process.env.SUPPORT_TELEGRAM_BOT_TOKEN || process.env.TELEGRAM_BOT_TOKEN;
   const chatIds = getTelegramChatIds();
   if (!token || chatIds.length === 0) return;
@@ -49,7 +65,10 @@ export async function notifySupportChat(input: {
   email?: string | null;
   message: string;
   conversationId: string;
+  messageId?: string;
 }) {
+  const inboxUrl = `https://wazap.lt/admin/crm/support?chat=${encodeURIComponent(input.conversationId)}`;
+  await queueSupportAlert({ eventKey: 'chat:' + (input.messageId || randomUUID()), name: input.name, email: input.email, subject: 'Wazap live support: new customer message', message: input.message, link: inboxUrl });
   const token = process.env.SUPPORT_TELEGRAM_BOT_TOKEN || process.env.TELEGRAM_BOT_TOKEN;
   const chatIds = getTelegramChatIds();
   if (!token || chatIds.length === 0) return;

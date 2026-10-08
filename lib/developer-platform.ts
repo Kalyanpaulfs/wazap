@@ -1,8 +1,7 @@
 import { createCipheriv, createDecipheriv, createHash, randomBytes, randomUUID } from "crypto";
-import { isIP } from "net";
-import { resolve4, resolve6 } from "dns/promises";
+import { webhookUrl, publicWebhookAddresses } from "./safe-webhook-request";
 import { prisma } from "@/lib/prisma";
-import { rateLimit } from "@/lib/rate-limit";
+import { sharedRateLimit } from "@/lib/shared-rate-limit";
 import type { Prisma } from "@prisma/client";
 
 export const API_SCOPES = ["conversations:read", "conversations:write", "messages:write", "leads:read", "leads:write", "tasks:read", "tasks:write", "automations:read", "automations:write", "agents:read", "agents:write", "channels:read", "channels:write", "whatsapp:read", "whatsapp:write", "analytics:read", "operations:read", "partners:read", "audit:read"] as const;
@@ -27,22 +26,9 @@ export function decryptSecret(value: string) {
 export function createApiCredential() { const prefix = randomBytes(5).toString("hex"); const key = `wz_live_${prefix}_${randomBytes(24).toString("base64url")}`; return { key, prefix: `wz_live_${prefix}` }; }
 export function createWebhookSecret() { return `whsec_${randomBytes(32).toString("base64url")}`; }
 
-function privateIp(ip: string) {
-  const normalized = ip.toLowerCase();
-  if (normalized === "::1" || normalized === "0:0:0:0:0:0:0:1" || normalized.startsWith("fc") || normalized.startsWith("fd") || normalized.startsWith("fe8") || normalized.startsWith("fe9") || normalized.startsWith("fea") || normalized.startsWith("feb")) return true;
-  if (!isIP(ip.includes("::ffff:") ? ip.split("::ffff:")[1] : ip)) return false;
-  const value = ip.includes("::ffff:") ? ip.split("::ffff:")[1] : ip;
-  const parts = value.split(".").map(Number); if (parts.length !== 4) return false;
-  return parts[0] === 10 || parts[0] === 127 || parts[0] === 0 || (parts[0] === 169 && parts[1] === 254) || (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) || (parts[0] === 192 && parts[1] === 168) || parts[0] >= 224;
-}
 export async function validateWebhookUrl(input: string, resolveDns = false) {
-  let url: URL; try { url = new URL(input); } catch { throw new Error("Enter a valid HTTPS webhook URL."); }
-  if (url.protocol !== "https:" || url.username || url.password || url.port && url.port !== "443") throw new Error("Webhook URLs must use HTTPS on the standard port without embedded credentials.");
-  if (url.hostname === "localhost" || url.hostname.endsWith(".local") || privateIp(url.hostname)) throw new Error("Private or local webhook destinations are not allowed.");
-  if (resolveDns) {
-    const addresses = [...await resolve4(url.hostname).catch(() => []), ...await resolve6(url.hostname).catch(() => [])];
-    if (!addresses.length || addresses.some(privateIp)) throw new Error("Webhook destination did not resolve to a public address.");
-  }
+  const url = webhookUrl(input);
+  if (resolveDns) await publicWebhookAddresses(url);
   return url;
 }
 
@@ -118,7 +104,7 @@ export async function authenticateApi(req: Request, requiredScope: string): Prom
   const key = await prisma.apiKey.findUnique({ where: { keyHash: hashSecret(token) } });
   if (!key || key.status !== "active" || key.expiresAt && key.expiresAt <= new Date()) return { error: { status: 401, code: "invalid_api_key", message: "API key is invalid, revoked, or expired." } };
   if (!key.scopes.includes(requiredScope)) return { error: { status: 403, code: "insufficient_scope", message: `This key requires ${requiredScope}.` } };
-  if (!rateLimit(`public-api:${key.id}`, 120, 60_000)) return { error: { status: 429, code: "rate_limited", message: "API rate limit exceeded." } };
+  if (!await sharedRateLimit(`public-api:${key.id}`, 120, 60_000)) return { error: { status: 429, code: "rate_limited", message: "API rate limit exceeded." } };
   await prisma.apiKey.update({ where: { id: key.id }, data: { lastUsedAt: new Date() } });
   return { context: { apiKeyId: key.id, workspaceId: key.workspaceId, createdByMemberId: key.createdByMemberId, scopes: key.scopes, requestId: randomUUID(), startedAt: Date.now() } };
 }

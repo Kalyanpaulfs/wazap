@@ -52,6 +52,9 @@ model User {
   workspaceInvitesAccepted WorkspaceInvitation[] @relation("WorkspaceAcceptor")
 
   @@index([accountDeletionScheduledFor])
+  securityMfa SecurityMfa?
+  securitySubscriptionStates SecuritySubscriptionState[]
+  securityBillingState SecurityUserBilling?
 }
 
 model PasswordResetToken {
@@ -1205,6 +1208,8 @@ model Payment {
   activatedAt DateTime?
   createdAt   DateTime  @default(now())
   user        User?     @relation(fields: [userId], references: [id])
+  securityCharge SecurityPaymentCharge?
+  currency String @default("USD")
 }
 
 model RotatorLink {
@@ -1214,6 +1219,7 @@ model RotatorLink {
   name           String
   numbers        String[]
   fallbackNumber String?
+  message        String?
   currentIdx     Int      @default(0)
   totalClicks    Int      @default(0)
   createdAt      DateTime @default(now())
@@ -1493,4 +1499,61 @@ model CrmCampaignRecipient {
   lead CrmLead @relation(fields: [leadId], references: [id], onDelete: Restrict)
   @@unique([campaignId, leadId])
   @@index([status, nextAttemptAt])
+}
+
+
+model SecurityRateLimit {
+  key String @id
+  count Int
+  resetAt DateTime @db.Timestamptz(6)
+  @@index([resetAt], map: "SecurityRateLimit_expiry")
+}
+model SecurityPaymentCharge {
+  provider String
+  chargeId String
+  paymentId String @unique
+  currency String
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+  @@id([provider, chargeId])
+}
+model SecurityMfa {
+  userId String @id
+  enabled Boolean @default(false)
+  secret String?
+  pending String?
+  pendingExpiresAt DateTime? @db.Timestamptz(6)
+  lastStep BigInt @default(-1)
+  recoveryHashes String[] @default([])
+  enabledAt DateTime? @db.Timestamptz(6)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+model SecurityBillingEvent {
+  provider String
+  eventId String
+  occurredAt DateTime @db.Timestamptz(6)
+  processedAt DateTime @default(now()) @db.Timestamptz(6)
+  @@id([provider, eventId])
+}
+model SecuritySubscriptionState {
+  provider String
+  subscriptionId String
+  userId String
+  occurredAt DateTime @db.Timestamptz(6)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@id([provider, subscriptionId])
+}
+model SecurityUserBilling {
+  userId String @id
+  provider String
+  subscriptionId String
+  occurredAt DateTime @db.Timestamptz(6)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+model SecurityPaymentReconciliation {
+  paymentId String @id
+  canonicalPaymentId String?
+  original Json
+  reason String
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
 }

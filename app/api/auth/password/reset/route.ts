@@ -2,7 +2,7 @@ import { createHash } from "crypto";
 import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { rateLimit } from "@/lib/rate-limit";
+import { sharedRateLimit } from "@/lib/shared-rate-limit";
 import { requestIp } from "@/lib/request-ip";
 
 function strongPassword(value: string) {
@@ -11,7 +11,7 @@ function strongPassword(value: string) {
 
 export async function POST(req: Request) {
   const ip = requestIp(req.headers);
-  if (!rateLimit(`password-reset:${ip}`, 10, 60 * 60 * 1000)) return NextResponse.json({ error: "Too many attempts. Please wait before trying again." }, { status: 429 });
+  if (!await sharedRateLimit(`password-reset:${ip}`, 10, 60 * 60 * 1000)) return NextResponse.json({ error: "Too many attempts. Please wait before trying again." }, { status: 429 });
   const body = await req.json().catch(() => ({}));
   const token = String(body.token || "").trim();
   const password = String(body.password || "");

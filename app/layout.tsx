@@ -22,7 +22,10 @@ const organizationJsonLd = {
   url: BASE,
   logo: `${BASE}/icon-512.png`,
   email: "hello@wazap.lt",
-  sameAs: [],
+  sameAs: [
+    "https://www.linkedin.com/company/wazaplt/",
+    "https://www.instagram.com/wazaplt/",
+  ],
 };
 
 export const viewport: Viewport = {

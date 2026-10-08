@@ -1,0 +1,1 @@
+ALTER TABLE "RotatorLink" ADD COLUMN IF NOT EXISTS "message" TEXT;

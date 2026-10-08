@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -22,10 +23,10 @@ export default async function AccountPage() {
     accountClosureBlockers(userId),
   ]);
   if (!user) redirect("/login?redirect=/account");
-  return <AccountClient initial={{
+  return <><div className="mx-auto max-w-5xl px-4 pt-6"><Link className="text-[#25D366]" href="/account/security">Manage two-factor authentication →</Link></div><AccountClient initial={{
     requestedAt: user.accountDeletionRequestedAt?.toISOString() || null,
     scheduledFor: user.accountDeletionScheduledFor?.toISOString() || null,
     graceDays: ACCOUNT_DELETION_GRACE_DAYS,
     blockers,
-  }} />;
+  }} /></>;
 }

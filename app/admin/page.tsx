@@ -46,7 +46,8 @@ export default async function AdminPage() {
         activatedAt: { not: null },
         txId: { not: null },
         method: { in: ["dodo", "paypal"] },
-        status: { notIn: ["refunded", "chargeback"] },
+        status: "active",
+        currency: "USD",
         NOT: { method: "paypal", txId: { startsWith: "I-" } },
       },
       select: { userId: true, amount: true, method: true, status: true },
@@ -158,7 +159,7 @@ export default async function AdminPage() {
       trialPlan: u.trialPlan,
       isAdmin: u.isAdmin, createdAt: u.createdAt.toISOString(),
       payments: u.payments.map(p => ({
-        id: p.id, plan: p.plan, amount: p.amount, method: p.method,
+        id: p.id, plan: p.plan, amount: p.amount, currency: p.currency, method: p.method,
         txId: p.txId, status: p.status, createdAt: p.createdAt.toISOString(),
       })),
     })),

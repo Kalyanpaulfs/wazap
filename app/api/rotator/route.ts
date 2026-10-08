@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -13,7 +14,7 @@ function getLimit(plan: string) {
   return (limits[plan as keyof typeof limits] ?? limits.free).uses;
 }
 
-function genCode() { return Math.random().toString(36).slice(2, 8).toUpperCase(); }
+function genCode() { return randomBytes(5).toString("hex").toUpperCase(); }
 async function uniqueCode(): Promise<string> {
   let code = genCode();
   while (await prisma.rotatorLink.findUnique({ where: { code } })) code = genCode();
@@ -57,6 +58,7 @@ export async function GET() {
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (req.headers.get("origin") !== new URL(process.env.NEXTAUTH_URL || "https://wazap.lt").origin) return NextResponse.json({ error: "Invalid request origin." }, { status: 403 });
   const userId = (session.user as any).id;
   const entitlementUser = await prisma.user.findUnique({
     where: { id: userId },
@@ -79,13 +81,13 @@ export async function POST(req: Request) {
   if (!body || typeof body !== "object" || typeof body.name !== "string" || !body.name.trim() || !Array.isArray(body.numbers) || !body.numbers.length || body.numbers.some((number: unknown) => typeof number !== "string")) {
     return NextResponse.json({ error: "Add a router name and a list of WhatsApp numbers." }, { status: 400 });
   }
-  const { name, numbers, fallbackNumber } = body;
+  const { name, numbers, fallbackNumber, message } = body;
   const cleanNumbers = (numbers as unknown[]).map(number => String(number).replace(/\D/g, "")).filter(number => number.length >= 8).slice(0, 100);
   const cleanFallback = String(fallbackNumber ?? "").replace(/\D/g, "");
   if (!cleanNumbers.length) return NextResponse.json({ error: "Add at least one valid WhatsApp number." }, { status: 400 });
   const code = await uniqueCode();
-  const rotator = await prisma.rotatorLink.create({ data: { userId, name: String(name).slice(0, 100), numbers: cleanNumbers, fallbackNumber: cleanFallback.length >= 8 ? cleanFallback : cleanNumbers[0], code } });
-  await cacheRoute({ code: rotator.code, numbers: rotator.numbers, fallbackNumber: rotator.fallbackNumber, currentIdx: rotator.currentIdx });
+  const rotator = await prisma.rotatorLink.create({ data: { userId, name: String(name).slice(0, 100), numbers: cleanNumbers, fallbackNumber: cleanFallback.length >= 8 ? cleanFallback : cleanNumbers[0], message: typeof message === "string" ? message.slice(0, 2000) : null, code } });
+  await cacheRoute({ code: rotator.code, numbers: rotator.numbers, fallbackNumber: rotator.fallbackNumber, currentIdx: rotator.currentIdx, message: rotator.message });
   await recordFunnelEvent("first_tool_success", { userId, source: "rotator" });
   return NextResponse.json(rotator);
 }
@@ -93,10 +95,47 @@ export async function POST(req: Request) {
 export async function DELETE(req: Request) {
   const session = await getServerSession(authOptions);
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (req.headers.get("origin") !== new URL(process.env.NEXTAUTH_URL || "https://wazap.lt").origin) return NextResponse.json({ error: "Invalid request origin." }, { status: 403 });
   const userId = (session.user as any).id;
   const { id } = await req.json();
   const existing = await prisma.rotatorLink.findFirst({ where: { id, userId }, select: { code: true } });
   await prisma.rotatorLink.deleteMany({ where: { id, userId } });
   if (existing) await removeCachedRoute(existing.code);
   return NextResponse.json({ success: true });
+}
+
+export async function PATCH(req: Request) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (req.headers.get("origin") !== new URL(process.env.NEXTAUTH_URL || "https://wazap.lt").origin) return NextResponse.json({ error: "Invalid request origin." }, { status: 403 });
+  const userId = (session.user as any).id;
+  const body = await req.json().catch(() => null);
+  if (!body || typeof body.id !== "string") return NextResponse.json({ error: "Choose a rotator." }, { status: 400 });
+  const existing = await prisma.rotatorLink.findFirst({ where: { id: body.id, userId } });
+  if (!existing) return NextResponse.json({ error: "Rotator not found." }, { status: 404 });
+  const data: { name?: string; numbers?: string[]; fallbackNumber?: string; message?: string } = {};
+  if (body.name !== undefined) {
+    if (typeof body.name !== "string" || !body.name.trim() || body.name.length > 100) return NextResponse.json({ error: "Enter a name of up to 100 characters." }, { status: 400 });
+    data.name = body.name.trim();
+  }
+  if (body.numbers !== undefined) {
+    if (!Array.isArray(body.numbers) || !body.numbers.length || body.numbers.length > 100 || body.numbers.some((n: unknown) => typeof n !== "string" || !/^\+?[1-9][0-9]{7,14}$/.test(n))) return NextResponse.json({ error: "Use international numbers with 8–15 digits, one per line." }, { status: 400 });
+    data.numbers = [...new Set<string>(body.numbers.map((n: string) => n.replace(/^\+/, "")))];
+  }
+  if (body.fallbackNumber !== undefined) {
+    if (typeof body.fallbackNumber !== "string" || (body.fallbackNumber && !/^\+?[1-9][0-9]{7,14}$/.test(body.fallbackNumber))) return NextResponse.json({ error: "Enter a valid international fallback number." }, { status: 400 });
+    data.fallbackNumber = body.fallbackNumber.replace(/^\+/, "") || (data.numbers || existing.numbers)[0];
+  } else if (data.numbers && !data.numbers.includes(existing.fallbackNumber || "")) data.fallbackNumber = data.numbers[0];
+  if (body.message !== undefined) {
+    if (typeof body.message !== "string" || body.message.length > 2000) return NextResponse.json({ error: "Messages may contain up to 2,000 characters." }, { status: 400 });
+    data.message = body.message;
+  }
+  if (!Object.keys(data).length) return NextResponse.json({ error: "No changes supplied." }, { status: 400 });
+  const result = await prisma.rotatorLink.updateMany({ where: { id: body.id, userId }, data });
+  if (!result.count) return NextResponse.json({ error: "Rotator not found." }, { status: 404 });
+  const updated = await prisma.rotatorLink.findFirst({ where: { id: body.id, userId } });
+  if (!updated) return NextResponse.json({ error: "Rotator not found." }, { status: 404 });
+  await removeCachedRoute(updated.code);
+  await cacheRoute({ code: updated.code, numbers: updated.numbers, fallbackNumber: updated.fallbackNumber, message: updated.message, currentIdx: updated.currentIdx });
+  return NextResponse.json(updated);
 }

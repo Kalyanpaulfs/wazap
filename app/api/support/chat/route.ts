@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { rateLimit } from "@/lib/rate-limit";
-import { notifySupportChat } from "@/lib/support-notify";
+import { notifySupportChat, queueSupportAlert } from "@/lib/support-notify";
 import {capturedChat,sameSiteRequest} from "@/lib/crm";
 import { requestIp } from "@/lib/request-ip";
 
@@ -21,7 +21,7 @@ function publicConversation(conversation: {
     name: conversation.name,
     email: conversation.email,
     status: conversation.status,
-    messages: conversation.messages.map(m => ({
+    messages: [...conversation.messages].reverse().map(m => ({
       id: m.id,
       sender: m.sender,
       body: m.body,
@@ -37,13 +37,14 @@ export async function GET(req: Request) {
 
   const conversation = await prisma.supportConversation.findUnique({
     where: { visitorId },
-    include: { messages: { orderBy: { createdAt: "asc" }, take: 100 } },
+    include: { messages: { orderBy: { createdAt: "desc" }, take: 100 } },
   });
   if (!conversation) return NextResponse.json({ conversation: null });
 
 
   await prisma.supportChatMessage.updateMany({
-    where: { conversationId: conversation.id, sender: "admin", readByVisitor: false },
+    where: { conversationId: conversation.id,
+    sender: "admin", readByVisitor: false },
     data: { readByVisitor: true },
   });
 
@@ -89,7 +90,7 @@ export async function POST(req: Request) {
     },
   });
 
-  await tx.supportChatMessage.create({
+  const incoming = await tx.supportChatMessage.create({
     data: {
       conversationId: saved.id,
       sender: "visitor",
@@ -99,18 +100,20 @@ export async function POST(req: Request) {
   });
 
   if(profile.crmLeadId)await tx.crmLead.update({where:{id:profile.crmLeadId},data:{lastActivityAt:new Date()}});
-  return saved;
+  await queueSupportAlert({eventKey:'chat:'+incoming.id,name:saved.name,email:saved.email,subject:'Wazap live support: new customer message',message:incoming.body,link:`https://wazap.lt/admin/crm/support?chat=${encodeURIComponent(saved.id)}`},tx);
+  return {...saved,messageId:incoming.id};
   });
   await notifySupportChat({
     name: name || conversation.name,
     email: email || conversation.email,
     message,
     conversationId: conversation.id,
+    messageId: conversation.messageId,
   });
 
   const updated = await prisma.supportConversation.findUniqueOrThrow({
     where: { id: conversation.id },
-    include: { messages: { orderBy: { createdAt: "asc" }, take: 100 } },
+    include: { messages: { orderBy: { createdAt: "desc" }, take: 100 } },
   });
 
   return NextResponse.json({ conversation: publicConversation(updated) });

@@ -28,7 +28,7 @@ export default function Navbar() {
           {navigation.map(item => <Link key={item.href} href={item.href} className="text-slate-300 hover:text-[#25D366] transition-colors">{item.label}</Link>)}
         </div>
         <LanguageSelector />
-        <Link href={accountHref} className="max-w-[90px] sm:max-w-none text-center leading-tight rounded-full bg-[#25D366] px-4 py-2 text-sm font-semibold text-black hover:bg-[#1fba58] transition-colors">{accountLabel}</Link>
+        <Link href={accountHref} style={{ color: "#0a0f0a" }} className="max-w-[90px] sm:max-w-none text-center leading-tight rounded-full bg-[#25D366] px-4 py-2 text-sm font-semibold text-black hover:bg-[#1fba58] transition-colors">{accountLabel}</Link>
         <details className="sm:hidden relative">
           <summary className="cursor-pointer rounded-full border border-green-900 p-2 text-sm text-slate-300" aria-label="Open navigation"><Menu size={19} /></summary>
           <div className="absolute right-0 top-12 w-48 rounded-2xl border border-green-900 bg-[#101810] p-4 flex flex-col gap-4 text-sm">

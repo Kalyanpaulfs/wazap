@@ -1,3 +1,4 @@
+import { applyVerifiedLifecycle, recordVerifiedCharge } from "@/lib/payment-integrity";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { planExpiry, PLAN_PRICES } from "@/lib/billing";
@@ -26,7 +27,7 @@ export async function POST(req: Request) {
   if (!secret) return NextResponse.json({ error: "Webhook not configured." }, { status: 501 });
 
   const raw = await req.text();
-  let evt: { type?: string; data?: Record<string, unknown> };
+  let evt: { type?: string; timestamp?: string; data?: Record<string, unknown> };
   try {
     if (!hasDodoSignatureHeaders(req)) {
       return NextResponse.json({ error: "Invalid signature." }, { status: 400 });
@@ -37,7 +38,7 @@ export async function POST(req: Request) {
       "webhook-id": req.headers.get("webhook-id") || "",
       "webhook-signature": req.headers.get("webhook-signature") || "",
       "webhook-timestamp": req.headers.get("webhook-timestamp") || "",
-    }) as { type?: string; data?: Record<string, unknown> };
+    }) as { type?: string; timestamp?: string; data?: Record<string, unknown> };
   } catch (err) {
     console.error("[dodo/webhook] bad signature", err);
     return NextResponse.json({ error: "Invalid signature." }, { status: 400 });
@@ -78,83 +79,26 @@ export async function POST(req: Request) {
       : null;
   if (!user) return NextResponse.json({ ok: true, note: "user not found" });
 
-  if (DEACTIVATE_EVENTS.has(type)) {
-    await queueBillingNotice({key:`dodo:${req.headers.get("webhook-id")}`,userId:user.id,email:user.email,name:user.name,plan:resolvedPlan,state:type==="subscription.failed"?"failed":type==="subscription.expired"?"expired":type==="subscription.on_hold"?"paused":"cancelled",accessUntil:user.planExpiresAt});
-    if (END_ACCESS_EVENTS.has(type)) {
-      await prisma.user.update({
-        where: { id: user.id },
-        data: { plan: "free", planExpiresAt: null },
-      });
+  const occurredAt = new Date(String(evt.timestamp || ""));
+  const subscriptionId = String(data.subscription_id || sub.subscription_id || txId || "");
+  if (!Number.isFinite(occurredAt.getTime()) || !subscriptionId) return NextResponse.json({ error: "Missing verified event identity." }, { status: 422 });
+  if (type === "payment.succeeded") {
+    const amount = Number(data.total_amount);
+    const currency = String(data.currency || "").toUpperCase();
+    // Dodo total_amount is denominated in currency minor units.
+    const minorDigits = new Intl.NumberFormat("en", { style: "currency", currency }).resolvedOptions().maximumFractionDigits ?? 2;
+    if (!data.payment_id || !Number.isSafeInteger(amount) || amount <= 0) return NextResponse.json({ error: "Missing verified charge data." }, { status: 422 });
+    const result = await recordVerifiedCharge({ provider: "dodo", chargeId: String(data.payment_id), userId: user.id, plan: resolvedPlan, amount: amount / (10 ** minorDigits), currency, subscriptionId, occurredAt, checkoutId: typeof data.checkout_session_id === "string" ? data.checkout_session_id : undefined });
+    if (!result.duplicate) {
+      await recordFunnelEvent("subscription_renewed", { userId: user.id, source: "dodo", metadata: { plan: resolvedPlan, event: type } });
+      await markPartnerCustomer(user.id);
     }
-    await recordFunnelEvent(type === "subscription.failed" ? "payment_failed" : "subscription_cancelled", {
-      userId: user.id,
-      source: "dodo",
-      metadata: { plan: resolvedPlan, event: type },
-    });
-    return NextResponse.json({
-      ok: true,
-      deactivated: END_ACCESS_EVENTS.has(type) ? user.id : null,
-      accessRetainedUntil: END_ACCESS_EVENTS.has(type) ? null : user.planExpiresAt,
-    });
+    return NextResponse.json({ ok: true, activated: user.id, event: type, duplicate: result.duplicate });
   }
 
-  const providerPeriodEnd =
-    type.startsWith("subscription.") && typeof data.next_billing_date === "string"
-      ? new Date(data.next_billing_date)
-      : null;
-  const periodEnd = providerPeriodEnd && !Number.isNaN(providerPeriodEnd.getTime())
-    ? providerPeriodEnd
-    : type === "payment.succeeded" && user.plan === resolvedPlan && user.planExpiresAt && user.planExpiresAt > new Date()
-      ? user.planExpiresAt
-      : planExpiry(resolvedPlan);
-  await prisma.user.update({
-    where: { id: user.id },
-    data: { plan: resolvedPlan, planExpiresAt: periodEnd },
-  });
-  await recordFunnelEvent(type === "subscription.renewed" ? "subscription_renewed" : "subscription_activated", { userId: user.id, source: "dodo", metadata: { plan: resolvedPlan, event: type } });
-  if (user.trialStartedAt) {
-    await recordFunnelEvent("trial_converted", { userId: user.id, source: "dodo", metadata: { plan: resolvedPlan } });
-  }
-  await markPartnerCustomer(user.id);
-
-  // Subscription lifecycle events govern access. Only successful charges are
-  // revenue. Dodo emits both kinds for initial subscriptions; recording both
-  // as payments would double-count revenue and send duplicate receipts.
-  if (type !== "payment.succeeded") {
-    return NextResponse.json({ ok: true, activated: user.id, event: type });
-  }
-
-  const already = txId
-    ? await prisma.payment.findFirst({ where: { txId, method: "dodo", status: "active" } })
-    : null;
-  if (!already) {
-    await prisma.$transaction(async tx => {
-const pending = await tx.payment.findFirst({
-      where: { userId: user.id, method: "dodo", plan: resolvedPlan, status: "pending" },
-      orderBy: { createdAt: "desc" },
-    });
-    if (pending) {
-      await tx.payment.update({
-        where: { id: pending.id },
-        data: { txId: txId || pending.txId, status: "active", activatedAt: new Date() },
-      });
-    } else {
-      await tx.payment.create({
-        data: {
-          userId: user.id,
-          email: user.email,
-          plan: resolvedPlan,
-          amount: PLAN_PRICES[resolvedPlan],
-          method: "dodo",
-          txId,
-          status: "active",
-          activatedAt: new Date(),
-        },
-      });
-    }
-    await queuePaidReceipt({key:`dodo:${txId || req.headers.get("webhook-id")}`,userId:user.id,email:user.email,name:user.name,plan:resolvedPlan,amount:PLAN_PRICES[resolvedPlan],txId},tx);
-    });
-  }
-
-  return NextResponse.json({ ok: true, activated: user.id, event: type });
+  const deactivating = DEACTIVATE_EVENTS.has(type);
+  const state = deactivating ? type === "subscription.failed" ? "failed" : type === "subscription.expired" ? "expired" : type === "subscription.on_hold" ? "paused" : "cancelled" : undefined;
+  const result = await applyVerifiedLifecycle({ provider: "dodo", eventId: req.headers.get("webhook-id")!, subscriptionId, occurredAt, userId: user.id, plan: resolvedPlan, endAccess: END_ACCESS_EVENTS.has(type), state, periodEnd: typeof data.next_billing_date === "string" ? new Date(data.next_billing_date) : null });
+  if (!result.duplicate && !result.stale && !deactivating) await markPartnerCustomer(user.id);
+  return NextResponse.json({ ok: true, event: type, ...result });
 }

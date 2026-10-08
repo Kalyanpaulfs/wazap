@@ -1,7 +1,7 @@
 import "server-only";
 import http from "node:http";
 
-export type SupportAnswer = { reply: string; language: string; handoff: boolean; reason: string };
+export type SupportAnswer = { reply: string; language: string; handoff: boolean; reason: string; fallback?: string };
 export async function codexSupportAnswer(message: string, history: {role:string;content:string}[]): Promise<SupportAnswer | null> {
   if (process.env.WAZAP_CODEX_SUPPORT !== "enabled") return null;
   return new Promise(resolve => {

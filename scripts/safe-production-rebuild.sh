@@ -15,6 +15,13 @@ if [[ "$(pwd)" != "$app_dir" ]]; then
   exit 1
 fi
 
+# Reserve room for isolated dependencies, build output and rollback.
+available_bytes="$(df -PB1 "$app_dir" | awk 'NR==2 {print $4}')"
+if [[ "$available_bytes" -lt 4294967296 ]]; then
+  echo "At least 4 GiB free is required before a production rebuild. Archive verified old releases first." >&2
+  exit 1
+fi
+
 mkdir -p "$stage_dir" "$backup_dir"
 
 cleanup() {
@@ -73,7 +80,22 @@ prune_old_rebuilds() {
       continue
     fi
     case "$target" in
-      "$backup_root"/safe-rebuild-*) rm -rf -- "$target" ;;
+      "$backup_root"/safe-rebuild-*)
+        # Keep older rollback copies recoverable rather than discarding them.
+        local archive_root="/opt/wazap-cold-archives/rebuilds"
+        local archive_name="$(basename "$target").tar.gz"
+        mkdir -p "$archive_root"
+        chmod 700 "$archive_root"
+        if [[ -e "$archive_root/$archive_name" || -e "$archive_root/$archive_name.partial" ]]; then
+          echo "Archive already exists; preserving unpacked backup: $target" >&2
+          continue
+        fi
+        (umask 077; tar -I 'gzip -1' -cpf "$archive_root/$archive_name.partial" -C "$backup_root" "$(basename "$target")")
+        tar -df "$archive_root/$archive_name.partial" -C "$backup_root"
+        mv "$archive_root/$archive_name.partial" "$archive_root/$archive_name"
+        sha256sum "$archive_root/$archive_name" > "$archive_root/$archive_name.sha256"
+        rm -rf -- "$target"
+        ;;
       *) echo "Refusing unexpected rebuild-prune target: $target" >&2; return 1 ;;
     esac
   done < <(find "$backup_root" -mindepth 1 -maxdepth 1 -type d -name 'safe-rebuild-*' -printf '%T@ %p\n' | sort -nr)

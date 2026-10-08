@@ -6,6 +6,8 @@ const groups = [
   { title: "Help & company", links: [["/resources", "Guides & comparisons"], ["/faq", "FAQ"], ["/contact", "Contact"], ["/about", "About Wazap"], ["/languages", "Languages"]] },
 ];
 
+const extraProducts = [["/flow", "Wazap Flow (Beta)"], ["/integrations", "Integrations"], ["/whatsapp-business-platform", "WhatsApp Business Platform"], ["/whatsapp-crm", "WhatsApp CRM"], ["/whatsapp-ai-agent", "WhatsApp AI Agent"]];
+
 const policies = [["/refund", "Refunds"], ["/cookie", "Cookies"], ["/acceptable-use", "Acceptable use"], ["/api-policy", "API policy"], ["/partner-terms", "Partner terms"]];
 
 export default function Footer() {
@@ -24,6 +26,7 @@ export default function Footer() {
                 {group.links.map(([href, label]) => (
                   <li key={href}><Link href={href} className="inline-block py-1 text-sm text-slate-400 transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-emerald-400">{label}</Link></li>
                 ))}
+                {group.title === "Product" && <li><details><summary className="cursor-pointer py-1 text-sm text-slate-400 hover:text-white">More products</summary><ul className="mt-3 space-y-3 pb-2">{extraProducts.map(([href, label]) => <li key={href}><Link href={href} className="inline-block py-1 text-sm text-slate-400 transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-emerald-400">{label}</Link></li>)}</ul></details></li>}
               </ul>
             </nav>
           ))}

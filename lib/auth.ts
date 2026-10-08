@@ -1,9 +1,10 @@
+import { mfaState, verifyMfa } from "./mfa";
 import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 import { trustedGoogleIdentity } from "./google-identity";
 import { prisma } from "./prisma";
-import { rateLimit } from "./rate-limit";
+import { sharedRateLimit } from "./shared-rate-limit";
 import { isPlanExpired } from "./billing";
 import bcrypt from "bcryptjs";
 import { effectivePlan, newProductTrial } from "./entitlements";
@@ -63,6 +64,7 @@ export const authOptions: NextAuthOptions = {
           await tx.workspaceMember.create({ data: { workspaceId: workspace.id, userId: created.id, role: "owner" } });
           return tx.user.update({ where: { id: created.id }, data: { activeWorkspaceId: workspace.id } });
         }, { isolationLevel: "Serializable" });
+        if ((await mfaState(user.id))?.enabled) throw new Error("Use password and authenticator sign-in for this protected account");
         return { id: user.id, email: user.email, name: user.name, plan: effectivePlan(user), isAdmin: user.isAdmin, sessionVersion: user.sessionVersion };
       },
     })] : []),
@@ -71,6 +73,7 @@ export const authOptions: NextAuthOptions = {
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
+        otp: { label: "Authenticator or recovery code", type: "text" },
       },
       async authorize(credentials, req) {
         if (!credentials?.email || !credentials?.password || credentials.password.length > 128) return null;
@@ -78,16 +81,19 @@ export const authOptions: NextAuthOptions = {
         const requestHeaders = new Headers((req as any)?.headers || {});
         const ip = requestIp(requestHeaders);
         const accountKey = createHash("sha256").update(email).digest("hex");
-        if (!rateLimit(`login-ip:${ip}`, 20, 15 * 60_000)) return null;
-        if (!rateLimit(`login-account:${accountKey}`, 8, 15 * 60_000)) return null;
+        if (!await sharedRateLimit(`login-ip:${ip}`, 20, 15 * 60_000)) return null;
+        if (!await sharedRateLimit(`login-account:${accountKey}`, 8, 15 * 60_000)) return null;
         const user = await prisma.user.findUnique({ where: { email } });
         const valid = await bcrypt.compare(credentials.password, user?.password || DUMMY_PASSWORD_HASH);
         if (!user || !user.password || !valid) return null;
+        const factor = await mfaState(user.id);
+        const mfaVerified = factor?.enabled ? await verifyMfa(user.id, String(credentials.otp || "").slice(0, 64)) : false;
+        if (factor?.enabled && !mfaVerified) return null;
         if (isPlanExpired(user.plan, user.planExpiresAt)) {
           await prisma.user.update({ where: { id: user.id }, data: { plan: "free", planExpiresAt: null } });
-          return { id: user.id, email: user.email, name: user.name ?? "", plan: effectivePlan({ ...user, plan: "free" }), isAdmin: user.isAdmin, sessionVersion: user.sessionVersion };
+          return { id: user.id, email: user.email, name: user.name ?? "", plan: effectivePlan({ ...user, plan: "free" }), isAdmin: user.isAdmin, sessionVersion: user.sessionVersion, mfaVerified };
         }
-        return { id: user.id, email: user.email, name: user.name ?? "", plan: effectivePlan(user), isAdmin: user.isAdmin, sessionVersion: user.sessionVersion };
+        return { id: user.id, email: user.email, name: user.name ?? "", plan: effectivePlan(user), isAdmin: user.isAdmin, sessionVersion: user.sessionVersion, mfaVerified };
       },
     }),
   ],
@@ -99,6 +105,8 @@ export const authOptions: NextAuthOptions = {
         token.isAdmin = (user as any).isAdmin;
         token.sessionVersion = (user as any).sessionVersion;
         token.invalidated = false;
+        token.mfaVerified = (user as any).mfaVerified === true;
+        token.mfaVerifiedAt = token.mfaVerified ? Date.now() : undefined;
       }
       if (token.id) {
         const fresh = await prisma.user.findUnique({ where: { id: token.id as string } });
@@ -119,7 +127,8 @@ export const authOptions: NextAuthOptions = {
         } else {
           token.plan = effectivePlan(fresh);
         }
-        token.isAdmin = fresh.isAdmin;
+        const factor = fresh.isAdmin ? await mfaState(fresh.id) : null;
+        token.isAdmin = fresh.isAdmin && (!factor?.enabled || (token.mfaVerified === true && Number.isFinite(Number(token.mfaVerifiedAt)) && Date.now() - Number(token.mfaVerifiedAt) < 12 * 60 * 60_000));
       }
       return token;
     },

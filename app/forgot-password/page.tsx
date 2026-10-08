@@ -29,6 +29,7 @@ export default function ForgotPasswordPage() {
       {error&&<p className="text-xs text-red-400">{error}</p>}
       <button disabled={loading} className="w-full rounded-full bg-[#25D366] py-3 text-sm font-semibold text-black disabled:opacity-50">{loading?"Queuing secure link…":"Send reset link"}</button>
     </form>
+    <p className="mt-4 text-sm text-slate-400">If you registered with Google, return to sign in and choose Google. Reset links are for accounts with a Wazap password. For another service, use that service’s official account recovery.</p>
     <p className="mt-4 text-center text-sm text-slate-500"><Link href="/login" className="text-[#25D366] hover:underline">Return to sign in</Link></p>
   </div></main>;
 }

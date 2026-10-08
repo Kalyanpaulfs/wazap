@@ -1,3 +1,4 @@
+import { applyVerifiedLifecycle, recordVerifiedCharge } from "@/lib/payment-integrity";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { extendPlanExpiry, planExpiry, PLAN_PRICES } from "@/lib/billing";
@@ -28,6 +29,7 @@ const END_ACCESS_EVENTS = new Set(["BILLING.SUBSCRIPTION.EXPIRED"]);
 
 type PayPalWebhookEvent = {
   id?: string;
+  create_time?: string;
   event_type?: string;
   resource?: Record<string, any>;
 };
@@ -149,93 +151,23 @@ export async function POST(req: Request) {
       : null;
   if (!user) return NextResponse.json({ ok: true, note: "user not found" });
 
-  if (DEACTIVATE_EVENTS.has(type)) {
-    await queueBillingNotice({key:`paypal:${event.id||req.headers.get("paypal-transmission-id")}`,userId:user.id,email:user.email,name:user.name,plan,state:type==="BILLING.SUBSCRIPTION.PAYMENT.FAILED"?"failed":type==="BILLING.SUBSCRIPTION.EXPIRED"?"expired":type==="BILLING.SUBSCRIPTION.SUSPENDED"?"paused":"cancelled",accessUntil:user.planExpiresAt});
-    if (END_ACCESS_EVENTS.has(type)) {
-      await prisma.user.update({
-        where: { id: user.id },
-        data: { plan: "free", planExpiresAt: null },
-      });
+  const occurredAt = new Date(String(event.create_time || ""));
+  if (!event.id || !subscriptionId || !Number.isFinite(occurredAt.getTime())) return NextResponse.json({ error: "Missing verified event identity." }, { status: 422 });
+  if (RENEWAL_EVENTS.has(type)) {
+    const amount = Number(resource.amount?.total ?? resource.amount?.value);
+    const currency = String(resource.amount?.currency ?? resource.amount?.currency_code ?? "").toUpperCase();
+    if (!resource.id || !Number.isFinite(amount) || amount <= 0 || !/^[A-Z]{3}$/.test(currency)) return NextResponse.json({ error: "Missing verified charge data." }, { status: 422 });
+    const result = await recordVerifiedCharge({ provider: "paypal", chargeId: String(resource.id), userId: user.id, plan, amount, currency, subscriptionId, occurredAt });
+    if (!result.duplicate) {
+      await recordFunnelEvent("subscription_renewed", { userId: user.id, source: "paypal", metadata: { plan, event: type } });
+      await markPartnerCustomer(user.id);
     }
-    if (subscriptionId) {
-      await prisma.payment.updateMany({
-        where: { txId: subscriptionId, method: "paypal" },
-        data: { status: "inactive" },
-      });
-    }
-    await recordFunnelEvent(type === "BILLING.SUBSCRIPTION.PAYMENT.FAILED" ? "payment_failed" : "subscription_cancelled", {
-      userId: user.id,
-      source: "paypal",
-      metadata: { plan, event: type },
-    });
-    return NextResponse.json({
-      ok: true,
-      deactivated: END_ACCESS_EVENTS.has(type) ? user.id : null,
-      accessRetainedUntil: END_ACCESS_EVENTS.has(type) ? null : user.planExpiresAt,
-      event: type,
-    });
+    return NextResponse.json({ ok: true, activated: user.id, event: type, duplicate: result.duplicate });
   }
 
-  const newExpiry = RENEWAL_EVENTS.has(type)
-    ? renewalExpiry(plan, user.planExpiresAt)
-    : planExpiry(plan);
-
-  await prisma.user.update({
-    where: { id: user.id },
-    data: { plan, planExpiresAt: newExpiry },
-  });
-
-  await recordFunnelEvent(RENEWAL_EVENTS.has(type) ? "subscription_renewed" : "subscription_activated", {
-    userId: user.id,
-    source: "paypal",
-    metadata: { plan, event: type },
-  });
-  if (user.trialStartedAt && !RENEWAL_EVENTS.has(type)) {
-    await recordFunnelEvent("trial_converted", { userId: user.id, source: "paypal", metadata: { plan } });
-  }
-  await markPartnerCustomer(user.id);
-
-  // Subscription lifecycle events confirm access, not a cash transaction.
-  // Only completed sales/captures below may record revenue and send receipts.
-  if (ACTIVATE_EVENTS.has(type)) {
-    if (subscriptionId) {
-      await prisma.payment.updateMany({
-        where: { txId: subscriptionId, method: "paypal" },
-        data: { status: "subscription_active", activatedAt: new Date() },
-      });
-    }
-    return NextResponse.json({ ok: true, activated: user.id, event: type });
-  }
-
-  const txId = String(resource.id || event.id || subscriptionId || "");
-
-  const already = txId
-    ? await prisma.payment.findFirst({ where: { txId, method: "paypal", status: "active" } })
-    : null;
-  if (!already) {
-    await prisma.$transaction(async tx => {
-await tx.payment.create({
-      data: {
-        userId: user.id,
-        email: user.email,
-        plan,
-        amount: moneyAmount(resource, plan),
-        method: "paypal",
-        txId: txId || null,
-        status: "active",
-        activatedAt: new Date(),
-      },
-    });
-    await queuePaidReceipt({key:`paypal:${txId}`,userId:user.id,email:user.email,name:user.name,plan,amount:moneyAmount(resource,plan),txId},tx);
-    });
-  }
-
-  if (subscriptionId && RENEWAL_EVENTS.has(type)) {
-    await prisma.payment.updateMany({
-      where: { txId: subscriptionId, method: "paypal", status: "pending" },
-      data: { status: "subscription_active", activatedAt: new Date() },
-    });
-  }
-
-  return NextResponse.json({ ok: true, activated: user.id, event: type });
+  const deactivating = DEACTIVATE_EVENTS.has(type);
+  const state = deactivating ? type === "BILLING.SUBSCRIPTION.PAYMENT.FAILED" ? "failed" : type === "BILLING.SUBSCRIPTION.EXPIRED" ? "expired" : type === "BILLING.SUBSCRIPTION.SUSPENDED" ? "paused" : "cancelled" : undefined;
+  const result = await applyVerifiedLifecycle({ provider: "paypal", eventId: event.id, subscriptionId, occurredAt, userId: user.id, plan, endAccess: END_ACCESS_EVENTS.has(type), state });
+  if (!result.duplicate && !result.stale && !deactivating) await markPartnerCustomer(user.id);
+  return NextResponse.json({ ok: true, event: type, ...result });
 }

@@ -1,0 +1,1 @@
+{"type":"object","properties":{"reply":{"type":"string"},"language":{"type":"string"},"handoff":{"type":"boolean"},"reason":{"type":"string"},"fallback":{"type":"string"}},"required":["reply","language","handoff","reason","fallback"],"additionalProperties":false}

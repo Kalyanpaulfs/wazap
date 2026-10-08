@@ -13,6 +13,7 @@ function LoginForm() {
   const redirect = safeInternalRedirect(params.get("redirect"));
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [otp, setOtp] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -22,8 +23,8 @@ function LoginForm() {
     setLoading(true);
     setError("");
     try {
-      const res = await signIn("credentials", { email: email.trim(), password, redirect: false });
-      if (!res?.ok || res.error) { setError("We couldn't sign you in. Check your email and password. If you've tried several times, wait 15 minutes before retrying."); return; }
+      const res = await signIn("credentials", { email: email.trim(), password, otp, redirect: false });
+      if (!res?.ok || res.error) { setError("We couldn't sign you in. Check your email, password and authenticator code. If you've tried several times, wait 15 minutes before retrying."); return; }
       window.location.href = redirect;
     } catch {
       setError("We couldn't reach Wazap. Your details are still here—please try again.");
@@ -48,6 +49,7 @@ function LoginForm() {
             className="w-full rounded-xl bg-slate-900 border border-slate-700 px-4 py-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#25D366] transition-colors" placeholder="••••••••" />
           <button type="button" aria-controls="login-password" aria-pressed={showPassword} onClick={() => setShowPassword(value => !value)} className="mt-2 text-xs text-slate-400 hover:text-white">{showPassword ? "Hide password" : "Show password"}</button>
         </div>
+        <div><label htmlFor="login-otp" className="block text-xs text-slate-400 mb-1.5">Authenticator or recovery code (if enabled)</label><input id="login-otp" autoComplete="one-time-code" maxLength={64} value={otp} onChange={e => setOtp(e.target.value)} className="w-full rounded-xl bg-slate-900 border border-slate-700 px-4 py-3 text-sm text-white" /></div>
         {error && <p role="alert" className="text-xs text-red-400">{error}</p>}
         <button type="submit" disabled={loading}
           className="w-full rounded-full bg-[#25D366] hover:bg-[#1fba58] disabled:opacity-50 py-3 text-sm font-semibold text-black transition-colors">

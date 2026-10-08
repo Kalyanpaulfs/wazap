@@ -16,7 +16,7 @@ export async function queueBillingNotice(opts: {key:string; userId:string; email
  const content=localizedBillingNotice(opts,await customerLanguage(opts.email)); const id="billing_"+createHash("sha256").update(opts.key+":"+opts.userId).digest("hex");
  await db.outboundEmail.upsert({where:{id},update:{},create:{id,userId:opts.userId,recipient:opts.email,type:`billing_${opts.state}`,subject:content.subject,html:content.html}});
 }
-export async function queuePaidReceipt(opts: {key:string;userId:string;email:string;name:string|null;plan:string;amount:number;txId:string|null}, db: Prisma.TransactionClient | typeof prisma = prisma) {
+export async function queuePaidReceipt(opts: {key:string;userId:string;email:string;name:string|null;plan:string;amount:number;currency?:string;txId:string|null}, db: Prisma.TransactionClient | typeof prisma = prisma) {
  const id="receipt_"+createHash("sha256").update(opts.key+":"+opts.userId).digest("hex");
  await db.outboundEmail.upsert({where:{id},update:{},create:{id,userId:opts.userId,recipient:opts.email,type:"billing_receipt",...localizedReceipt(opts,await customerLanguage(opts.email))}});
 }

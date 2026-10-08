@@ -59,3 +59,9 @@ exports/
 uploads/
 sessions/
 auth_info*/
+.wa-sessions/
+runtime.env
+operations/support-cleanup/
+services/support-worker/usage*.json
+services/support-worker/*evaluation*.json
+services/support-worker/*verification*.json

@@ -4,7 +4,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { accountClosureBlockers, ACCOUNT_DELETION_GRACE_DAYS } from "@/lib/account-lifecycle";
-import { rateLimit } from "@/lib/rate-limit";
+import { sharedRateLimit } from "@/lib/shared-rate-limit";
 import { renderAccountClosureEmail, renderAccountRestoredEmail } from "@/lib/email";
 
 export const runtime = "nodejs";
@@ -49,7 +49,7 @@ export async function POST(req: Request) {
   if (!sameOrigin(req)) return NextResponse.json({ error: "Invalid request origin." }, { status: 403 });
   const user = await currentUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (!rateLimit(`account-lifecycle:${user.id}`, 6, 60 * 60_000)) {
+  if (!await sharedRateLimit(`account-lifecycle:${user.id}`, 6, 60 * 60_000)) {
     return NextResponse.json({ error: "Too many account changes. Please wait." }, { status: 429 });
   }
   const body = (await req.json().catch(() => ({}))) as { action?: string; password?: string; confirmation?: string };
