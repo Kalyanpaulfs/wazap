@@ -1,0 +1,2 @@
+export function outboundReferences(headers:string){const unfolded=headers.replace(/\r?\n[ \t]+/g," ");const selected=unfolded.split(/\r?\n/).filter(line=>/^(In-Reply-To|References):/i.test(line)).join(" ");return [...new Set([...selected.matchAll(/<wazap\.([a-zA-Z0-9_-]{1,120})@wazap\.lt>/g)].map(match=>match[1]))].reverse().slice(0,20);}
+export function outboundMessageId(id:string){if(!/^[a-zA-Z0-9_-]{1,120}$/.test(id))throw Error("Invalid message reference");return `<wazap.${id}@wazap.lt>`;}

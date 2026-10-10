@@ -1,3 +1,4 @@
+import {ownsSupport} from "@/lib/support-session";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { rateLimit } from "@/lib/rate-limit";
@@ -14,6 +15,7 @@ export async function POST(req: Request) {
   if (!rateLimit(`chatbot:${ip}`, 40, 60 * 60 * 1000)) return NextResponse.json({ reply: "Please wait a moment before sending another message." }, { status: 429 });
   const { message, visitorId } = await req.json().catch(()=>({})) as { message?: unknown; visitorId?: unknown };
   if(typeof visitorId!=="string"||typeof message!=="string"||!message.trim()||message.length>4000)return NextResponse.json({error:"A visitor and message are required."},{status:400});
+  if(!ownsSupport(req,visitorId))return NextResponse.json({error:"Support session required."},{status:403});
   const profile=await capturedChat(visitorId);
   if(!profile)return NextResponse.json({error:"Please enter your name, email and phone number before starting chat.",contactRequired:true},{status:422});
   const previousMessages=await prisma.supportChatMessage.findMany({where:{conversationId:profile.id},orderBy:{createdAt:"desc"},take:8,select:{sender:true,body:true}});

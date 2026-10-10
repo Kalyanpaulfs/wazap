@@ -1,5 +1,6 @@
-import { supportMonitorHealth } from "@/lib/support-monitor";
-import { chatResponseState, responseState } from "@/lib/support-queue";
+import {responseState,chatResponseState} from "@/lib/support-queue";
+import {supportMonitorHealth} from "@/lib/support-monitor";
+import {activeCrmContacts,CRM_TRASH_TAG} from "@/lib/crm-trash";
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -17,12 +18,12 @@ function cleanText(value: unknown, max = 4000) {
 
 async function getConversations() {
   const conversations = await prisma.supportConversation.findMany({
+    where:{OR:[{crmLeadId:null},{crmLead:activeCrmContacts}]},
     orderBy: { lastMessageAt: "desc" },
     take: 50,
     include: { messages: { orderBy: { createdAt: "desc" }, take: 100 } },
   });
 
-  const unreadCounts = await prisma.supportChatMessage.groupBy({by:["conversationId"],where:{sender:"visitor",readByAdmin:false,conversationId:{in:conversations.map(c=>c.id)}},_count:{_all:true}});
   return conversations.map(c => ({
     ...chatResponseState(c),
     id: c.id,
@@ -38,8 +39,8 @@ async function getConversations() {
     aiSummary: c.aiSummary,
     lastMessageAt: c.lastMessageAt.toISOString(),
     createdAt: c.createdAt.toISOString(),
-    unread: unreadCounts.find(row=>row.conversationId===c.id)?._count._all || 0,
-    messages: [...c.messages].reverse().map(m => ({
+    unread: c.messages.filter(m => m.sender === "visitor" && !m.readByAdmin).length,
+    messages: c.messages.slice().reverse().map(m => ({
       id: m.id,
       sender: m.sender,
       body: m.body,
@@ -51,13 +52,17 @@ async function getConversations() {
 }
 
 async function getRequests(){
- const rows=await prisma.contactMessage.findMany({orderBy:{createdAt:'desc'},take:100});
+ const trashed=await prisma.crmLead.findMany({where:{tags:{has:CRM_TRASH_TAG}},select:{email:true}});
+ const rows=await prisma.contactMessage.findMany({where:{NOT:{OR:trashed.map(lead=>({email:{equals:lead.email,mode:'insensitive' as const}}))}},orderBy:{createdAt:'desc'},take:100});
  const leads=await prisma.crmLead.findMany({where:{email:{in:rows.map(r=>r.email.toLowerCase())}},select:{id:true,email:true}});
- return rows.map(r=>({...r,...responseState(r.adminReply?null:r.createdAt),crmLeadId:leads.find(l=>l.email===r.email.toLowerCase())?.id||null}));
+ const relations=await prisma.crmActivity.findMany({where:{sourceKey:{in:rows.map(r=>"support-thread:"+r.id)}},select:{sourceKey:true,body:true}});
+ const qa=await prisma.crmActivity.findMany({where:{sourceKey:{in:rows.map(r=>"support-qa:"+r.id)}},select:{sourceKey:true,body:true}});
+ const parentIds=relations.map(r=>r.body);const parents=await prisma.contactMessage.findMany({where:{id:{in:parentIds}},select:{id:true,subject:true,message:true,adminReply:true}});
+ return rows.map(r=>{const parentId=relations.find(x=>x.sourceKey==="support-thread:"+r.id)?.body;const isQa=qa.some(x=>x.sourceKey==="support-qa:"+r.id&&x.body==="true");return {...r,...responseState(r.adminReply||isQa?null:r.createdAt),isQa,parentRequest:parents.find(x=>x.id===parentId)||null,crmLeadId:leads.find(l=>l.email===r.email.toLowerCase())?.id||null};});
 }
 export async function GET() {
   if (!(await requireAdmin())) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  return NextResponse.json({ conversations: await getConversations(), requests: await getRequests(), health: await supportMonitorHealth() }, {headers:{"Cache-Control":"no-store"}});
+  return NextResponse.json({ health:await supportMonitorHealth(), conversations: await getConversations(), requests: await getRequests() }, {headers:{"Cache-Control":"no-store"}});
 }
 
 export async function POST(req: Request) {
@@ -73,15 +78,12 @@ export async function POST(req: Request) {
   const conversation=await prisma.supportConversation.findUnique({where:{id:String(conversationId)}});
   if(!conversation)return NextResponse.json({error:"Conversation not found."},{status:404});
   await prisma.$transaction(async tx=>{
-  const replyAt = new Date();
-  await tx.supportChatMessage.updateMany({where:{conversationId,sender:"visitor",createdAt:{lte:replyAt}},data:{readByAdmin:true}});
   await tx.supportChatMessage.create({
     data: {
       conversationId,
       sender: "admin",
       body: cleanMessage,
       readByAdmin: true,
-      createdAt: replyAt,
     },
   });
   await tx.supportConversation.update({
@@ -91,29 +93,25 @@ export async function POST(req: Request) {
 
   if(conversation.crmLeadId)await tx.crmActivity.create({data:{leadId:conversation.crmLeadId,kind:'support_reply',body:`Support reply: ${cleanMessage}`}});
   });
-  return NextResponse.json({ conversations: await getConversations(), requests: await getRequests(), health: await supportMonitorHealth() }, {headers:{"Cache-Control":"no-store"}});
+  return NextResponse.json({ health:await supportMonitorHealth(), conversations: await getConversations(), requests: await getRequests() }, {headers:{"Cache-Control":"no-store"}});
 }
 
 export async function PATCH(req: Request) {
   if (!(await requireAdmin())) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   if(!sameSiteRequest(req))return NextResponse.json({error:"Invalid request origin."},{status:403});
-  const { conversationId, status, read = true, readThroughAt } = await req.json().catch(()=>({}));
+  const { conversationId, status, read, readThroughAt } = await req.json().catch(()=>({}));
   if(status!==undefined&&!['open','closed'].includes(status))return NextResponse.json({error:"Invalid status."},{status:400});
   if (!conversationId) return NextResponse.json({ error: "Missing conversation." }, { status: 400 });
 
-  if (typeof read !== "boolean") return NextResponse.json({ error: "Invalid read state." }, { status: 400 });
-  const through = readThroughAt ? new Date(readThroughAt) : new Date();
-  if (Number.isNaN(through.getTime()) || through > new Date()) return NextResponse.json({ error: "Invalid read timestamp." }, { status: 400 });
-  if (read) await prisma.supportChatMessage.updateMany({ where: { conversationId, sender: "visitor", readByAdmin: false, createdAt: { lte: through } }, data: { readByAdmin: true } });
-  else {
-    const latest = await prisma.supportChatMessage.findFirst({ where: { conversationId, sender: "visitor" }, orderBy: [{createdAt:"desc"},{id:"desc"}] });
-    if (latest) await prisma.supportChatMessage.update({ where: { id: latest.id }, data: { readByAdmin: false } });
-  }
+  await prisma.supportChatMessage.updateMany({
+    where: { conversationId, sender: "visitor", ...(readThroughAt&&Number.isFinite(Date.parse(readThroughAt))?{createdAt:{lte:new Date(readThroughAt)}}:{}) },
+    data: { readByAdmin: read!==false },
+  });
 
   if (status === "open" || status === "closed") {
     await prisma.supportConversation.update({ where: { id: conversationId }, data: { status } });
   }
 
-  return NextResponse.json({ conversations: await getConversations(), requests: await getRequests(), health: await supportMonitorHealth() }, {headers:{"Cache-Control":"no-store"}});
+  return NextResponse.json({ health:await supportMonitorHealth(), conversations: await getConversations(), requests: await getRequests() }, {headers:{"Cache-Control":"no-store"}});
 }

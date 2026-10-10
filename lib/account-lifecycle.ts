@@ -58,10 +58,11 @@ export async function permanentlyDeleteAccount(userId: string) {
     await tx.payment.updateMany({ where: { userId: user.id }, data: { email: retainedEmail } });
     await tx.$executeRaw`UPDATE "SecurityPaymentReconciliation" SET "original" = jsonb_set(jsonb_set("original", '{email}', to_jsonb(${retainedEmail}::text)), '{userId}', 'null'::jsonb) WHERE "original" ->> 'userId' = ${user.id}`;
     await tx.outboundEmail.deleteMany({
-      where: { OR: [{ userId: user.id }, { recipient: { equals: user.email, mode: "insensitive" } }] },
+      where: { userId: user.id },
     });
-    await tx.contactMessage.deleteMany({ where: { email: { equals: user.email, mode: "insensitive" } } });
-    await tx.workspaceInvitation.deleteMany({ where: { email: { equals: user.email, mode: "insensitive" } } });
+    // Guest contact details do not establish account ownership. Preserve guest
+    // enquiries until a separately verified history/deletion request.
+    await tx.workspaceInvitation.deleteMany({ where: { acceptedById: user.id } });
     await tx.funnelEvent.deleteMany({ where: { userId: user.id } });
     await tx.siteVisit.deleteMany({ where: { userId: user.id } });
     await tx.user.delete({ where: { id: user.id } });
@@ -215,12 +216,13 @@ export async function buildAccountExport(userId: string) {
     }),
     prisma.funnelEvent.findMany({ where: { userId }, orderBy: { createdAt: "asc" } }),
     prisma.siteVisit.findMany({ where: { userId }, orderBy: { createdAt: "asc" } }),
-    prisma.contactMessage.findMany({ where: { email: { equals: user.email, mode: "insensitive" } }, orderBy: { createdAt: "asc" } }),
-    prisma.supportConversation.findMany({ where: { email: { equals: user.email, mode: "insensitive" } }, include: { messages: { orderBy: { createdAt: "asc" } } }, orderBy: { createdAt: "asc" } }),
+    Promise.resolve([]), // Guest email is self-reported, not proof of account ownership.
+    Promise.resolve([]), // Guest support remains available to authorized admins, not email-matched exports.
   ]);
   return sanitizeAccountExport({
     exportVersion: "2026-08-03",
     generatedAt: new Date().toISOString(),
+    guestSupportNotice: "Guest enquiries and chats are excluded because self-reported email does not establish ownership. Contact support for verified history recovery.",
     securityNotice: "Passwords, password-reset tokens, API-key hashes, webhook secrets, channel signing secrets, access tokens, and session tokens are intentionally excluded.",
     account: user,
     ownedWorkspaces: owned,

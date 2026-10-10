@@ -30,6 +30,18 @@ else
   exit 1
 fi
 
+# Include the append-only business evidence alongside each SQL snapshot.
+# Atomic ledger replacement means cp reads a complete prior or current version.
+ledger="${WAZAP_BUSINESS_LEDGER:-/opt/wazap-private/business-ledger.json}"
+if [[ -f "$ledger" ]]; then
+  ledger_output="$BACKUP_DIR/wazap-$timestamp.business-ledger.json"
+  cp -- "$ledger" "$ledger_output.partial"
+  node -e 'const fs=require("fs");const x=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));if(x.version!==1||!Array.isArray(x.entries))process.exit(1)' "$ledger_output.partial"
+  chmod 600 "$ledger_output.partial"
+  mv -- "$ledger_output.partial" "$ledger_output"
+  sha256sum "$ledger_output" > "$ledger_output.sha256"
+fi
+
 find "$BACKUP_DIR" -maxdepth 1 -type f -name 'wazap-*.sql.gz' -printf '%T@ %p\n' \
   | sort -nr \
   | tail -n +8 \

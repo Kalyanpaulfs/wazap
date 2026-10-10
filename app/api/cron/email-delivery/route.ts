@@ -1,3 +1,4 @@
+import {outboundMessageId} from "@/lib/support-threading";
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { isEmailConfigured, sendEmail } from '@/lib/email';
@@ -22,7 +23,7 @@ export async function GET(req:Request){
  const messages=[...serviceMessages,...marketingMessages];
  let accepted=0;
  for(const message of messages){
-  const headers:Record<string,string>={'X-Mailin-custom':`outbound-email:${message.id}`,'Auto-Submitted':'auto-replied','X-Auto-Response-Suppress':'All'};
+  const headers:Record<string,string>={'Message-ID':outboundMessageId(message.id),'X-Mailin-custom':`outbound-email:${message.id}`,'Auto-Submitted':'auto-replied','X-Auto-Response-Suppress':'All'};
   const thread=await prisma.crmActivity.findUnique({where:{sourceKey:'inbound-email-reply:'+message.id},select:{body:true}});if(thread&&/^<[^\r\n<>]{1,900}>$/.test(thread.body)){headers['In-Reply-To']=thread.body;headers.References=thread.body;}
   if(message.type.startsWith('marketing_')&&!message.type.startsWith('marketing_service_')){const check=await nurtureEligibility(message.recipient,message.userId,message.type==='marketing_nurture_feedback');if(!check.ok||(message.type==='marketing_nurture_reactivation'&&(!check.user||!reactivationEligible(check.user)))){await prisma.outboundEmail.updateMany({where:{id:message.id,status:'queued'},data:{status:'cancelled',lastError:check.reason||'Paid access renewed; reactivation held'}});continue;}if(check.lead){headers['List-Unsubscribe']=`<${preferenceUrl(check.lead.id,message.recipient)}>`;headers['List-Unsubscribe-Post']='List-Unsubscribe=One-Click';}}
   const lead=await prisma.crmLead.findFirst({where:{email:{equals:message.recipient,mode:'insensitive'},emailSuppressedAt:{not:null}},select:{id:true}});

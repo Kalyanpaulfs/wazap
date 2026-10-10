@@ -1,3 +1,4 @@
+import {activeCrmContacts,CRM_TRASH_TAG} from "./crm-trash";
 import { readFile, mkdir, writeFile, rename } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import { prisma } from './prisma';
@@ -9,8 +10,11 @@ export async function supportMonitorHealth(){try{return JSON.parse(await readFil
 export async function monitorSupport({poll=process.env.SUPPORT_INBOX_POLLING!=="disabled",now=new Date()}={}) {
  const inboxes=poll?(await pollZohoInboxes()).results:[];
  const since=new Date(process.env.SUPPORT_MONITOR_SINCE || now.toISOString());
- const chats=await prisma.supportConversation.findMany({where:{status:{not:'closed'}},include:{messages:{orderBy:{createdAt:'asc'}}}});
- const tickets=await prisma.contactMessage.findMany({where:{adminReply:null}});
+ const chats=await prisma.supportConversation.findMany({where:{status:{not:'closed'},OR:[{crmLeadId:null},{crmLead:activeCrmContacts}]},include:{messages:{orderBy:{createdAt:'asc'}}}});
+ const trashed=await prisma.crmLead.findMany({where:{tags:{has:CRM_TRASH_TAG}},select:{email:true}});
+ const tickets=await prisma.contactMessage.findMany({where:{adminReply:null,NOT:{OR:trashed.map(lead=>({email:{equals:lead.email,mode:'insensitive' as const}}))}}});
+ const qa=await prisma.crmActivity.findMany({where:{sourceKey:{startsWith:"support-qa:"},body:"true"},select:{sourceKey:true}});
+ const qaIds=new Set(qa.map(x=>x.sourceKey!.slice("support-qa:".length)));
  let overdue=0;
  for(const chat of chats){
   for(const m of chat.messages.filter(m=>m.sender==='visitor'&&m.createdAt>=since))await queueSupportAlert({eventKey:'chat:'+m.id,name:chat.name,email:chat.email,subject:'Wazap live support: new customer message',message:m.body,link:`https://wazap.lt/admin/crm/support?chat=${encodeURIComponent(chat.id)}`});
@@ -19,6 +23,7 @@ export async function monitorSupport({poll=process.env.SUPPORT_INBOX_POLLING!=="
   await queueSupportAlert({eventKey:`overdue:chat:${chat.id}:${state.waitingSince}:${bucket}`,name:chat.name,email:chat.email,subject:'Wazap support: 30-minute reply target exceeded',message:'A customer is still waiting for a human reply. Reading the chat does not resolve this request.',link:`https://wazap.lt/admin/crm/support?chat=${encodeURIComponent(chat.id)}`});
  }
  for(const ticket of tickets){
+  if(qaIds.has(ticket.id))continue;
   if(ticket.createdAt>=since)await queueSupportAlert({eventKey:'request:'+ticket.id,name:ticket.name,email:ticket.email,subject:'New Wazap support request: '+ticket.subject,message:ticket.message});
   const state=responseState(ticket.createdAt,now);if(!state.overdue)continue;overdue++;
   const bucket=Math.floor((now.getTime()-new Date(state.dueAt!).getTime())/3600000);

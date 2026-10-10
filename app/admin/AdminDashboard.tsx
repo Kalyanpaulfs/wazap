@@ -31,7 +31,7 @@ interface User {
 }
 interface Stats { totalUsers: number; subscribers: number; conversionPct: number; totalRevenue: string; mrr: string; expiringSoon: number; churned: number; activeTrials: number; queuedEmails: number; emailFailures: number; emailAwaitingDelivery: number; }
 interface BackupRestoreStatus { status: "healthy" | "failed" | "stale" | "missing"; verifiedAt: string | null; backup: string | null; bytes: number | null; durationSeconds: number | null; reason: string | null; }
-interface NorthStarMetrics { timezone: string; dayStartedAt: string; inboxBusinessesToday: number; trackedLinkBusinessesToday: number; trackedLinkStartsToday: number; newInboxConversationsToday: number; inboxBusinesses7d: number; inboxBusinesses30d: number; trackedLinkBusinesses7d: number; trackedLinkBusinesses30d: number; retainedBusinesses7d: number; retainedBusinesses7dRate: number | null; }
+interface NorthStarMetrics { previousRouterBusinesses7d:number; repeatedRouterBusinesses7d:number; repeatedRouterBusinesses7dRate:number|null; timezone: string; dayStartedAt: string; inboxBusinessesToday: number; trackedLinkBusinessesToday: number; trackedLinkStartsToday: number; newInboxConversationsToday: number; inboxBusinesses7d: number; inboxBusinesses30d: number; trackedLinkBusinesses7d: number; trackedLinkBusinesses30d: number; retainedBusinesses7d: number; retainedBusinesses7dRate: number | null; }
 interface FunnelMetric { name: string; count: number; }
 interface TrafficMetric { label: string; count: number; }
 interface ContactMessage {
@@ -243,8 +243,8 @@ export default function AdminDashboard({ data }: {
       <section className="rounded-2xl border border-[#25D366]/30 bg-[#25D366]/5 p-5">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[.18em] text-[#25D366]">North star · Asia/Dubai</p>
-            <h2 className="mt-1 text-xl font-bold text-white">Verified customer conversation activity</h2>
+            <p className="text-xs font-bold uppercase tracking-[.18em] text-[#25D366]">Business activity · Asia/Dubai</p>
+            <h2 className="mt-1 text-xl font-bold text-white">Inbox activity and tracked routing</h2><a href="/admin/business" className="text-sm text-[#25D366] underline">Onboarding, actual costs and workload →</a>
           </div>
           <p className="text-xs text-slate-500">Current day since {new Date(data.system.northStar.dayStartedAt).toLocaleString()}</p>
         </div>
@@ -265,9 +265,10 @@ export default function AdminDashboard({ data }: {
         </div>
         <p className="mt-3 text-xs text-slate-500">
           {data.system.northStar.retainedBusinesses7dRate === null
-            ? "Weekly retention will appear after businesses are active in two consecutive seven-day windows."
+            ? "Inbox repeat-use will appear after businesses are active in two consecutive seven-day windows."
             : `${data.system.northStar.retainedBusinesses7d} business${data.system.northStar.retainedBusinesses7d === 1 ? "" : "es"} returned week over week (${data.system.northStar.retainedBusinesses7dRate}%).`}
         </p>
+        <p className="mt-2 text-sm text-slate-300">Router repeat-use: {data.system.northStar.repeatedRouterBusinesses7d} of {data.system.northStar.previousRouterBusinesses7d} workspaces from the preceding week returned ({data.system.northStar.repeatedRouterBusinesses7dRate ?? "—"}%). This is usage repetition, not paid retention; internal/test classification still needs review.</p>
         <p className="mt-2 text-xs text-slate-500">Tracked link opens are redirects into WhatsApp; they are reported separately and are not counted as inbox conversations. {data.system.northStar.trackedLinkBusinesses7d} businesses used tracked links in the last 7 days.</p>
       </section>
 
