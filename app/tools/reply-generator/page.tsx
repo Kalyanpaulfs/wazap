@@ -43,27 +43,27 @@ export default function Page() {
         </div>
         <div className="mt-10 grid gap-5 rounded-3xl border border-slate-800 bg-[#111811] p-6 md:grid-cols-2">
           <div className="space-y-4">
-            <textarea
+            <textarea aria-label="Paste the customer message…"
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               rows={6}
               placeholder="Paste the customer message…"
               className="w-full rounded-xl border border-slate-700 bg-slate-950 p-4 text-sm text-white outline-none focus:border-[#25D366]"
             />
-            <input
+            <input aria-label="Customer name (optional)"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Customer name (optional)"
               className="w-full rounded-xl border border-slate-700 bg-slate-950 p-3 text-sm text-white"
             />
-            <input
+            <input aria-label="What should the reply achieve?"
               value={goal}
               onChange={(e) => setGoal(e.target.value)}
               placeholder="What should the reply achieve?"
               className="w-full rounded-xl border border-slate-700 bg-slate-950 p-3 text-sm text-white"
             />
             <select
-              value={tone}
+              aria-label="Reply tone" value={tone}
               onChange={(e) => setTone(e.target.value as keyof typeof openings)}
               className="w-full rounded-xl border border-slate-700 bg-slate-950 p-3 text-sm text-white"
             >

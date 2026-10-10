@@ -9,14 +9,7 @@ export const metadata: Metadata = {
   openGraph: { title: "WhatsApp Ad Link Builder with Click Tracking — Wazap", description: "Track every click on your WhatsApp ad links. UTM tagging, click dashboard, multiple campaigns.", url: "https://wazap.lt/tools/ad-builder" },
 };
 
-const jsonLd = {
-  "@context": "https://schema.org", "@type": "SoftwareApplication",
-  name: "Click-to-WhatsApp Ad Builder", applicationCategory: "MarketingApplication",
-  url: "https://wazap.lt/tools/ad-builder", operatingSystem: "Web",
-  description: "UTM-tracked WhatsApp links for Facebook and Google ads with click analytics dashboard.",
-  offers: { "@type": "AggregateOffer", lowPrice: "19.00", highPrice: "99.00", priceCurrency: "USD" },
-};
 
 export default function Layout({ children }: { children: React.ReactNode }) {
-  return <><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />{children}<ToolSeo k="ad-builder" /></>;
+  return <>{children}<ToolSeo k="ad-builder" /></>;
 }

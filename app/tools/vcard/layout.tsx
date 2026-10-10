@@ -9,14 +9,7 @@ export const metadata: Metadata = {
   openGraph: { title: "WhatsApp vCard + QR Generator — Digital Business Card — Wazap", description: "Create a digital business card and WhatsApp QR code in seconds. Download .vcf and QR PNG for free.", url: "https://wazap.lt/tools/vcard" },
 };
 
-const jsonLd = {
-  "@context": "https://schema.org", "@type": "SoftwareApplication",
-  name: "WhatsApp vCard + QR Generator", applicationCategory: "BusinessApplication",
-  url: "https://wazap.lt/tools/vcard", operatingSystem: "Web",
-  description: "Generate digital business cards (.vcf) and custom WhatsApp QR codes. Free download.",
-  offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
-};
 
 export default function Layout({ children }: { children: React.ReactNode }) {
-  return <><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />{children}<ToolSeo k="vcard" /></>;
+  return <>{children}<ToolSeo k="vcard" /></>;
 }

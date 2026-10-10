@@ -20,10 +20,10 @@ export default function Navbar() {
   return (
     <nav aria-label="Main navigation" className="sticky top-0 z-50 border-b border-green-900/20 bg-[#0a0f0a]/92 backdrop-blur-md">
       <div className="mx-auto max-w-6xl px-4 h-14 flex items-center justify-between">
-        <Link href="/" aria-label="Wazap home" className="flex items-center gap-2">
+        <Link href="/" aria-label="Wazap home" className="flex items-center gap-2 max-[360px]:w-[116px] max-[360px]:[&>svg]:w-full">
           <BrandLogo />
         </Link>
-        <div className="flex items-center gap-3 sm:gap-6">
+        <div className="flex items-center gap-3 max-[360px]:gap-1 sm:gap-6">
         <div className="hidden sm:flex items-center gap-6 text-sm">
           {navigation.map(item => <Link key={item.href} href={item.href} className="text-slate-300 hover:text-[#25D366] transition-colors">{item.label}</Link>)}
         </div>

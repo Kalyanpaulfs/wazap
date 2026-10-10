@@ -27,7 +27,17 @@ export default function SeoSolutionPage({
   schemaName: string;
   canonical: string;
 }) {
+  const related = [
+    { href: "/whatsapp-team-inbox", label: "WhatsApp team inbox", body: "Assign and review connected conversations." },
+    { href: "/whatsapp-crm", label: "WhatsApp CRM", body: "Keep contacts and next actions organized." },
+    { href: "/whatsapp-ai-agent", label: "WhatsApp AI agent", body: "Review assistance and handoff options." },
+    { href: "/tools/rotator", label: "WhatsApp link rotator", body: "Route public handoffs across existing numbers." },
+  ].filter(item => !canonical.endsWith(item.href));
   const jsonLd = [
+    { "@context": "https://schema.org", "@type": "BreadcrumbList", itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Wazap", item: "https://wazap.lt" },
+      { "@type": "ListItem", position: 2, name: schemaName, item: canonical },
+    ] },
     {
       "@context": "https://schema.org",
       "@type": "SoftwareApplication",
@@ -106,6 +116,14 @@ export default function SeoSolutionPage({
           </div>
         </section>
 
+        <nav aria-label="Related WhatsApp workflows" className="mt-16">
+          <h2 className="text-2xl font-bold text-white">Choose the next step for your team</h2>
+          <div className="mt-5 grid gap-4 sm:grid-cols-3">
+            {related.map(item => <Link key={item.href} href={item.href} className="min-w-0 rounded-2xl border border-slate-800 bg-[#111811] p-5 hover:border-[#25D366]/50">
+              <h3 className="font-bold text-[#25D366]">{item.label}</h3><p className="mt-2 text-sm leading-6 text-slate-400">{item.body}</p>
+            </Link>)}
+          </div>
+        </nav>
         <section className="mt-16 rounded-3xl border border-slate-800 bg-[#111811] p-8 text-center">
           <h2 className="text-3xl font-black text-white">Turn WhatsApp conversations into an accountable workflow.</h2>
           <p className="mx-auto mt-3 max-w-2xl text-slate-400">Start with free tools, then bring your team, leads and customer follow-ups into one Wazap workspace.</p>

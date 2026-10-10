@@ -8,12 +8,13 @@ export interface ToolSeoData {
 }
 
 export const TOOL_SEO: Record<string, ToolSeoData> = {
+"bulk": {"name": "Consent-Based WhatsApp Bulk Queue", "href": "/tools/bulk", "appDesc": "Prepare personalized WhatsApp chats for manual review and sending.", "faqs": [{"q": "Does Wazap send the messages automatically?", "a": "No. It prepares a queue and opens chats one at a time. You review and send inside WhatsApp. Only use contacts with permission for the communication."}]},"follow-up": {"name": "WhatsApp Lead Follow-Up Tracker", "href": "/tools/follow-up", "appDesc": "Track leads, source labels, estimated values and next follow-up dates.", "faqs": [{"q": "Does a recorded lead value mean revenue was collected?", "a": "No. Estimated value and lead status are workflow records. Collected sales need separate business evidence."}]},"chat-insights": {"name": "WhatsApp Chat Insights", "href": "/tools/chat-insights", "appDesc": "Analyze message activity in an exported WhatsApp text chat in your browser.", "faqs": [{"q": "Does my chat file leave my browser?", "a": "The text is parsed in your browser. Wazap records tool-use activity for allowances; chat contents are not included in that activity request."}, {"q": "Which export date formats are supported?", "a": "Android dash-separated and iPhone bracketed timestamps are supported. Choose day/month or month/day to match the supplied export."}]},"reply-generator": {"name": "WhatsApp Customer Reply Generator", "href": "/tools/reply-generator", "appDesc": "Prepare and review a structured customer-reply draft in your browser.", "faqs": [{"q": "Is the reply sent automatically?", "a": "No. Generate a draft, review its facts and copy it yourself. Nothing is sent to the customer by this tool."}]},"message-scheduler": {"name": "WhatsApp Message Reminder", "href": "/tools/message-scheduler", "appDesc": "Download a calendar reminder containing a prepared WhatsApp message link.", "faqs": [{"q": "Will Wazap send at the scheduled time?", "a": "No. Import the calendar reminder and configure notifications in your calendar. You open the chat and send manually."}]},
   widget: {
     name: "WhatsApp Widget Generator", href: "/tools/widget",
-    appDesc: "Generate an embeddable floating WhatsApp chat button for any website. Free forever.",
+    appDesc: "Prepare an embeddable floating WhatsApp click-to-chat button for your website.",
     faqs: [
       { q: "How do I add a WhatsApp chat button to my website?", a: "Enter your number, customise the colour, position and greeting, then copy the one line of HTML the generator gives you and paste it just before the closing </body> tag of your site. It works on WordPress, Shopify, Wix, Webflow and plain HTML." },
-      { q: "Is the WhatsApp widget free?", a: "Yes. The widget generator is free to use. Paid plans remove the small Wazap label and unlock unlimited widgets." },
+      { q: "Is the WhatsApp widget free?", a: "You can preview the widget and try copying it within your account allowance. Paid plans increase usage. Review the generated code and its Wazap attribution before adding it to your site." },
       { q: "Do I need the WhatsApp Business API?", a: "No. The widget uses WhatsApp's official click-to-chat links, so it works with any normal WhatsApp or WhatsApp Business number — no API approval needed." },
     ],
   },
@@ -21,7 +22,7 @@ export const TOOL_SEO: Record<string, ToolSeoData> = {
     name: "WhatsApp Number Formatter", href: "/tools/checker",
     appDesc: "Clean and format up to 500 phone numbers and generate direct wa.me links.",
     faqs: [
-      { q: "How do I format WhatsApp numbers in bulk?", a: "Paste up to 500 phone numbers (one per line, with country code). The tool checks phone-number format, flags malformed entries, and generates a clickable wa.me link for every valid format. It does not confirm whether a number is registered on WhatsApp." },
+      { q: "How do I format WhatsApp numbers in bulk?", a: "Paste phone numbers one per line, with country code, within your account allowance. The tool checks phone-number format, flags malformed entries, and generates a clickable wa.me link for every valid format. It does not confirm whether a number is registered on WhatsApp." },
       { q: "Does it confirm a number has WhatsApp?", a: "No. It validates international phone-number format and builds wa.me links in your browser; it does not query WhatsApp account registration." },
       { q: "What format should the numbers be in?", a: "Include the country code, e.g. 971501234567 or +44 7700 900123. The tool cleans spaces, dashes and brackets automatically." },
     ],
@@ -30,9 +31,9 @@ export const TOOL_SEO: Record<string, ToolSeoData> = {
     name: "Click-to-WhatsApp Ad Builder", href: "/tools/ad-builder",
     appDesc: "Create UTM-tracked WhatsApp links for Facebook and Google ads with click analytics.",
     faqs: [
-      { q: "How do I track WhatsApp clicks from my ads?", a: "Create an ad link with your number, message and UTM tags (source, medium, campaign). Use that link in your Facebook or Google ad and the builder counts every click so you can see which campaign drives the most chats." },
+      { q: "How do I track WhatsApp clicks from my ads?", a: "Create an ad link with your number, message and UTM tags (source, medium, campaign). Share that tracked link where the advertising platform permits it and compare recorded click activity. Received messages and sales need separate verification." },
       { q: "What are UTM parameters for?", a: "UTM tags label acquisition links by source, medium and campaign. Verify the attribution path separately; tags alone do not confirm a received WhatsApp message or a sale." },
-      { q: "Can I use these links in Meta ads?", a: "Yes — click-to-WhatsApp wa.me links work in Facebook and Instagram ad destinations and in Google Ads." },
+      { q: "Can I use these links in Meta ads?", a: "Check the current destination and campaign rules of the advertising platform before using a tracked WhatsApp link. The link builder does not publish ads or certify ad approval." },
     ],
   },
   vcard: {
@@ -55,10 +56,12 @@ export const TOOL_SEO: Record<string, ToolSeoData> = {
   },
   rotator: {
     name: "WhatsApp Link Rotator", href: "/tools/rotator",
-    appDesc: "One trackable link that distributes click-to-WhatsApp leads across team numbers in round-robin order.",
+    appDesc: "One trackable link that rotates click-to-chat handoffs across configured WhatsApp team numbers.",
     faqs: [
       { q: "How does a WhatsApp link rotator work?", a: "Add configured team numbers and create one public link. Sequential handoffs rotate across destinations. Agent availability and exact ordering under concurrent requests are not guaranteed." },
-      { q: "Why use a rotator instead of one number?", a: "It stops one agent getting every enquiry. Each click is handed to the next destination so the team shares new opportunities fairly." },
+      { q: "Why use a rotator instead of one number?", a: "Use one entry point for a team handling the same type of enquiry. Sequential handoffs take turns across the configured numbers; received messages and sales are measured separately." },
+      { q: "Can I add a predefined WhatsApp message?", a: "Yes. Add an optional message when creating the router, or edit it on a saved router. The same text is prepared for each destination; the visitor can edit it and chooses whether to send it." },
+      { q: "How much routing is free?", a: "The first 25 routed handoffs are free per account across all rotators. This lifetime allowance does not reset daily. Paid routing starts at $9/month; the 14-day workspace trial is separate." },
       { q: "Can I see how many clicks each agent gets?", a: "Yes. Wazap shows total routed handoff activity and the last 30 days by destination. A handoff is not proof of a sent message or a unique customer." },
     ],
   },
@@ -126,7 +129,9 @@ export const TOOL_SEO: Record<string, ToolSeoData> = {
     faqs: [
       { q: "How do I make bold or italic text in WhatsApp?", a: "Type your message, select the words, and tap Bold, Italic, Strikethrough or Monospace — the tool adds the right symbols (*bold*, _italic_, ~strike~) and shows a live preview. Copy it and paste into WhatsApp." },
       { q: "What are the WhatsApp formatting symbols?", a: "*text* for bold, _text_ for italic, ~text~ for strikethrough, and ```text``` for monospace. This tool adds them for you so you don't have to remember." },
-      { q: "Does the formatting work everywhere?", a: "Yes — the symbols are WhatsApp's own formatting, so they render on iPhone, Android and WhatsApp Web." },
+      { q: "Does Wazap send or upload my message?", a: "Formatting and preview happen in your browser. Copying does not send the message; you paste it into WhatsApp and choose whether to send it." },
+      { q: "Is the formatter free?", a: "You can edit and preview text, with one free copy in this browser. A paid Wazap plan unlocks further copies." },
+      { q: "Why does my formatting not appear?", a: "Check the opening and closing symbols and avoid spaces immediately inside them. Try one style on a short phrase and review the pasted result in WhatsApp. Wazap’s preview is illustrative." },
     ],
   },
 };

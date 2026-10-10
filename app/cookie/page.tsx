@@ -19,7 +19,7 @@ export default function CookiePage() {
           </Link>
         </div>
       </nav>
-      <div className="max-w-2xl mx-auto px-4 py-16">
+      <div className="w-full min-w-0 max-w-2xl mx-auto px-4 py-16">
         <h1 className="text-3xl font-bold text-white mb-2">Cookie Policy</h1>
         <p className="text-slate-500 text-sm mb-10">Last updated: July 2026</p>
 

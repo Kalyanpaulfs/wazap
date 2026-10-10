@@ -14,19 +14,22 @@ export default function LinkBuilderPage() {
   const [cc, setCc] = useState("971");
   const [phone, setPhone] = useState("");
   const [msg, setMsg] = useState("");
+  const [error, setError] = useState("");
   const [copied, setCopied] = useState("");
 
   const clean = (cc + phone).replace(/\D/g, "");
-  const valid = clean.length >= 8;
+  const valid = phone.replace(/\D/g, "").length > 0 && /^[1-9]\d{6,14}$/.test(clean);
   const link = valid ? `https://wa.me/${clean}${msg ? `?text=${encodeURIComponent(msg)}` : ""}` : "";
   const html = link
     ? `<a href="${link}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:8px;background:#25D366;color:#fff;font-weight:600;padding:12px 22px;border-radius:9999px;text-decoration:none;font-family:sans-serif;font-size:15px">Chat on WhatsApp</a>`
     : "";
   const md = link ? `[Chat on WhatsApp](${link})` : "";
 
-  function copy(text: string, key: string) {
+  async function copy(text: string, key: string) {
     if (!text) return;
-    navigator.clipboard.writeText(text); setCopied(key); setTimeout(() => setCopied(""), 1500);
+    setError("");
+    try { await navigator.clipboard.writeText(text); setCopied(key); setTimeout(() => setCopied(""), 1500); }
+    catch { setError("Copy was blocked. Select the link or snippet and copy it manually."); }
   }
   const CopyBtn = ({ text, k }: { text: string; k: string }) => (
     <button onClick={() => copy(text, k)} disabled={!text}
@@ -38,7 +41,7 @@ export default function LinkBuilderPage() {
 
   return (
     <>
-      <div className="border-b border-green-900/20 bg-[#0a0f0a]/90 px-4 h-10 flex items-center gap-3 text-sm">
+      <div className="border-b border-green-900/20 bg-[#0a0f0a]/90 px-4 min-h-10 py-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
         <Link href="/tools" className="text-slate-500 hover:text-white">← Tools</Link>
         <span className="text-slate-700">/</span>
         <span className="text-white font-medium">Click-to-Chat Link Builder</span>
@@ -54,17 +57,18 @@ export default function LinkBuilderPage() {
 
           <div className="rounded-2xl border border-slate-800 bg-[#111811] p-6 space-y-4">
             <div className="flex gap-2">
-              <select value={cc} onChange={e => setCc(e.target.value)}
+              <select aria-label="Country code" value={cc} onChange={e => setCc(e.target.value)}
                 className="rounded-xl bg-slate-900 border border-slate-700 px-3 py-3 text-sm text-white focus:outline-none focus:border-[#25D366]">
                 {COUNTRIES.map(c => <option key={c.code} value={c.code}>{c.label}</option>)}
               </select>
-              <input value={phone} onChange={e => setPhone(e.target.value)} placeholder="Phone number" inputMode="tel"
-                className="flex-1 rounded-xl bg-slate-900 border border-slate-700 px-4 py-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#25D366] font-mono" />
+              <input aria-label="Phone number without country code" value={phone} onChange={e => setPhone(e.target.value)} placeholder="Phone number" inputMode="tel"
+                className="min-w-0 flex-1 rounded-xl bg-slate-900 border border-slate-700 px-4 py-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#25D366] font-mono" />
             </div>
-            <textarea value={msg} onChange={e => setMsg(e.target.value)} rows={3} placeholder="Pre-filled message (optional) — e.g. Hi! I'd like to know more about…"
+            <textarea aria-label="Pre-filled message" value={msg} onChange={e => setMsg(e.target.value)} rows={3} placeholder="Pre-filled message (optional) — e.g. Hi! I'd like to know more about…"
               className="w-full rounded-xl bg-slate-900 border border-slate-700 px-4 py-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#25D366] resize-none" />
           </div>
 
+          {error && <p role="alert" className="text-sm text-red-400">{error}</p>}
           {valid ? (
             <div className="space-y-4">
               {/* Live button preview */}
@@ -82,7 +86,7 @@ export default function LinkBuilderPage() {
                 <div className="flex items-center gap-2">
                   <code className="flex-1 min-w-0 truncate rounded-lg bg-slate-900 px-3 py-2 text-xs text-slate-300 font-mono">{link}</code>
                   <CopyBtn text={link} k="link" />
-                  <a href={link} target="_blank" rel="noopener noreferrer" className="shrink-0 text-slate-500 hover:text-[#25D366]"><ExternalLink className="h-4 w-4" /></a>
+                  <a aria-label="Open generated WhatsApp link" href={link} target="_blank" rel="noopener noreferrer" className="shrink-0 text-slate-500 hover:text-[#25D366]"><ExternalLink className="h-4 w-4" /></a>
                 </div>
               </div>
 
@@ -105,7 +109,7 @@ export default function LinkBuilderPage() {
               </div>
             </div>
           ) : (
-            <p className="text-center text-sm text-slate-600">Enter a phone number to generate your link and button.</p>
+            <p className="text-center text-sm text-slate-600">Enter a valid international number (7–15 digits total) using the country selector.</p>
           )}
 
           <p className="text-center text-xs text-slate-600">Uses WhatsApp&apos;s official click-to-chat (wa.me) links — no app, no API, works on mobile &amp; desktop.</p>

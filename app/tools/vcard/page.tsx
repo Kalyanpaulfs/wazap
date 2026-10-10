@@ -76,6 +76,7 @@ export default function VCardPage() {
 
   async function downloadVCF() {
     setLimitError(null);
+    try {
     const res = await fetch("/api/tools/use", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -86,6 +87,7 @@ export default function VCardPage() {
       setLimitError(`Daily download limit reached. Resets at midnight.`);
       return;
     }
+    if (!res.ok) throw new Error(data.error || "Contact download could not be completed. Please try again.");
     setRemaining(data.remaining === -1 ? null : data.remaining);
     const blob = new Blob([vcfContent], { type: "text/vcard" });
     const url = URL.createObjectURL(blob);
@@ -93,7 +95,9 @@ export default function VCardPage() {
     a.href = url;
     a.download = `${name.replace(/\s/g, "-") || "contact"}.vcf`;
     a.click();
-    URL.revokeObjectURL(url);
+    URL.revokeObjectURL(url);    } catch (error) {
+      setLimitError(error instanceof Error ? error.message : "Contact download could not be completed. Please try again.");
+    }
   }
 
   function downloadQR() {
@@ -123,7 +127,7 @@ export default function VCardPage() {
 
   return (
     <>
-      <div className="border-b border-green-900/20 bg-[#0a0f0a]/90 px-4 h-10 flex items-center gap-3 text-sm">
+      <div className="border-b border-green-900/20 bg-[#0a0f0a]/90 px-4 min-h-10 py-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
         <Link href="/tools" className="text-slate-500 hover:text-white">← Tools</Link>
         <span className="text-slate-700">/</span>
         <span className="text-white font-medium">vCard + QR Generator</span>
@@ -185,8 +189,8 @@ export default function VCardPage() {
                 <label className="text-xs text-slate-400 block mb-1">WhatsApp Number *</label>
                 <div className="flex gap-2">
                   <CountryPicker value={dial} onChange={setDial} />
-                  <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="Phone number"
-                    className="flex-1 rounded-xl bg-slate-900 border border-slate-700 px-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#25D366]" />
+                  <input aria-label="Phone number" type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="Phone number"
+                    className="min-w-0 flex-1 rounded-xl bg-slate-900 border border-slate-700 px-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#25D366]" />
                 </div>
               </div>
 
@@ -202,7 +206,7 @@ export default function VCardPage() {
                 </div>
                 <div className="flex items-center gap-2 mt-2">
                   <label className="text-xs text-slate-500">Custom:</label>
-                  <input type="color" value={color} onChange={e => setColor(e.target.value)}
+                  <input aria-label="Custom QR colour" type="color" value={color} onChange={e => setColor(e.target.value)}
                     className="w-8 h-8 rounded-lg cursor-pointer bg-transparent border border-slate-700" />
                   <span className="text-xs text-slate-500 font-mono">{color}</span>
                 </div>

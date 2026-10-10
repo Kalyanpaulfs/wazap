@@ -10,33 +10,14 @@ import {
 } from "lucide-react";
 import { recordToolUse } from "@/lib/tool-activity-client";
 
-type Row = { date: Date; sender: string; text: string };
-function parse(raw: string) {
-  const out: Row[] = [];
-  for (const line of raw.split(/\r?\n/)) {
-    const m = line.match(
-      /^\[?(\d{1,2})[\/.](\d{1,2})[\/.](\d{2,4}),?\s+(\d{1,2}):(\d{2})(?:\s*([AP]M))?\]?\s*[-–]\s*([^:]+):\s*(.*)$/i,
-    );
-    if (!m) continue;
-    let h = +m[4];
-    if (m[6]) {
-      if (/PM/i.test(m[6]) && h < 12) h += 12;
-      if (/AM/i.test(m[6]) && h === 12) h = 0;
-    }
-    const y = +m[3] < 100 ? 2000 + +m[3] : +m[3];
-    out.push({
-      date: new Date(y, +m[2] - 1, +m[1], h, +m[5]),
-      sender: m[7].trim(),
-      text: m[8],
-    });
-  }
-  return out;
-}
+import { parseWhatsAppChat, type ChatDateOrder } from "@/lib/chat-export";
 export default function Page() {
   const [draft, setDraft] = useState("");
   const [raw, setRaw] = useState("");
+  const [dateOrder, setDateOrder] = useState<ChatDateOrder>("day-first");
+  const [analyzedOrder, setAnalyzedOrder] = useState<ChatDateOrder>("day-first");
   const [error, setError] = useState("");
-  const rows = useMemo(() => parse(raw), [raw]);
+  const rows = useMemo(() => parseWhatsAppChat(raw, analyzedOrder), [raw, analyzedOrder]);
   const stats = useMemo(() => {
     const senders = new Map<string, number>();
     const hours = Array(24).fill(0);
@@ -83,18 +64,24 @@ export default function Page() {
                 }}
               />
             </label>
-            <textarea
+            <label htmlFor="chat-export" className="mt-4 block text-sm text-slate-300">Exported chat text</label>
+            <textarea id="chat-export"
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
               rows={13}
               placeholder="Or paste an exported chat here…"
               className="mt-4 w-full rounded-xl border border-slate-700 bg-slate-950 p-4 text-xs text-white outline-none focus:border-[#25D366]"
             />
+            <label htmlFor="chat-date-order" className="mt-3 block text-sm text-slate-300">Export date order</label>
+            <select id="chat-date-order" value={dateOrder} onChange={e => setDateOrder(e.target.value as ChatDateOrder)} className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 p-3 text-sm text-white">
+              <option value="day-first">Day / month / year</option><option value="month-first">Month / day / year</option>
+            </select>
             <button disabled={!draft.trim()} onClick={async () => {
               setError("");
               try {
-                if (!parse(draft).length) throw new Error("No WhatsApp messages were recognized. Export without media and use the .txt file.");
+                if (!parseWhatsAppChat(draft, dateOrder).length) throw new Error("No WhatsApp messages were recognized. Export without media and use the .txt file.");
                 await recordToolUse("chatInsights", "analyze");
+                setAnalyzedOrder(dateOrder);
                 setRaw(draft);
               } catch (e) { setError(e instanceof Error ? e.message : "Analysis failed."); }
             }} className="mt-3 w-full rounded-full bg-[#25D366] py-3 text-sm font-bold text-black disabled:opacity-40">Analyze chat</button>

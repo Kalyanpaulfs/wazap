@@ -1,3 +1,4 @@
+import ToolSeo from "@/app/ToolSeo";
 import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Free WhatsApp Chat Analyzer & Insights",
@@ -6,5 +7,5 @@ export const metadata: Metadata = {
   alternates: { canonical: "https://wazap.lt/tools/chat-insights" },
 };
 export default function Layout({ children }: { children: React.ReactNode }) {
-  return children;
+  return <>{children}<ToolSeo k="chat-insights" /></>;
 }

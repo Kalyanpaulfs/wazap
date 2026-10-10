@@ -37,6 +37,7 @@ export default function NumberCheckerPage() {
     if (!lines.length) return;
     setLimitError(null);
 
+    try {
     const res = await fetch("/api/tools/use", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -49,9 +50,12 @@ export default function NumberCheckerPage() {
       return;
     }
 
+    if (!res.ok) throw new Error(data.error || "Number validation could not be completed. Please try again.");
     setRemaining(data.remaining === -1 ? null : data.remaining);
     setResults(lines.map(parseNumber));
-    setChecked(true);
+    setChecked(true);    } catch (error) {
+      setLimitError(error instanceof Error ? error.message : "Number validation could not be completed. Please try again.");
+    }
   }
 
   const inputCount = input.split("\n").filter(Boolean).length;
@@ -61,7 +65,7 @@ export default function NumberCheckerPage() {
 
   return (
     <>
-      <div className="border-b border-green-900/20 bg-[#0a0f0a]/90 px-4 h-10 flex items-center gap-3 text-sm">
+      <div className="border-b border-green-900/20 bg-[#0a0f0a]/90 px-4 min-h-10 py-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
         <Link href="/tools" className="text-slate-500 hover:text-white">← Tools</Link>
         <span className="text-slate-700">/</span>
         <span className="text-white font-medium">Number Formatter</span>
@@ -84,12 +88,12 @@ export default function NumberCheckerPage() {
               <span className="text-sm font-medium text-white">Paste numbers (one per line)</span>
             </div>
             <p className="text-xs text-slate-500">Include country code. Examples: <code className="text-slate-400">971501234567</code> or <code className="text-slate-400">+44 7700 900123</code></p>
-            <textarea value={input} onChange={e => setInput(e.target.value)} rows={10}
+            <textarea aria-label="Phone numbers, one per line" value={input} onChange={e => setInput(e.target.value)} rows={10}
               placeholder={`971501234567\n447700900123\n15551234567\n...`}
               className="w-full rounded-xl bg-slate-900 border border-slate-700 px-4 py-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#25D366] resize-none font-mono" />
 
             {limitError && (
-              <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+              <div role="alert" className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
                 {limitError} {plan === "free" && <Link href="/pricing" className="underline ml-1">Upgrade for more</Link>}
               </div>
             )}

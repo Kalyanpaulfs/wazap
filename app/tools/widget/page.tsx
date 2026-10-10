@@ -26,6 +26,7 @@ export default function WidgetGeneratorPage() {
   }, []);
 
   const fullNumber = dial + number.replace(/\D/g, "");
+  const validNumber = /^[1-9]\d{6,14}$/.test(fullNumber) && number.trim().length > 0;
   const waUrl = message.trim()
     ? `https://wa.me/${fullNumber}?text=${encodeURIComponent(message)}`
     : `https://wa.me/${fullNumber}`;
@@ -36,10 +37,11 @@ export default function WidgetGeneratorPage() {
     ? "bottom:24px;left:24px;"
     : "top:24px;right:24px;";
 
+  const safeLabel = label.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   const embedCode = `<!-- Wazap WhatsApp Widget -->
 <div id="wazap-widget" style="position:fixed;${positionStyle}z-index:9999;display:flex;flex-direction:column;align-items:${position.includes("right") ? "flex-end" : "flex-start"};gap:8px;">
-  ${showLabel ? `<div style="background:#1f2937;color:#fff;padding:8px 14px;border-radius:999px;font-size:13px;font-family:sans-serif;font-weight:600;box-shadow:0 4px 12px rgba(0,0,0,0.3);white-space:nowrap;">${label}</div>` : ""}
-  <a href="${waUrl}" target="_blank" rel="noopener noreferrer"
+  ${showLabel ? `<div style="background:#1f2937;color:#fff;padding:8px 14px;border-radius:999px;font-size:13px;font-family:sans-serif;font-weight:600;box-shadow:0 4px 12px rgba(0,0,0,0.3);white-space:nowrap;">${safeLabel}</div>` : ""}
+  <a aria-label="Chat on WhatsApp" href="${waUrl}" target="_blank" rel="noopener noreferrer"
     style="display:flex;align-items:center;justify-content:center;width:${size}px;height:${size}px;background:${color};border-radius:50%;box-shadow:0 4px 16px rgba(0,0,0,0.3);transition:transform 0.2s;"
     onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">
     <svg width="${Math.round(parseInt(size) * 0.48)}" height="${Math.round(parseInt(size) * 0.48)}" viewBox="0 0 24 24" fill="white">
@@ -57,6 +59,8 @@ export default function WidgetGeneratorPage() {
 
   async function copy() {
     setLimitError(null);
+    if (!validNumber) { setLimitError("Enter a valid phone number before copying your widget."); return; }
+    try {
     const res = await fetch("/api/tools/use", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -67,15 +71,18 @@ export default function WidgetGeneratorPage() {
       setLimitError("Daily limit reached. Resets at midnight.");
       return;
     }
+    if (!res.ok) throw new Error(data.error || "Widget copy could not be completed. Please try again.");
     setRemaining(data.remaining === -1 ? null : data.remaining);
-    navigator.clipboard.writeText(embedCode);
+    await navigator.clipboard.writeText(embedCode);
     setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    setTimeout(() => setCopied(false), 2000);    } catch (error) {
+      setLimitError(error instanceof Error ? error.message : "Widget copy could not be completed. Please try again.");
+    }
   }
 
   return (
     <>
-      <div className="border-b border-green-900/20 bg-[#0a0f0a]/90 px-4 h-10 flex items-center gap-3 text-sm">
+      <div className="border-b border-green-900/20 bg-[#0a0f0a]/90 px-4 min-h-10 py-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
         <Link href="/tools" className="text-slate-500 hover:text-white">← Tools</Link>
         <span className="text-slate-700">/</span>
         <span className="text-white font-medium">Widget Generator</span>
@@ -94,16 +101,16 @@ export default function WidgetGeneratorPage() {
               <div className="rounded-2xl border border-slate-800 bg-[#111811] p-6 space-y-4">
                 <h2 className="font-semibold text-white">Your WhatsApp Number</h2>
                 <div className="flex flex-col gap-2 sm:flex-row">
-                  <select value={dial} onChange={e => setDial(e.target.value)}
+                  <select aria-label="Country code" value={dial} onChange={e => setDial(e.target.value)}
                     className="w-full min-w-0 rounded-xl bg-slate-900 border border-slate-700 px-3 py-2.5 text-sm text-white focus:outline-none focus:border-[#25D366] sm:w-44 sm:shrink-0">
                     {COUNTRIES.map(c => <option key={c.code} value={c.dial.replace("+","")}>{c.dial} {c.name}</option>)}
                   </select>
-                  <input type="tel" value={number} onChange={e => setNumber(e.target.value)} placeholder="Phone number"
+                  <input aria-label="Phone number" type="tel" value={number} onChange={e => setNumber(e.target.value)} placeholder="Phone number"
                     className="w-full min-w-0 flex-1 rounded-xl bg-slate-900 border border-slate-700 px-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#25D366]" />
                 </div>
                 <div>
                   <label className="text-xs text-slate-400 block mb-1">Pre-filled message</label>
-                  <input type="text" value={message} onChange={e => setMessage(e.target.value)}
+                  <input aria-label="Widget pre-filled message" type="text" value={message} onChange={e => setMessage(e.target.value)}
                     className="w-full rounded-xl bg-slate-900 border border-slate-700 px-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#25D366]" />
                 </div>
               </div>
@@ -113,7 +120,7 @@ export default function WidgetGeneratorPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="text-xs text-slate-400 block mb-1">Position</label>
-                    <select value={position} onChange={e => setPosition(e.target.value)}
+                    <select aria-label="Widget position" value={position} onChange={e => setPosition(e.target.value)}
                       className="w-full rounded-xl bg-slate-900 border border-slate-700 px-3 py-2.5 text-sm text-white focus:outline-none focus:border-[#25D366]">
                       <option value="bottom-right">Bottom Right</option>
                       <option value="bottom-left">Bottom Left</option>
@@ -122,7 +129,7 @@ export default function WidgetGeneratorPage() {
                   </div>
                   <div>
                     <label className="text-xs text-slate-400 block mb-1">Button Size (px)</label>
-                    <input type="number" value={size} onChange={e => setSize(e.target.value)} min="40" max="100"
+                    <input aria-label="Widget button size in pixels" type="number" value={size} onChange={e => setSize(e.target.value)} min="40" max="100"
                       className="w-full rounded-xl bg-slate-900 border border-slate-700 px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#25D366]" />
                   </div>
                 </div>
@@ -130,7 +137,7 @@ export default function WidgetGeneratorPage() {
                   <label className="text-xs text-slate-400 block mb-2">Button Color</label>
                   <div className="flex gap-2 flex-wrap">
                     {["#25D366","#128C7E","#000000","#1a1a2e","#7c3aed","#dc2626","#ea580c","#0070ba"].map(c => (
-                      <button key={c} onClick={() => setColor(c)}
+                      <button aria-label={`Use widget colour ${c}`} aria-pressed={color === c} key={c} onClick={() => setColor(c)}
                         className={`w-8 h-8 rounded-full border-2 transition-all ${color === c ? "border-white scale-110" : "border-transparent"}`}
                         style={{ backgroundColor: c }} />
                     ))}
@@ -142,7 +149,7 @@ export default function WidgetGeneratorPage() {
                     <span className="text-sm text-slate-300">Show label bubble</span>
                   </label>
                   {showLabel && (
-                    <input type="text" value={label} onChange={e => setLabel(e.target.value)}
+                    <input aria-label="Widget greeting label" type="text" value={label} onChange={e => setLabel(e.target.value)}
                       className="w-full rounded-xl bg-slate-900 border border-slate-700 px-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#25D366]" />
                   )}
                 </div>
@@ -173,7 +180,7 @@ export default function WidgetGeneratorPage() {
                     <Code className="h-4 w-4 text-[#25D366]" />
                     <h2 className="font-semibold text-white">Embed Code</h2>
                   </div>
-                  <button onClick={copy} disabled={atLimit}
+                  <button onClick={copy} disabled={atLimit || !validNumber}
                     className="flex items-center gap-1.5 rounded-full border border-slate-700 hover:border-[#25D366] px-3 py-1.5 text-xs text-slate-300 hover:text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
                     {copied ? <Check className="h-3.5 w-3.5 text-[#25D366]" /> : <Copy className="h-3.5 w-3.5" />}
                     {copied ? "Copied!" : atLimit ? "Limit reached" : "Copy"}

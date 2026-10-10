@@ -279,7 +279,7 @@ export default function FollowUpPage() {
               ))}
             </div>
             <label className="mt-4 block text-xs text-slate-400">Notes
-              <textarea value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} rows={3} placeholder="Intent, objections, promised next step…"
+              <textarea aria-label="Intent, objections, promised next step…" value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} rows={3} placeholder="Intent, objections, promised next step…"
                 className="mt-1.5 w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2.5 text-sm text-white outline-none focus:border-[#25D366]" />
             </label>
             <div className="mt-5 flex flex-wrap items-center gap-3">

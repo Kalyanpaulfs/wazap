@@ -23,9 +23,12 @@ export default function LinktreePage() {
   useEffect(() => { fetchPages(); }, []);
 
   async function fetchPages() {
-    const res = await fetch("/api/linktree");
-    if (res.ok) setPages(await res.json());
-    setLoading(false);
+    try {
+      const res = await fetch("/api/linktree");
+      if (res.ok) setPages(await res.json());
+      else if (res.status !== 401) throw new Error("Saved items could not be loaded. Try reloading the page.");
+    } catch (e) { setError(e instanceof Error ? e.message : "Saved items could not be loaded."); }
+    finally { setLoading(false); }
   }
 
   async function create(e: React.FormEvent) {
@@ -34,6 +37,7 @@ export default function LinktreePage() {
     const validLinks = links.filter(l => l.label && l.number).map(l => ({ ...l, number: dial + l.number.replace(/\D/g, "") }));
     if (validLinks.length < 1) { setError("Add at least one link"); return; }
     setCreating(true);
+    try {
     const res = await fetch("/api/linktree", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -45,20 +49,23 @@ export default function LinktreePage() {
     setShowForm(false);
     setForm({ slug: "", title: "", bio: "", color: "#25D366" });
     setLinks([{ label: "", number: "", note: "" }, { label: "", number: "", note: "" }]);
-    setCreating(false);
+    } catch (e) { setError(e instanceof Error ? e.message : "Could not save. Please try again."); }
+    finally { setCreating(false); }
   }
 
   async function del(id: string) {
-    await fetch("/api/linktree", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) });
-    setPages(p => p.filter(x => x.id !== id));
+    try {
+    const response = await fetch("/api/linktree", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) });
+    if (!response.ok) throw new Error("Delete failed. The saved item remains in your list.");
+    setPages(p => p.filter(x => x.id !== id));    } catch (e) { setError(e instanceof Error ? e.message : "Delete failed."); }
   }
 
   function getUrl(slug: string) { return `${window.location.origin}/l/${slug}`; }
-  function copy(id: string, url: string) { navigator.clipboard.writeText(url); setCopied(id); setTimeout(() => setCopied(null), 2000); }
+  async function copy(id: string, url: string) { try { await navigator.clipboard.writeText(url); setCopied(id); setTimeout(() => setCopied(null), 2000); } catch { setError("Copy was blocked. Select the link and copy it manually."); } }
 
   return (
     <>
-      <div className="border-b border-green-900/20 bg-[#0a0f0a]/90 px-4 h-10 flex items-center gap-3 text-sm">
+      <div className="border-b border-green-900/20 bg-[#0a0f0a]/90 px-4 min-h-10 py-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
         <Link href="/tools" className="text-slate-500 hover:text-white">← Tools</Link>
         <span className="text-slate-700">/</span>
         <span className="text-white font-medium">WhatsApp Linktree</span>
@@ -88,20 +95,20 @@ export default function LinktreePage() {
                   <label className="text-xs text-slate-400 block mb-1">Page URL slug *</label>
                   <div className="flex items-center gap-1 rounded-xl bg-slate-900 border border-slate-700 px-4 py-2.5 focus-within:border-[#25D366]">
                     <span className="text-xs text-slate-500">wazap.lt/l/</span>
-                    <input required value={form.slug} onChange={e => setForm(f => ({ ...f, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "") }))} placeholder="my-team"
+                    <input aria-label="my-team" required value={form.slug} onChange={e => setForm(f => ({ ...f, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "") }))} placeholder="my-team"
                       className="flex-1 bg-transparent text-sm text-white placeholder-slate-600 focus:outline-none" />
                   </div>
                 </div>
                 <div>
                   <label className="text-xs text-slate-400 block mb-1">Page Title *</label>
-                  <input required value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="Sales Team"
+                  <input aria-label="Sales Team" required value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="Sales Team"
                     className="w-full rounded-xl bg-slate-900 border border-slate-700 px-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#25D366]" />
                 </div>
               </div>
 
               <div>
                 <label className="text-xs text-slate-400 block mb-1">Bio (optional)</label>
-                <input value={form.bio} onChange={e => setForm(f => ({ ...f, bio: e.target.value }))} placeholder="Contact our team on WhatsApp"
+                <input aria-label="Contact our team on WhatsApp" value={form.bio} onChange={e => setForm(f => ({ ...f, bio: e.target.value }))} placeholder="Contact our team on WhatsApp"
                   className="w-full rounded-xl bg-slate-900 border border-slate-700 px-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#25D366]" />
               </div>
 
@@ -125,11 +132,11 @@ export default function LinktreePage() {
                 <div className="space-y-3">
                   {links.map((link, i) => (
                     <div key={i} className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_1fr_auto] gap-2 items-center">
-                      <input value={link.label} onChange={e => setLinks(prev => prev.map((l, j) => j === i ? { ...l, label: e.target.value } : l))}
+                      <input aria-label="Label (e.g. English)" value={link.label} onChange={e => setLinks(prev => prev.map((l, j) => j === i ? { ...l, label: e.target.value } : l))}
                         placeholder="Label (e.g. English)" className="rounded-xl bg-slate-900 border border-slate-700 px-3 py-2 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-[#25D366]" />
-                      <input value={link.number} onChange={e => setLinks(prev => prev.map((l, j) => j === i ? { ...l, number: e.target.value } : l))}
+                      <input aria-label="Phone number" value={link.number} onChange={e => setLinks(prev => prev.map((l, j) => j === i ? { ...l, number: e.target.value } : l))}
                         placeholder="Phone number" className="rounded-xl bg-slate-900 border border-slate-700 px-3 py-2 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-[#25D366]" />
-                      <input value={link.note} onChange={e => setLinks(prev => prev.map((l, j) => j === i ? { ...l, note: e.target.value } : l))}
+                      <input aria-label="Note (optional)" value={link.note} onChange={e => setLinks(prev => prev.map((l, j) => j === i ? { ...l, note: e.target.value } : l))}
                         placeholder="Note (optional)" className="rounded-xl bg-slate-900 border border-slate-700 px-3 py-2 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-[#25D366]" />
                       {links.length > 1 && (
                         <button type="button" onClick={() => setLinks(prev => prev.filter((_, j) => j !== i))} className="text-slate-600 hover:text-red-400 p-1 transition-colors">
@@ -143,7 +150,7 @@ export default function LinktreePage() {
                 </div>
               </div>
 
-              {error && <p className="text-xs text-red-400">{error}</p>}
+              {error && <p role="alert" className="text-xs text-red-400">{error}</p>}
               <button type="submit" disabled={creating}
                 className="w-full rounded-full bg-[#25D366] hover:bg-[#1fba58] disabled:opacity-50 py-3 text-sm font-bold text-black transition-colors">
                 {creating ? "Creating..." : "Create Page"}
