@@ -1,4 +1,4 @@
-import { SUPPORT_REPLY_TARGET_MINUTES } from './support-queue';
+import {isCrmTrashed} from "./crm-trash";
 import { prisma } from './prisma';
 import { codexSupportAnswer } from './codex-support-provider';
 import { customerLanguage, serviceEmail } from './customer-email';
@@ -14,6 +14,7 @@ export async function prepareSupportAnswers(){
  const contacts=await prisma.contactMessage.findMany({where:{createdAt:{gte:since},adminReply:null},orderBy:[{createdAt:'asc'},{id:'asc'}],take:50,...(cursor?{cursor:{id:cursor},skip:1}:{})});
  if(!contacts.length)break;cursor=contacts[contacts.length-1].id;
  for(const contact of contacts){
+  const contactLead=await prisma.crmLead.findUnique({where:{email:contact.email.toLowerCase()},select:{tags:true}});if(contactLead&&isCrmTrashed(contactLead))continue;
   const id='support_auto_'+createHash('sha256').update(contact.id).digest('hex');if(await prisma.outboundEmail.findUnique({where:{id},select:{id:true}}))continue;
   const channel=contact.subject==='billing'?'billing':contact.subject==='marketing'?'marketing':'support';const language=await customerLanguage(contact.email);
   let answer=null;
@@ -36,10 +37,11 @@ export async function prepareSupportAnswers(){
   const body=answer?.reply||handoffText[1]; if(handoff)subject=handoffText[0];
   await prisma.$transaction(async tx=>{
    const current=await tx.contactMessage.findUnique({where:{id:contact.id}});if(!current||current.adminReply)return;
+   const currentLead=await tx.crmLead.findUnique({where:{email:contact.email.toLowerCase()},select:{tags:true}});if(currentLead&&isCrmTrashed(currentLead))return;
    const existing=await tx.outboundEmail.findUnique({where:{id}});if(existing)return;
    await tx.outboundEmail.create({data:{id,recipient:contact.email,type:channel==='marketing'?'marketing_service_auto_answer':channel+'_auto_answer',subject,html:serviceEmail({subject,heading:subject,body:`${body}\n\nReference: ${contact.id}`,channel,language:answer?.language||language})}});
    const lead=await tx.crmLead.findFirst({where:{email:{equals:contact.email,mode:'insensitive'}}});
-   if(lead){if(answer?.language&&/^[a-z]{2,3}(?:-[a-z0-9]{2,8})*$/.test(answer.language.toLowerCase()))await tx.crmActivity.upsert({where:{sourceKey:'customer-language:'+lead.id},create:{leadId:lead.id,kind:'support',body:answer.language.toLowerCase(),sourceKey:'customer-language:'+lead.id},update:{body:answer.language.toLowerCase()}});await tx.crmActivity.upsert({where:{sourceKey:'support-auto:'+contact.id},create:{leadId:lead.id,kind:'support',body:handoff?'Email request escalated to the team.':'Automated guidance prepared; customer can reply for human help.',sourceKey:'support-auto:'+contact.id},update:{}});if(handoff)await tx.crmTask.create({data:{leadId:lead.id,title:`${channel==='billing'?'Billing':channel==='marketing'?'Marketing':'Support'}: review request ${contact.id}`,dueAt:new Date(contact.createdAt.getTime()+SUPPORT_REPLY_TARGET_MINUTES*60000)}});}
+   if(lead){await tx.crmActivity.upsert({where:{sourceKey:"support-outbound:"+id},create:{leadId:lead.id,kind:"support_thread",body:contact.id,sourceKey:"support-outbound:"+id},update:{}});if(answer?.language&&/^[a-z]{2,3}(?:-[a-z0-9]{2,8})*$/.test(answer.language.toLowerCase()))await tx.crmActivity.upsert({where:{sourceKey:'customer-language:'+lead.id},create:{leadId:lead.id,kind:'support',body:answer.language.toLowerCase(),sourceKey:'customer-language:'+lead.id},update:{body:answer.language.toLowerCase()}});await tx.crmActivity.upsert({where:{sourceKey:'support-auto:'+contact.id},create:{leadId:lead.id,kind:'support',body:handoff?'Email request escalated to the team.':'Automated guidance prepared; customer can reply for human help.',sourceKey:'support-auto:'+contact.id},update:{}});if(handoff)await tx.crmTask.create({data:{leadId:lead.id,title:`${channel==='billing'?'Billing':channel==='marketing'?'Marketing':'Support'}: review request ${contact.id}`,dueAt:new Date(Date.now()+86400000)}});}
    if(handoff)await tx.outboundEmail.upsert({where:{id:id+'_team'},update:{},create:{id:id+'_team',recipient:channel==='marketing'?'joseph@wazap.lt':`${channel}@wazap.lt`,type:channel==='marketing'?'marketing_service_team_escalation':channel+'_team_escalation',subject:`Wazap ${channel}: request needs review`,html:serviceEmail({subject:'Request needs review',heading:'Customer request needs review',body:`Name: ${contact.name}\nEmail: ${contact.email}\nTopic: ${contact.subject}\nReference: ${contact.id}\n\n${contact.message}\n\nReview the request in https://wazap.lt/admin/crm/support`,channel})}});
   });prepared++;
   if(prepared>=1)break;

@@ -1,0 +1,37 @@
+/* Support-only readability: preserve CRM and all messaging behavior. */
+.wp-support-readable{max-width:1800px;color:#edf5ef}
+.wp-support-readable .wp-admin-heading p{font-size:15px;line-height:1.6}
+.wp-support-readable .wp-admin-tabs button{font-size:16px;padding:14px 18px}
+.wp-support-readable .wp-crm-grid,.wp-support-readable .wp-crm-grid.has-detail{grid-template-columns:minmax(280px,.7fr) minmax(0,1.3fr)}
+.wp-support-readable .wp-crm-list-heading h2,.wp-support-readable .wp-crm-detail-heading h2{font-size:18px;line-height:1.5}
+.wp-support-readable .wp-crm-list-heading span{font-size:14px}
+.wp-support-readable .wp-crm-row{padding:20px 16px;gap:12px;align-items:start}
+.wp-support-readable .wp-crm-person strong{font-size:16px;line-height:1.5;color:#f6faf7;font-weight:650}
+.wp-support-readable .wp-crm-person small{font-size:13px;line-height:1.55;color:#bed0c3}
+.wp-support-readable .wp-support-row-state{flex-shrink:0;max-width:120px}
+.wp-support-readable .wp-support-row-state small,.wp-support-readable .wp-crm-pill{font-size:12px;line-height:1.5}
+.wp-support-readable .wp-crm-row.is-selected{box-shadow:inset 4px 0 #25d366;background:#213e2b}
+.wp-support-readable .wp-support-preview{display:-webkit-box!important;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin-top:8px!important;color:#e0eae3!important}
+.wp-support-search input,.wp-support-search select,.wp-support-readable textarea{background:#f7faf8;color:#16291e;border:1px solid #96afa0;border-radius:10px;padding:13px 15px;font-size:16px;line-height:1.6;min-width:0}
+.wp-support-search input{flex:1;min-width:220px}.wp-support-search select{min-width:190px}
+.wp-support-search input::placeholder,.wp-support-readable textarea::placeholder{color:#52665a;opacity:1}
+.wp-support-readable .wp-crm-detail{background:#f2f6f3;color:#172d20;border-color:#9eb7a7}
+.wp-support-readable .wp-crm-detail-heading{background:#e4eee7;color:#172d20}
+.wp-support-readable .wp-crm-detail-heading button{font-size:14px;padding:8px 12px;border:1px solid #91ab9a;border-radius:8px}
+.wp-support-readable .wp-crm-detail .text-slate-400{color:#4d6355;font-size:14px;line-height:1.6}
+.wp-support-readable .wp-crm-detail .wp-crm-secondary{background:#fff;border-color:#a3b8ab;color:#244d33;font-size:14px;min-height:44px}
+.wp-support-history{padding:10px 0;overflow:visible}
+.wp-support-readable .wp-crm-chat{background:#fff;border-color:#c1d1c6;padding:20px;border-radius:14px;color:#162c1e}
+.wp-support-readable .wp-crm-chat p{font-size:17px;line-height:1.8;white-space:pre-wrap;overflow-wrap:anywhere;margin-top:10px}
+.wp-support-readable .wp-crm-chat small{font-size:13px;line-height:1.6;color:#4d6355}
+.wp-support-readable .wp-support-message.is-admin{background:#e0f3e6;border-left:4px solid #198344}
+.wp-support-readable .wp-support-message.is-bot{background:#eaf0fa;border-left:4px solid #5476b2}
+.wp-support-readable .wp-support-message.is-visitor{border-left:4px solid #6e8c79}
+.wp-support-message-author{display:block;font-weight:700}.wp-support-message-author span{font-weight:400;display:block;margin-top:3px}
+.wp-support-readable form{border-top:1px solid #c1d1c6;padding-top:20px;margin-top:24px}
+.wp-support-readable form label{font-size:17px;font-weight:650;display:block}.wp-support-readable textarea{width:100%;min-height:150px}
+.wp-support-readable form p{font-size:14px;line-height:1.6;color:#4d6355}.wp-support-readable .wp-primary{font-size:16px;padding:12px 22px}
+.wp-support-empty{padding:40px;background:#132219;border:1px dashed #5c7d68;border-radius:14px;font-size:16px;line-height:1.7;color:#cbded1}.wp-support-empty h2{font-size:22px;color:#fff;margin-bottom:10px}
+.wp-support-readable button:focus-visible,.wp-support-readable input:focus-visible,.wp-support-readable select:focus-visible,.wp-support-readable textarea:focus-visible{outline:3px solid #198344;outline-offset:3px}
+@media(max-width:1190px){.wp-support-readable .wp-crm-grid,.wp-support-readable .wp-crm-grid.has-detail{grid-template-columns:1fr}.wp-support-empty{display:none}}
+@media(max-width:767px){.wp-support-readable .wp-crm-grid.has-detail{display:flex;flex-direction:column-reverse}.wp-support-readable .wp-crm-list,.wp-support-readable .wp-crm-detail{width:100%}.wp-support-search input,.wp-support-search select{width:100%;flex-basis:100%}.wp-support-readable .wp-crm-chat{padding:16px}.wp-support-readable .wp-crm-chat p{font-size:16px}.wp-support-readable .wp-crm-person strong{font-size:15px}.wp-support-readable .wp-crm-row{gap:8px}}

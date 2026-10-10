@@ -1,3 +1,4 @@
+import {ownsSupport} from "@/lib/support-session";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { rateLimit } from "@/lib/rate-limit";
@@ -34,6 +35,7 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const visitorId = cleanText(searchParams.get("visitorId"), 120);
   if (!visitorId) return NextResponse.json({ conversation: null });
+  if(!ownsSupport(req,visitorId))return NextResponse.json({error:"Support session required."},{status:403,headers:{"Cache-Control":"no-store"}});
 
   const conversation = await prisma.supportConversation.findUnique({
     where: { visitorId },
@@ -48,7 +50,7 @@ export async function GET(req: Request) {
     data: { readByVisitor: true },
   });
 
-  return NextResponse.json({ conversation: publicConversation(conversation) });
+  return NextResponse.json({ conversation: publicConversation(conversation) },{headers:{"Cache-Control":"no-store"}});
 }
 
 export async function POST(req: Request) {
@@ -61,6 +63,7 @@ export async function POST(req: Request) {
   const body = await req.json().catch(()=>({}));
   const visitorId = cleanText(body.visitorId, 120);
   const message = cleanText(body.message);
+  if(!ownsSupport(req,visitorId))return NextResponse.json({error:"Support session required."},{status:403});
   const profile=await capturedChat(visitorId);
   if(!profile)return NextResponse.json({error:"Please enter your name, email and phone number before starting chat.",contactRequired:true},{status:422});
   const email=profile.email||"";

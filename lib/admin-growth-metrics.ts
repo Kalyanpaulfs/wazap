@@ -41,9 +41,14 @@ export async function adminConversationNorthStar(now = new Date()) {
   const inboxTodayIds = new Set(inboxToday.map((item) => item.workspaceId));
   const inbox7dIds = new Set(inbox7d.map((item) => item.workspaceId));
   const previousInbox7dIds = new Set(inboxPrevious7d.map((item) => item.workspaceId));
+  const previousRouterIds=new Set(startsPrevious7d.map(item=>item.workspaceId));
+  const repeatedRouterBusinesses7d=starts7d.filter(item=>previousRouterIds.has(item.workspaceId)).length;
   const retained7d = [...inbox7dIds].filter((workspaceId) => previousInbox7dIds.has(workspaceId)).length;
   return {
     timezone: "Asia/Dubai",
+    previousRouterBusinesses7d:startsPrevious7d.length,
+    repeatedRouterBusinesses7d,
+    repeatedRouterBusinesses7dRate:previousRouterIds.size?Math.round(repeatedRouterBusinesses7d/previousRouterIds.size*1000)/10:null,
     dayStartedAt: today.toISOString(),
     inboxBusinessesToday: inboxTodayIds.size,
     trackedLinkBusinessesToday: startsToday.length,

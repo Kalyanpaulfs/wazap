@@ -34,6 +34,7 @@ import ToolShortcuts from "./ToolShortcuts";
 import SetupGuide from "../product/SetupGuide";
 import UpgradeSuccessBanner from "./UpgradeSuccessBanner";
 import BillingManager from "./BillingManager";
+import { currentSubscriptionRecord } from "@/lib/subscription-record";
 import {
   effectivePlan,
   isProductTrialActive,
@@ -74,7 +75,7 @@ function usagePercent(used: number, limit: number | null) {
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ upgraded?: string; workspace?: string }>;
+  searchParams: Promise<{ upgraded?: string; workspace?: string; plan?: string }>;
 }) {
   const params = await searchParams;
   const justUpgraded = params?.upgraded === "1";
@@ -115,11 +116,7 @@ export default async function DashboardPage({
     prisma.dailyUsage.findUnique({
       where: { userId_date: { userId, date: today() } },
     }),
-    prisma.contactMessage.findMany({
-      where: { email: userEmail, adminReply: { not: null } },
-      orderBy: { repliedAt: "desc" },
-      take: 5,
-    }),
+    Promise.resolve([] as import("@prisma/client").ContactMessage[]), // Guest enquiries need independently verified ownership.
     prisma.adLink.count({ where: { userId } }),
     prisma.linktreePage.count({ where: { userId } }),
     prisma.rotatorLink.count({ where: { userId } }),
@@ -141,19 +138,7 @@ export default async function DashboardPage({
       where: { userId, name: "first_tool_success" },
       select: { id: true },
     }),
-    prisma.payment.findFirst({
-      where: {
-        userId,
-        status: "active",
-        txId: { not: null },
-        OR: [
-          { method: "dodo" },
-          { method: "paypal", txId: { startsWith: "I-" } },
-        ],
-      },
-      select: { method: true },
-      orderBy: [{ activatedAt: "desc" }, { createdAt: "desc" }],
-    }),
+    currentSubscriptionRecord(userId),
     prisma.channelConnection.count({
       where: { workspaceId: activeMembership.workspaceId, status: "active" },
     }),
@@ -365,7 +350,7 @@ export default async function DashboardPage({
     <>
       <main className="wp-overview px-4 py-7 sm:px-7 sm:py-9">
         <div className="mx-auto max-w-7xl space-y-6">
-          {justUpgraded && <UpgradeSuccessBanner plan={plan} />}
+          {justUpgraded && <UpgradeSuccessBanner plan={user?.plan || "free"} expiresAt={user?.planExpiresAt?.toISOString() || null} expectedPlan={params.plan} />}
 
 
           <header className="wp-overview-heading"><div><p className="wp-eyebrow">YOUR BUSINESS WORKSPACE</p><h1>Overview</h1><p>Keep your conversations moving. Start with what needs your attention.</p></div><Link prefetch={false} href="/tools/follow-up" className="wp-primary">Open leads <ArrowRight size={16}/></Link></header>
