@@ -32,14 +32,21 @@ export default function CatalogToolPage() {
     if (sessionStatus === "unauthenticated") setLoading(false);
   }, [sessionStatus]);
   async function load() {
-    const [catalogResponse, orderResponse] = await Promise.all([fetch("/api/catalog"), fetch("/api/catalog/orders")]);
-    if (catalogResponse.ok) setCats(await catalogResponse.json());
-    if (orderResponse.ok) setOrders(await orderResponse.json());
-    setLoading(false);
+    try {
+      const [catalogResponse, orderResponse] = await Promise.all([fetch("/api/catalog"), fetch("/api/catalog/orders")]);
+      if (!catalogResponse.ok || !orderResponse.ok) throw new Error("Catalog information could not be loaded. Please reload.");
+      setCats(await catalogResponse.json()); setOrders(await orderResponse.json());
+    } catch (e) { setError(e instanceof Error ? e.message : "Catalog information could not be loaded."); }
+    finally { setLoading(false); }
   }
+
   async function updateOrder(id: string, status: string) {
-    const response = await fetch("/api/catalog/orders", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, status }) });
-    if (response.ok) { setOrders(current => current.map(order => order.id === id ? { ...order, status } : order)); load(); }
+    setError("");
+    try {
+      const response = await fetch("/api/catalog/orders", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, status }) });
+      if (!response.ok) throw new Error("Order status could not be saved. Please try again.");
+      setOrders(current => current.map(order => order.id === id ? { ...order, status } : order)); await load();
+    } catch (e) { setError(e instanceof Error ? e.message : "Order status could not be saved."); }
   }
 
   function setRow(i: number, k: keyof Row, v: string) { setRows(rs => rs.map((r, j) => j === i ? { ...r, [k]: v } : r)); }
@@ -61,18 +68,22 @@ export default function CatalogToolPage() {
       if (!res.ok) { setError(d.error ?? "Could not publish."); setUpgrade(!!d.upgrade); return; }
       setTitle(""); setBio(""); setPhone(""); setSlug(""); setRows([{ name: "", price: "", desc: "" }]);
       load();
-    } finally { setCreating(false); }
+    } catch (e) { setError(e instanceof Error ? e.message : "Could not publish. Please try again."); } finally { setCreating(false); }
   }
   async function del(id: string) {
     if (!confirm("Delete this catalog page? Its link will stop working.")) return;
-    await fetch("/api/catalog", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) });
+    try {
+    const response = await fetch("/api/catalog", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) });
+    if (!response.ok) throw new Error("Delete failed. The catalog remains in your list.");
     setCats(c => c.filter(x => x.id !== id));
+    } catch (e) { setError(e instanceof Error ? e.message : "Delete failed."); }
   }
-  function copy(t: string, k: string) { navigator.clipboard.writeText(t); setCopied(k); setTimeout(() => setCopied(""), 1500); }
+
+  async function copy(t: string, k: string) { try { await navigator.clipboard.writeText(t); setCopied(k); setTimeout(() => setCopied(""), 1500); } catch { setError("Copy was blocked. Select the link and copy it manually."); } }
 
   return (
     <>
-      <div className="border-b border-green-900/20 bg-[#0a0f0a]/90 px-4 h-10 flex items-center gap-3 text-sm">
+      <div className="border-b border-green-900/20 bg-[#0a0f0a]/90 px-4 min-h-10 py-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
         <Link href="/tools" className="text-slate-500 hover:text-white">← Tools</Link>
         <span className="text-slate-700">/</span>
         <span className="text-white font-medium">Catalog / Order Page</span>
@@ -89,15 +100,15 @@ export default function CatalogToolPage() {
           {/* Builder */}
           <div className="rounded-2xl border border-slate-800 bg-[#111811] p-6 space-y-3">
             <div className="flex items-center gap-2 mb-1"><Store className="h-4 w-4 text-[#25D366]" /><span className="text-sm font-medium text-white">Build your page</span></div>
-            <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Page title (e.g. Sara's Bakery)" className="w-full rounded-xl bg-slate-900 border border-slate-700 px-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#25D366]" />
-            <input value={bio} onChange={e => setBio(e.target.value)} placeholder="Short description (optional)" className="w-full rounded-xl bg-slate-900 border border-slate-700 px-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#25D366]" />
+            <input aria-label="Page title (e.g. Sara's Bakery)" value={title} onChange={e => setTitle(e.target.value)} placeholder="Page title (e.g. Sara's Bakery)" className="w-full rounded-xl bg-slate-900 border border-slate-700 px-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#25D366]" />
+            <input aria-label="Short description (optional)" value={bio} onChange={e => setBio(e.target.value)} placeholder="Short description (optional)" className="w-full rounded-xl bg-slate-900 border border-slate-700 px-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#25D366]" />
             <div className="flex gap-2">
-              <select value={dial} onChange={e => setDial(e.target.value)} className="rounded-xl bg-slate-900 border border-slate-700 px-3 py-2.5 text-sm text-white focus:outline-none focus:border-[#25D366]">{DIALS.map(d => <option key={d} value={d}>+{d}</option>)}</select>
-              <input value={phone} onChange={e => setPhone(e.target.value)} placeholder="WhatsApp number for orders" inputMode="tel" className="flex-1 rounded-xl bg-slate-900 border border-slate-700 px-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#25D366] font-mono" />
+              <select aria-label="Country code" value={dial} onChange={e => setDial(e.target.value)} className="rounded-xl bg-slate-900 border border-slate-700 px-3 py-2.5 text-sm text-white focus:outline-none focus:border-[#25D366]">{DIALS.map(d => <option key={d} value={d}>+{d}</option>)}</select>
+              <input aria-label="WhatsApp number for orders" value={phone} onChange={e => setPhone(e.target.value)} placeholder="WhatsApp number for orders" inputMode="tel" className="min-w-0 flex-1 rounded-xl bg-slate-900 border border-slate-700 px-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#25D366] font-mono" />
             </div>
             <div className="flex items-center gap-2">
               <span className="text-xs text-slate-500 font-mono shrink-0">{origin.replace(/^https?:\/\//,"")}/c/</span>
-              <input value={slug} onChange={e => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g,""))} placeholder="custom-link (optional)" className="flex-1 rounded-xl bg-slate-900 border border-slate-700 px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#25D366] font-mono" />
+              <input aria-label="custom-link (optional)" value={slug} onChange={e => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g,""))} placeholder="custom-link (optional)" className="min-w-0 flex-1 rounded-xl bg-slate-900 border border-slate-700 px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#25D366] font-mono" />
             </div>
 
             <div className="pt-2 space-y-2">
@@ -105,9 +116,9 @@ export default function CatalogToolPage() {
               {rows.map((r, i) => (
                 <div key={i} className="flex gap-2 items-start">
                   <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-2">
-                    <input value={r.name} onChange={e => setRow(i, "name", e.target.value)} placeholder="Item name" className="rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#25D366]" />
-                    <input value={r.price} onChange={e => setRow(i, "price", e.target.value)} placeholder="Price (e.g. 25 AED)" className="rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#25D366]" />
-                    <input value={r.desc} onChange={e => setRow(i, "desc", e.target.value)} placeholder="Description (optional)" className="rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#25D366]" />
+                    <input aria-label="Item name" value={r.name} onChange={e => setRow(i, "name", e.target.value)} placeholder="Item name" className="rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#25D366]" />
+                    <input aria-label="Price (e.g. 25 AED)" value={r.price} onChange={e => setRow(i, "price", e.target.value)} placeholder="Price (e.g. 25 AED)" className="rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#25D366]" />
+                    <input aria-label="Description (optional)" value={r.desc} onChange={e => setRow(i, "desc", e.target.value)} placeholder="Description (optional)" className="rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#25D366]" />
                   </div>
                   {rows.length > 1 && <button onClick={() => rmRow(i)} className="mt-2 text-slate-600 hover:text-red-400"><X className="h-4 w-4" /></button>}
                 </div>
@@ -115,7 +126,7 @@ export default function CatalogToolPage() {
               <button onClick={addRow} className="inline-flex items-center gap-1 text-xs text-[#25D366] hover:underline"><Plus className="h-3.5 w-3.5" /> Add item</button>
             </div>
 
-            {error && <p className="text-sm text-red-400">{error} {upgrade && <Link href="/pricing" className="underline text-[#25D366]">Upgrade →</Link>}</p>}
+            {error && <p role="alert" className="text-sm text-red-400">{error} {upgrade && <Link href="/pricing" className="underline text-[#25D366]">Upgrade →</Link>}</p>}
             <button onClick={create} disabled={creating} className="w-full inline-flex items-center justify-center gap-2 rounded-full bg-[#25D366] hover:bg-[#1fba58] disabled:opacity-50 py-3 text-sm font-bold text-black transition-colors">{creating ? <Loader2 className="h-4 w-4 animate-spin" /> : null} Publish catalog</button>
           </div>
 
@@ -159,7 +170,7 @@ export default function CatalogToolPage() {
                     <div className="text-xs text-slate-500">{order.customerName || "Anonymous visitor"}{order.customerPhone ? ` · ${order.customerPhone}` : ""} · {order.catalogPage.title} · {new Date(order.createdAt).toLocaleString()}</div>
                     {order.leadId && <Link href="/tools/follow-up" className="mt-1 inline-block text-[11px] font-semibold text-[#25D366] hover:underline">Open in Wazap Flow →</Link>}
                   </div>
-                  <select value={order.status} onChange={event => updateOrder(order.id, event.target.value)} className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-white">
+                  <select aria-label="Order status" value={order.status} onChange={event => updateOrder(order.id, event.target.value)} className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-white">
                     <option value="inquiry">Inquiry</option><option value="quoted">Quoted</option><option value="won">Won</option><option value="lost">Lost</option>
                   </select>
                 </div>

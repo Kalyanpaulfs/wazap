@@ -22,9 +22,12 @@ export default function ShortLinkPage() {
 
   useEffect(() => { setOrigin(window.location.origin); load(); }, []);
   async function load() {
-    const res = await fetch("/api/shortlinks");
-    if (res.ok) setLinks(await res.json());
-    setLoading(false);
+    try {
+      const res = await fetch("/api/shortlinks");
+      if (res.ok) setLinks(await res.json());
+      else if (res.status !== 401) throw new Error("Saved items could not be loaded. Try reloading the page.");
+    } catch (e) { setError(e instanceof Error ? e.message : "Saved items could not be loaded."); }
+    finally { setLoading(false); }
   }
   async function create() {
     setError(""); setUpgrade(false);
@@ -39,20 +42,22 @@ export default function ShortLinkPage() {
       if (!res.ok) { setError(d.error ?? "Could not create."); setUpgrade(!!d.upgrade); return; }
       setName(""); setPhone(""); setMessage(""); setSlug("");
       setLinks(l => [d, ...l]);
-    } finally { setCreating(false); }
+    } catch (e) { setError(e instanceof Error ? e.message : "Could not save. Please try again."); } finally { setCreating(false); }
   }
   async function del(id: string) {
     if (!confirm("Delete this short link? The URL will stop working.")) return;
-    await fetch("/api/shortlinks", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) });
-    setLinks(l => l.filter(x => x.id !== id));
+    try {
+    const response = await fetch("/api/shortlinks", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) });
+    if (!response.ok) throw new Error("Delete failed. The saved item remains in your list.");
+    setLinks(l => l.filter(x => x.id !== id));    } catch (e) { setError(e instanceof Error ? e.message : "Delete failed."); }
   }
-  function copy(text: string, k: string) { navigator.clipboard.writeText(text); setCopied(k); setTimeout(() => setCopied(""), 1500); }
+  async function copy(text: string, k: string) { try { await navigator.clipboard.writeText(text); setCopied(k); setTimeout(() => setCopied(""), 1500); } catch { setError("Copy was blocked. Select the link and copy it manually."); } }
 
   const totalClicks = links.reduce((s, l) => s + l.clicks, 0);
 
   return (
     <>
-      <div className="border-b border-green-900/20 bg-[#0a0f0a]/90 px-4 h-10 flex items-center gap-3 text-sm">
+      <div className="border-b border-green-900/20 bg-[#0a0f0a]/90 px-4 min-h-10 py-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
         <Link href="/tools" className="text-slate-500 hover:text-white">← Tools</Link>
         <span className="text-slate-700">/</span>
         <span className="text-white font-medium">Branded Short Links</span>
@@ -76,17 +81,17 @@ export default function ShortLinkPage() {
           {/* Create */}
           <div className="rounded-2xl border border-slate-800 bg-[#111811] p-6 space-y-3">
             <div className="flex items-center gap-2 mb-1"><Link2 className="h-4 w-4 text-[#25D366]" /><span className="text-sm font-medium text-white">New short link</span></div>
-            <input value={name} onChange={e => setName(e.target.value)} placeholder="Internal name (e.g. Instagram bio)" className="w-full rounded-xl bg-slate-900 border border-slate-700 px-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#25D366]" />
+            <input aria-label="Internal name (e.g. Instagram bio)" value={name} onChange={e => setName(e.target.value)} placeholder="Internal name (e.g. Instagram bio)" className="w-full rounded-xl bg-slate-900 border border-slate-700 px-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#25D366]" />
             <div className="flex gap-2">
-              <select value={dial} onChange={e => setDial(e.target.value)} className="rounded-xl bg-slate-900 border border-slate-700 px-3 py-2.5 text-sm text-white focus:outline-none focus:border-[#25D366]">{DIALS.map(d => <option key={d} value={d}>+{d}</option>)}</select>
-              <input value={phone} onChange={e => setPhone(e.target.value)} placeholder="WhatsApp number" inputMode="tel" className="flex-1 rounded-xl bg-slate-900 border border-slate-700 px-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#25D366] font-mono" />
+              <select aria-label="Country code" value={dial} onChange={e => setDial(e.target.value)} className="rounded-xl bg-slate-900 border border-slate-700 px-3 py-2.5 text-sm text-white focus:outline-none focus:border-[#25D366]">{DIALS.map(d => <option key={d} value={d}>+{d}</option>)}</select>
+              <input aria-label="WhatsApp number" value={phone} onChange={e => setPhone(e.target.value)} placeholder="WhatsApp number" inputMode="tel" className="min-w-0 flex-1 rounded-xl bg-slate-900 border border-slate-700 px-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#25D366] font-mono" />
             </div>
-            <textarea value={message} onChange={e => setMessage(e.target.value)} rows={2} placeholder="Pre-filled message (optional)" className="w-full rounded-xl bg-slate-900 border border-slate-700 px-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#25D366] resize-none" />
+            <textarea aria-label="Pre-filled message (optional)" value={message} onChange={e => setMessage(e.target.value)} rows={2} placeholder="Pre-filled message (optional)" className="w-full rounded-xl bg-slate-900 border border-slate-700 px-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#25D366] resize-none" />
             <div className="flex items-center gap-2">
               <span className="text-xs text-slate-500 font-mono shrink-0">{origin.replace(/^https?:\/\//,"")}/w/</span>
-              <input value={slug} onChange={e => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g,""))} placeholder="custom-slug (optional)" className="flex-1 rounded-xl bg-slate-900 border border-slate-700 px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#25D366] font-mono" />
+              <input aria-label="custom-slug (optional)" value={slug} onChange={e => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g,""))} placeholder="custom-slug (optional)" className="min-w-0 flex-1 rounded-xl bg-slate-900 border border-slate-700 px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#25D366] font-mono" />
             </div>
-            {error && <p className="text-sm text-red-400">{error} {upgrade && <Link href="/pricing" className="underline text-[#25D366]">Upgrade →</Link>}</p>}
+            {error && <p role="alert" className="text-sm text-red-400">{error} {upgrade && <Link href="/pricing" className="underline text-[#25D366]">Upgrade →</Link>}</p>}
             <button onClick={create} disabled={creating} className="w-full inline-flex items-center justify-center gap-2 rounded-full bg-[#25D366] hover:bg-[#1fba58] disabled:opacity-50 py-3 text-sm font-bold text-black transition-colors">{creating ? <Loader2 className="h-4 w-4 animate-spin" /> : null} Create short link</button>
           </div>
 

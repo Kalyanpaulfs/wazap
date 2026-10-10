@@ -1,4 +1,4 @@
-export type GrowthArticle = { category: string; slug: string; title: string; description: string; sections: { heading: string; paragraphs: string[] }[]; related: string[]; sources: { label: string; url: string }[] };
+export type GrowthArticle = { category: string; slug: string; reviewedAt?: string; title: string; description: string; sections: { heading: string; paragraphs: string[] }[]; related: string[]; sources: { label: string; url: string }[] };
 export const growthArticles: GrowthArticle[] = [
   {
     "category": "solutions",
@@ -16,8 +16,16 @@ export const growthArticles: GrowthArticle[] = [
       {
         "heading": "Set up an accountable enquiry workflow",
         "paragraphs": [
-          "Start with one campaign and two or three agents. Enter numbers with country codes, create the rotator, and test the public link before changing an advertisement. Ask each agent to confirm the destination team and agree how received enquiries will be identified in your CRM. The router does not attach a campaign message or verify receipt.",
+          "Start with one campaign and two or three agents who can handle that property type. In the creation form, choose their country code and enter each number without repeating it. For teams across countries, edit the saved number list with full international numbers, one per line. Add an optional predefined enquiry message; the visitor can change it and chooses whether to send it.",
           "Record a qualified viewing, appointment or deal in your CRM as a separate outcome. A routing event only shows a handoff attempt. It does not prove that a WhatsApp message was sent, that the contact was unique, or that an agent replied."
+        ]
+      },
+      {
+        "heading": "Example: a two-agent viewing campaign",
+        "paragraphs": [
+          "Name a router “Residential viewings” and add the two agents responsible for that campaign. Use an opening message such as “Hi, I’d like to arrange a viewing for the property in this campaign.” Copy the generated link to the campaign landing page or create a QR code for the brochure. This is an example workflow, not a customer result.",
+          "Before sharing it, use a dedicated test link to check the destination and prepared message on a phone and desktop. These test handoffs count towards the account allowance. In a quiet sequential run, handoffs take turns; concurrent requests may not produce exact ordering.",
+          "Agree who covers each destination and update the saved router when an agent is unavailable. A fallback number supports the routing recovery path; it is not an automatic check of whether an agent answers. Agents should record received enquiries, viewing requests and outcomes in their CRM."
         ]
       },
       {
@@ -36,11 +44,12 @@ export const growthArticles: GrowthArticle[] = [
       }
     ],
     "related": [
+      "/tools/rotator",
       "/guides/one-whatsapp-link-multiple-numbers",
-      "/guides/whatsapp-campaign-tracking",
-      "/solutions/agencies"
+      "/guides/whatsapp-campaign-tracking"
     ],
-    "sources": []
+    "sources": [],
+    "reviewedAt": "2026-10-10"
   },
   {
     "category": "solutions",
@@ -100,8 +109,8 @@ export const growthArticles: GrowthArticle[] = [
       {
         "heading": "Create and test the shared link",
         "paragraphs": [
-          "Sign in to Wazap and open the Link Rotator. Add the team’s international-format WhatsApp numbers, review the list and create the rotator. Copy the generated public URL rather than guessing a route or sending the dashboard address.",
-          "Open the public link from a phone and a desktop browser. Check the destination number before sending anything. The basic rotator redirects to the number; it does not provide a message composer. Repeat carefully across the destination list, remembering that genuine handoff tests can consume the free routing allowance."
+          "Sign in to Wazap and open the Link Rotator. Name the team, choose a country code and add at least two numbers without repeating that code. Add an optional predefined WhatsApp message, then create the router. For destinations in different countries, edit the saved number list with full international numbers. Copy the generated public URL rather than guessing a route or sending the dashboard address.",
+          "Open a dedicated test link from a phone and desktop browser. Check the destination number and, if configured, the prepared message before sending anything. The visitor can edit the text and decides whether to send it. Repeat carefully across the destination list: test handoffs consume the account’s free routing allowance, and no message needs to be sent to inspect the handoff."
         ]
       },
       {
@@ -120,11 +129,13 @@ export const growthArticles: GrowthArticle[] = [
       }
     ],
     "related": [
-      "/guides/whatsapp-round-robin-routing",
-      "/guides/router-vs-shared-inbox",
-      "/solutions/real-estate"
+      "/tools/rotator",
+      "/tools/linktree",
+      "/solutions/real-estate",
+      "/guides/whatsapp-round-robin-routing"
     ],
-    "sources": []
+    "sources": [],
+    "reviewedAt": "2026-10-10"
   },
   {
     "category": "guides",
@@ -150,7 +161,8 @@ export const growthArticles: GrowthArticle[] = [
         "heading": "Validate a small controlled run",
         "paragraphs": [
           "Prepare a dedicated test rotator with numbers you control. Verify each number’s country code, note the initial destination order, and open the link sequentially without sending messages. Record the observed destinations rather than assuming the expected result.",
-          "Next, check representative phone and desktop handoffs. Review the reported event count and your quota. Avoid testing a live customer link repeatedly because that changes its activity totals and can consume its allowance."
+          "Next, check representative phone and desktop handoffs. Review the reported event count and your quota. Avoid testing a live customer link repeatedly because that changes its activity totals and can consume its allowance.",
+          "Add an optional predefined message and verify that the same text is prepared for each destination. Edit the saved router to change its numbers, message or fallback without replacing the public URL. A fallback supports technical recovery; it does not detect whether an agent reads or replies to a message."
         ]
       },
       {
@@ -162,11 +174,13 @@ export const growthArticles: GrowthArticle[] = [
       }
     ],
     "related": [
+      "/tools/rotator",
       "/guides/one-whatsapp-link-multiple-numbers",
       "/guides/router-vs-shared-inbox",
       "/guides/whatsapp-campaign-tracking"
     ],
-    "sources": []
+    "sources": [],
+    "reviewedAt": "2026-10-10"
   },
   {
     "category": "guides",
@@ -220,7 +234,7 @@ export const growthArticles: GrowthArticle[] = [
         "heading": "Give every campaign a stable identity",
         "paragraphs": [
           "Use a consistent source, medium and campaign naming convention on links that lead to your Wazap landing or signup journey. Wazap’s Ad Builder helps create campaign-tagged links. Keep names readable and avoid personal information in URL parameters.",
-          "UTM tags on a web link do not automatically become a confirmed customer record inside a WhatsApp conversation. A prefilled message can give an agent campaign context, but the customer can edit or omit it. Verify the complete path you intend to measure."
+          "For a router campaign, use its optional predefined message to give the agent context, such as “I’m enquiring about the spring property campaign.” The same prepared text applies to each destination, but the visitor can edit or omit it. UTM tags on a web link do not automatically become a confirmed customer record inside a WhatsApp conversation."
         ]
       },
       {
@@ -246,11 +260,13 @@ export const growthArticles: GrowthArticle[] = [
       }
     ],
     "related": [
+      "/tools/rotator",
       "/solutions/agencies",
       "/solutions/real-estate",
       "/tools/ad-builder"
     ],
-    "sources": []
+    "sources": [],
+    "reviewedAt": "2026-10-10"
   },
   {
     "category": "compare",

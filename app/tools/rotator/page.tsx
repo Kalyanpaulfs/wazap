@@ -89,7 +89,7 @@ export default function RotatorPage() {
 
   return (
     <>
-      <div className="border-b border-green-900/20 bg-[#0a0f0a]/90 px-4 h-10 flex items-center gap-3 text-sm">
+      <div className="border-b border-green-900/20 bg-[#0a0f0a]/90 px-4 min-h-10 py-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
         <Link href="/tools" className="text-slate-500 hover:text-white">← Tools</Link>
         <span className="text-slate-700">/</span>
         <span className="text-white font-medium">Link Rotator</span>
@@ -137,7 +137,7 @@ export default function RotatorPage() {
             )}
             <div>
               <label className="text-xs text-slate-400 block mb-1">Rotator Name</label>
-              <input required value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Sales Team"
+              <input aria-label="e.g. Sales Team" required value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Sales Team"
                 className="w-full rounded-xl bg-slate-900 border border-slate-700 px-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#25D366]" />
             </div>
             <div>
@@ -153,7 +153,7 @@ export default function RotatorPage() {
                 <div key={i} className="flex gap-2">
                   <input value={inp} onChange={e => setInputs(prev => prev.map((v, j) => j === i ? e.target.value : v))}
                     placeholder={`Agent ${i + 1} phone number`}
-                    className="flex-1 rounded-xl bg-slate-900 border border-slate-700 px-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#25D366]" />
+                    className="min-w-0 flex-1 rounded-xl bg-slate-900 border border-slate-700 px-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#25D366]" />
                   {inputs.length > 2 && (
                     <button type="button" onClick={() => setInputs(prev => prev.filter((_, j) => j !== i))}
                       className="text-slate-600 hover:text-red-400 p-2 transition-colors">

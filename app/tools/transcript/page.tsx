@@ -54,12 +54,19 @@ export default function TranscriptPage() {
 
   function parse() {
     const result = parseTranscript(input);
+    if (!result.msgs.length) { setLimitError("No messages were recognized. Use an Android or iPhone WhatsApp .txt export without media."); return; }
+    setLimitError(null);
     setParsed(result);
     if (result.participants[0]) setMyName(result.participants[0]);
   }
 
   async function print() {
     setLimitError(null);
+    const content = printRef.current?.innerHTML;
+    if (!content) return;
+    const w = window.open("", "_blank");
+    if (!w) { setLimitError("The print window was blocked. Allow pop-ups for Wazap and try again."); return; }
+    try {
     const res = await fetch("/api/tools/use", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -67,15 +74,13 @@ export default function TranscriptPage() {
     });
     const data = await res.json();
     if (res.status === 429) {
-      setLimitError("Daily export limit reached. Resets at midnight.");
+      setLimitError("Daily export limit reached. Resets at midnight."); w.close();
       return;
     }
+    if (!res.ok) throw new Error(data.error || "Transcript export could not be completed. Please try again.");
     setRemaining(data.remaining === -1 ? null : data.remaining);
 
-    const content = printRef.current?.innerHTML;
-    if (!content) return;
-    const w = window.open("", "_blank");
-    if (!w) return;
+
     w.document.write(`<html><head><title>WhatsApp Transcript</title>
     <style>
       body{font-family:system-ui,sans-serif;background:#fff;padding:20px;max-width:700px;margin:0 auto;}
@@ -88,7 +93,10 @@ export default function TranscriptPage() {
       .meta{font-size:11px;color:#888;margin:2px 6px;}
     </style></head><body>${content}</body></html>`);
     w.document.close();
-    w.print();
+    w.print();    } catch (error) {
+      w.close();
+      setLimitError(error instanceof Error ? error.message : "Transcript export could not be completed. Please try again.");
+    }
   }
 
   const atLimit = remaining !== null && remaining <= 0;
@@ -96,7 +104,7 @@ export default function TranscriptPage() {
 
   return (
     <>
-      <div className="border-b border-green-900/20 bg-[#0a0f0a]/90 px-4 h-10 flex items-center gap-3 text-sm">
+      <div className="border-b border-green-900/20 bg-[#0a0f0a]/90 px-4 min-h-10 py-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
         <Link href="/tools" className="text-slate-500 hover:text-white">← Tools</Link>
         <span className="text-slate-700">/</span>
         <span className="text-white font-medium">Transcript Exporter</span>
@@ -113,6 +121,7 @@ export default function TranscriptPage() {
             <p className="text-slate-400">Upload or paste your WhatsApp chat export (.txt) and get a clean, printable transcript.</p>
           </div>
 
+          {limitError && !parsed && <p role="alert" className="text-sm text-red-400">{limitError}</p>}
           {!parsed ? (
             <div className="rounded-2xl border border-slate-800 bg-[#111811] p-6 space-y-4">
               <p className="text-xs text-slate-500">In WhatsApp: open a chat → ⋮ menu → More → Export Chat → Without Media → share the .txt file</p>
@@ -126,7 +135,7 @@ export default function TranscriptPage() {
                 <span className="text-xs text-slate-600">or paste</span>
                 <div className="flex-1 border-t border-slate-700" />
               </div>
-              <textarea value={input} onChange={e => setInput(e.target.value)} rows={8} placeholder="Paste your WhatsApp export text here..."
+              <textarea aria-label="Paste your WhatsApp export text here..." value={input} onChange={e => setInput(e.target.value)} rows={8} placeholder="Paste your WhatsApp export text here..."
                 className="w-full rounded-xl bg-slate-900 border border-slate-700 px-4 py-3 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-[#25D366] resize-none font-mono" />
               <button onClick={parse} disabled={!input.trim()}
                 className="w-full rounded-full bg-[#25D366] hover:bg-[#1fba58] disabled:opacity-40 py-3 text-sm font-bold text-black transition-colors">
@@ -138,7 +147,7 @@ export default function TranscriptPage() {
               <div className="flex items-center justify-between flex-wrap gap-3">
                 <div className="flex items-center gap-3">
                   <span className="text-sm text-slate-400">My name in chat:</span>
-                  <select value={myName} onChange={e => setMyName(e.target.value)}
+                  <select aria-label="My name in chat" value={myName} onChange={e => setMyName(e.target.value)}
                     className="rounded-xl bg-slate-900 border border-slate-700 px-3 py-2 text-sm text-white focus:outline-none focus:border-[#25D366]">
                     {parsed.participants.map(p => <option key={p} value={p}>{p}</option>)}
                   </select>

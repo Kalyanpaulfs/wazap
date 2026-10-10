@@ -87,18 +87,18 @@ export default function ContactPage() {
       <form onSubmit={handleSubmit} className="rounded-2xl border border-slate-800 bg-[#111811] p-6 space-y-5">
         <div className="grid sm:grid-cols-2 gap-4">
           <div>
-            <label className={labelClass}>Name *</label>
-            <input required value={form.name} onChange={set("name")} className={inputClass} placeholder="Your name" />
+            <label htmlFor="contact-name" className={labelClass}>Name *</label>
+            <input autoComplete="name" id="contact-name" required value={form.name} onChange={set("name")} className={inputClass} placeholder="Your name" />
           </div>
           <div>
-            <label className={labelClass}>Email *</label>
-            <input required type="email" value={form.email} onChange={set("email")} className={inputClass} placeholder="you@example.com" />
+            <label htmlFor="contact-email" className={labelClass}>Email *</label>
+            <input autoComplete="email" id="contact-email" required type="email" value={form.email} onChange={set("email")} className={inputClass} placeholder="you@example.com" />
           </div>
         </div>
 
         <div>
-          <label className={labelClass}>Subject *</label>
-          <select required value={form.subject} onChange={set("subject")} className={inputClass}>
+          <label htmlFor="contact-subject" className={labelClass}>Subject *</label>
+          <select id="contact-subject" required value={form.subject} onChange={set("subject")} className={inputClass}>
             <option value="">Select a topic…</option>
             <option value="general">General question</option>
             <option value="billing">Billing / payment</option>
@@ -113,12 +113,12 @@ export default function ContactPage() {
         </div>
 
         <div>
-          <label className={labelClass}>Message *</label>
-          <textarea required value={form.message} onChange={set("message")} rows={5} className={inputClass + " resize-none"}
+          <label htmlFor="contact-message" className={labelClass}>Message *</label>
+          <textarea id="contact-message" required value={form.message} onChange={set("message")} rows={5} className={inputClass + " resize-none"}
             placeholder="Describe your question or issue in detail…" />
         </div>
 
-        {error && <p className="text-red-400 text-sm">{error}</p>}
+        {error && <p role="alert" className="text-red-400 text-sm">{error}</p>}
 
         <button type="submit" disabled={loading}
           className="w-full rounded-full bg-[#25D366] hover:bg-[#1fba58] disabled:opacity-50 py-3 text-sm font-semibold text-black transition-colors flex items-center justify-center gap-2">

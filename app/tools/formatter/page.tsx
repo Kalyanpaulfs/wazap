@@ -64,7 +64,7 @@ export default function FormatterPage() {
   }
 
   const Tool = ({ icon, label, onClick }: { icon: React.ReactNode; label: string; onClick: () => void }) => (
-    <button onClick={onClick} title={label} className="inline-flex items-center gap-1 rounded-lg border border-slate-700 hover:border-[#25D366] bg-slate-900 px-3 py-1.5 text-sm text-slate-300 hover:text-white transition-colors">{icon}</button>
+    <button type="button" onClick={onClick} title={label} aria-label={label} className="inline-flex items-center gap-1 rounded-lg border border-slate-700 hover:border-[#25D366] bg-slate-900 px-3 py-1.5 text-sm text-slate-300 hover:text-white transition-colors">{icon}<span>{label}</span></button>
   );
 
   return (
@@ -73,7 +73,7 @@ export default function FormatterPage() {
         <Link href="/tools" className="text-slate-500 hover:text-white">← Tools</Link>
         <span className="text-slate-700">/</span>
         <span className="text-white font-medium">Text Formatter</span>
-        {!paid && <span className="ml-auto inline-flex items-center gap-1 text-xs text-yellow-400"><Crown className="h-3 w-3" /> 1 free · then Pro</span>}
+        {!paid && <span className="ml-auto inline-flex items-center gap-1 text-xs text-yellow-400"><Crown className="h-3 w-3" /> 1 free copy · then paid</span>}
       </div>
 
       <div className="hero-bg px-4 py-12">
@@ -90,13 +90,14 @@ export default function FormatterPage() {
               <Tool icon={<Strikethrough className="h-4 w-4" />} label="Strikethrough" onClick={() => wrap("~")} />
               <Tool icon={<Code className="h-4 w-4" />} label="Monospace" onClick={() => wrap("```")} />
             </div>
-            <textarea ref={ref} value={text} onChange={e => setText(e.target.value)} rows={6}
+            <label htmlFor="formatter-message" className="block text-sm font-medium text-slate-300">Your message</label>
+            <textarea id="formatter-message" ref={ref} value={text} onChange={e => setText(e.target.value)} rows={6}
               className="w-full rounded-xl bg-slate-900 border border-slate-700 px-4 py-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#25D366] resize-none" />
           </div>
 
           <div className="rounded-2xl border border-slate-800 bg-[#0b141a] p-5">
             <div className="text-xs text-slate-500 mb-2">Preview</div>
-            <div className="text-[15px] text-slate-100 leading-relaxed" dangerouslySetInnerHTML={{ __html: renderPreview(text) }} />
+            <div className="text-[15px] text-slate-100 leading-relaxed break-words" dangerouslySetInnerHTML={{ __html: renderPreview(text) }} />
           </div>
 
           {canCopy ? (

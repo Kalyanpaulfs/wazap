@@ -10,15 +10,6 @@ const jsonLd = {
   "@context": "https://schema.org",
   "@graph": [
     {
-      "@type": "SoftwareApplication",
-      name: "WhatsApp QR Code Generator",
-      applicationCategory: "BusinessApplication",
-      url: "https://wazap.lt/qr",
-      operatingSystem: "Web",
-      description: "Create a free WhatsApp QR code with an optional pre-filled message and download it as a PNG.",
-      offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
-    },
-    {
       "@type": "HowTo",
       name: "How to create a WhatsApp QR code",
       description: "Create and download a WhatsApp QR code for your phone number with Wazap.",
