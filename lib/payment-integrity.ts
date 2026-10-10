@@ -2,6 +2,7 @@ import { prisma } from "./prisma";
 import type { Prisma } from "@prisma/client";
 import { queueBillingNotice, queuePaidReceipt } from "./billing-email";
 import { extendPlanExpiry, planExpiry } from "./billing";
+import { recordCrmPayment } from "./crm-payment";
 
 async function subscriptionRecord(tx: Prisma.TransactionClient, opts: { provider: string; subscriptionId: string; userId: string; plan: string }, email: string, status: "subscription_active" | "subscription_inactive") {
   const existing = await tx.payment.findFirst({ where: { userId: opts.userId, method: opts.provider, txId: opts.subscriptionId, status: { in: ["pending", "inactive", "subscription_active", "subscription_inactive"] } } });
@@ -40,6 +41,7 @@ export async function recordVerifiedCharge(opts: {
     // consume an arbitrary pending checkout belonging to the same customer.
     const payment = await tx.payment.create({ data: { userId: user.id, email: user.email, plan: opts.plan, amount: opts.amount, currency: opts.currency, method: opts.provider, txId: opts.chargeId, status: "active", activatedAt: new Date() } });
     await tx.$executeRaw`INSERT INTO "SecurityPaymentCharge" ("provider", "chargeId", "paymentId", "currency") VALUES (${opts.provider}, ${opts.chargeId}, ${payment.id}, ${opts.currency})`;
+    await recordCrmPayment(tx, { ...opts, paymentId: payment.id, email: user.email, name: user.name });
     if (opts.checkoutId || opts.provider === "paypal") await tx.payment.updateMany({ where: { userId: user.id, method: opts.provider, txId: opts.checkoutId || opts.subscriptionId, status: "pending" }, data: { status: "subscription_active", activatedAt: new Date() } });
     await queuePaidReceipt({ key: `${opts.provider}:${opts.chargeId}`, userId: user.id, email: user.email, name: user.name, plan: opts.plan, amount: opts.amount, currency: opts.currency, txId: opts.chargeId }, tx);
     return { duplicate: false };
