@@ -35,6 +35,13 @@ export async function issueEmailCode(email: string, purpose: EmailCodePurpose, i
     return tx.emailCode.create({ data: { email, purpose, codeHash: codeHash(email, purpose, code), expiresAt } });
   });
 
+  // Local development only: Brevo accepts sends from the server's authorised IP,
+  // so print the code instead of emailing it. Never active in production.
+  if (process.env.NODE_ENV !== "production" && process.env.EMAIL_CODE_DEV_LOG === "true") {
+    console.log(`[email-code] DEV ONLY: ${purpose} code for ${email} is ${code}`);
+    return { ok: true };
+  }
+
   const subject = purpose === "login" ? `${code} is your Wazap sign-in code` : `${code} is your Wazap confirmation code`;
   const sent = await sendEmail({ to: email, subject, html: renderEmailCodeEmail({ code, purpose, minutes: EMAIL_CODE_TTL_MINUTES }), channel: "support" });
   if (!sent.accepted) {
