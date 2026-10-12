@@ -1,4 +1,5 @@
 import { verifyEmailCode } from "@/lib/email-code";
+import { requestIp } from "@/lib/request-ip";
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -74,7 +75,7 @@ export async function POST(req: Request) {
   if (body.confirmation !== `TRANSFER ${workspace.name}`) {
     return NextResponse.json({ error: `Type TRANSFER ${workspace.name} exactly.` }, { status: 400 });
   }
-  if (!(await verifyEmailCode(actor.email, "confirm", String(body.emailCode || "")))) {
+  if (!(await verifyEmailCode(actor.email, "confirm", String(body.emailCode || ""), requestIp(req.headers)))) {
     return NextResponse.json({ error: "Enter the latest code we emailed you." }, { status: 403 });
   }
 

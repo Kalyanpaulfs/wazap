@@ -59,6 +59,7 @@ export default function EmailCodeSignIn({ mode, redirect }: { mode: "login" | "s
         setError(`That code is not correct. You have ${left} ${left === 1 ? "attempt" : "attempts"} left.`);
         return;
       }
+      if (res?.error === "IP_BLOCKED") { setError("Too many wrong codes from your network. Please try again in 12 hours, or continue with Google."); return; }
       if (res?.error === "CODE_LOCKED") { setCode(""); setError("Too many wrong attempts. This code is locked. Tap \"Resend code\" to get a new one."); return; }
       if (res?.error === "CODE_EXPIRED") { setCode(""); setError("This code has expired or was replaced by a newer one. Tap \"Resend code\" to get a new one."); return; }
       if (!res?.ok || res.error) { setError("We couldn't sign you in right now. Please wait a few minutes and try again."); return; }

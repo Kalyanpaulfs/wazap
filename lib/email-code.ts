@@ -1,6 +1,6 @@
 import { createHmac, randomInt, timingSafeEqual } from "node:crypto";
 import { prisma } from "./prisma";
-import { sharedRateLimit } from "./shared-rate-limit";
+import { sharedRateLimit, sharedRateLimitExceeded } from "./shared-rate-limit";
 import { sendEmail, renderEmailCodeEmail } from "./email";
 
 // Passwordless sign-in and step-up confirmation via a 6-digit email code.
@@ -10,6 +10,19 @@ export type EmailCodePurpose = "login" | "confirm";
 
 export const EMAIL_CODE_TTL_MINUTES = 10;
 const MAX_ATTEMPTS = 5;
+const TWELVE_HOURS = 12 * 60 * 60_000;
+// Wrong guesses allowed per IP in 12 hours before that IP is blocked for the
+// rest of the window. Blocks scripts without locking out the real owner.
+const IP_WRONG_GUESS_LIMIT = 10;
+export const BLOCKED_MESSAGE = "Too many wrong codes from your network. Please try again in 12 hours, or continue with Google.";
+
+export async function ipBlockedForCodes(ip: string): Promise<boolean> {
+  return sharedRateLimitExceeded(`email-code-wrong-ip:${ip}`, IP_WRONG_GUESS_LIMIT);
+}
+
+export async function recordWrongCode(ip: string): Promise<void> {
+  await sharedRateLimit(`email-code-wrong-ip:${ip}`, IP_WRONG_GUESS_LIMIT, TWELVE_HOURS);
+}
 
 export function normalizeEmail(value: unknown): string {
   const email = String(value ?? "").trim().toLowerCase().slice(0, 320);
@@ -25,8 +38,10 @@ function codeHash(email: string, purpose: EmailCodePurpose, code: string): strin
 export type IssueResult = { ok: true } | { ok: false; status: number; error: string };
 
 export async function issueEmailCode(email: string, purpose: EmailCodePurpose, ip: string): Promise<IssueResult> {
+  if (await ipBlockedForCodes(ip)) return { ok: false, status: 429, error: BLOCKED_MESSAGE };
   if (!await sharedRateLimit(`email-code-ip:${ip}`, 20, 15 * 60_000)) return { ok: false, status: 429, error: "Too many code requests. Please wait 15 minutes." };
   if (!await sharedRateLimit(`email-code-email:${purpose}:${email}`, 5, 15 * 60_000)) return { ok: false, status: 429, error: "Too many codes sent to this email. Please wait 15 minutes." };
+  if (!await sharedRateLimit(`email-code-email-12h:${purpose}:${email}`, 10, TWELVE_HOURS)) return { ok: false, status: 429, error: "Too many codes sent to this email today. Please try again in 12 hours, or continue with Google." };
 
   const code = String(randomInt(0, 1_000_000)).padStart(6, "0");
   const expiresAt = new Date(Date.now() + EMAIL_CODE_TTL_MINUTES * 60_000);
@@ -88,7 +103,9 @@ export async function consumeEmailCode(id: string): Promise<boolean> {
   return claimed.count === 1;
 }
 
-export async function verifyEmailCode(email: string, purpose: EmailCodePurpose, code: string): Promise<boolean> {
+export async function verifyEmailCode(email: string, purpose: EmailCodePurpose, code: string, ip?: string): Promise<boolean> {
+  if (ip && await ipBlockedForCodes(ip)) return false;
   const id = await checkEmailCode(email, purpose, code);
+  if (!id && ip) await recordWrongCode(ip);
   return id ? consumeEmailCode(id) : false;
 }

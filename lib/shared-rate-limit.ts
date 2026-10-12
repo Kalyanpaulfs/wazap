@@ -20,3 +20,17 @@ export async function sharedRateLimit(key: string, limit: number, windowMs: numb
     return false;
   }
 }
+
+// Reads a bucket without counting a hit: true once `limit` hits are recorded.
+export async function sharedRateLimitExceeded(key: string, limit: number): Promise<boolean> {
+  try {
+    const digest = createHash("sha256").update(key).digest("hex");
+    const rows = await prisma.$queryRaw<Array<{ count: number }>>`
+      SELECT "count" FROM "SecurityRateLimit" WHERE "key" = ${digest} AND "resetAt" > clock_timestamp()
+    `;
+    return (rows[0]?.count ?? 0) >= limit;
+  } catch {
+    console.error("[security] shared authentication limiter unavailable");
+    return true;
+  }
+}

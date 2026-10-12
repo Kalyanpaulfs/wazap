@@ -9,7 +9,7 @@ import { isPlanExpired } from "./billing";
 import { effectivePlan, newProductTrial } from "./entitlements";
 import { createHash } from "node:crypto";
 import { requestIp } from "./request-ip";
-import { checkEmailCodeDetailed, consumeEmailCode, normalizeEmail } from "./email-code";
+import { checkEmailCodeDetailed, consumeEmailCode, ipBlockedForCodes, normalizeEmail, recordWrongCode } from "./email-code";
 import { cleanAttribution, createVerifiedAccount } from "./account-create";
 import { readPartnerTouchCookie } from "./partner-attribution";
 
@@ -90,7 +90,9 @@ export const authOptions: NextAuthOptions = {
         const accountKey = createHash("sha256").update(email).digest("hex");
         if (!await sharedRateLimit(`login-ip:${ip}`, 20, 15 * 60_000)) return null;
         if (!await sharedRateLimit(`login-account:${accountKey}`, 8, 15 * 60_000)) return null;
+        if (await ipBlockedForCodes(ip)) throw new Error("IP_BLOCKED");
         const check = await checkEmailCodeDetailed(email, "login", credentials.code);
+        if (!check.ok && check.reason !== "expired") await recordWrongCode(ip);
         // Surface the reason so the form can show how many tries are left.
         if (!check.ok) throw new Error(check.reason === "wrong" ? `CODE_WRONG:${check.remaining}` : check.reason === "locked" ? "CODE_LOCKED" : "CODE_EXPIRED");
         const codeId = check.id;

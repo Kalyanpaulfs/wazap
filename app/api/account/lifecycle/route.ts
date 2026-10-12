@@ -1,4 +1,5 @@
 import { verifyEmailCode } from "@/lib/email-code";
+import { requestIp } from "@/lib/request-ip";
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -79,7 +80,7 @@ export async function POST(req: Request) {
   if (body.confirmation !== "DELETE MY WAZAP ACCOUNT") {
     return NextResponse.json({ error: "Type the complete confirmation phrase." }, { status: 400 });
   }
-  if (!(await verifyEmailCode(user.email, "confirm", String(body.emailCode || "")))) {
+  if (!(await verifyEmailCode(user.email, "confirm", String(body.emailCode || ""), requestIp(req.headers)))) {
     return NextResponse.json({ error: "Enter the latest code we emailed you." }, { status: 403 });
   }
   const blockers = await accountClosureBlockers(user.id);
