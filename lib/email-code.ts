@@ -52,21 +52,31 @@ export async function issueEmailCode(email: string, purpose: EmailCodePurpose, i
   return { ok: true };
 }
 
+export type CodeCheck = { ok: true; id: string } | { ok: false; reason: "expired" | "locked" } | { ok: false; reason: "wrong"; remaining: number };
+
 // Checks a code without consuming it, counting wrong guesses. Returns the code
 // id when valid so the caller can consume it once every other check passes.
-export async function checkEmailCode(email: string, purpose: EmailCodePurpose, code: string): Promise<string | null> {
+export async function checkEmailCodeDetailed(email: string, purpose: EmailCodePurpose, code: string): Promise<CodeCheck> {
   const clean = String(code ?? "").replace(/\s/g, "");
-  if (!email || !/^\d{6}$/.test(clean)) return null;
-  const record = await prisma.emailCode.findFirst({
+  const record = email ? await prisma.emailCode.findFirst({
     where: { email, purpose, usedAt: null, expiresAt: { gt: new Date() } },
     orderBy: { createdAt: "desc" },
-  });
-  if (!record || record.attempts >= MAX_ATTEMPTS) return null;
-  const expected = Buffer.from(record.codeHash, "hex");
-  const actual = Buffer.from(codeHash(email, purpose, clean), "hex");
-  if (expected.length === actual.length && timingSafeEqual(expected, actual)) return record.id;
-  await prisma.emailCode.updateMany({ where: { id: record.id, usedAt: null }, data: { attempts: { increment: 1 } } });
-  return null;
+  }) : null;
+  if (!record) return { ok: false, reason: "expired" };
+  if (record.attempts >= MAX_ATTEMPTS) return { ok: false, reason: "locked" };
+  if (/^\d{6}$/.test(clean)) {
+    const expected = Buffer.from(record.codeHash, "hex");
+    const actual = Buffer.from(codeHash(email, purpose, clean), "hex");
+    if (expected.length === actual.length && timingSafeEqual(expected, actual)) return { ok: true, id: record.id };
+  }
+  const updated = await prisma.emailCode.update({ where: { id: record.id }, data: { attempts: { increment: 1 } }, select: { attempts: true } });
+  const remaining = Math.max(0, MAX_ATTEMPTS - updated.attempts);
+  return remaining ? { ok: false, reason: "wrong", remaining } : { ok: false, reason: "locked" };
+}
+
+export async function checkEmailCode(email: string, purpose: EmailCodePurpose, code: string): Promise<string | null> {
+  const result = await checkEmailCodeDetailed(email, purpose, code);
+  return result.ok ? result.id : null;
 }
 
 // Atomically marks a checked code as used; false if it was used concurrently.

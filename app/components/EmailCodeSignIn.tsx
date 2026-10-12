@@ -54,7 +54,14 @@ export default function EmailCodeSignIn({ mode, redirect }: { mode: "login" | "s
       const res = await signIn("email-code", { email: email.trim(), code: code.trim(), otp: otp.trim(), name: name.trim(), attribution, redirect: false });
       if (res?.error === "MFA_REQUIRED") { setNeedsOtp(true); setNotice("This account uses two-factor authentication. Enter your authenticator or recovery code."); return; }
       if (res?.error === "MFA_INVALID") { setNeedsOtp(true); setError("That authenticator code is not valid. Try the next code from your app."); return; }
-      if (!res?.ok || res.error) { setError("That code is wrong or has expired. Check the latest email, or send a new code."); return; }
+      if (res?.error?.startsWith("CODE_WRONG:")) {
+        const left = Number(res.error.split(":")[1]);
+        setError(`That code is not correct. You have ${left} ${left === 1 ? "attempt" : "attempts"} left.`);
+        return;
+      }
+      if (res?.error === "CODE_LOCKED") { setCode(""); setError("Too many wrong attempts. This code is locked. Tap \"Resend code\" to get a new one."); return; }
+      if (res?.error === "CODE_EXPIRED") { setCode(""); setError("This code has expired or was replaced by a newer one. Tap \"Resend code\" to get a new one."); return; }
+      if (!res?.ok || res.error) { setError("We couldn't sign you in right now. Please wait a few minutes and try again."); return; }
       if (mode === "signup") window.gtag?.("event", "sign_up", { method: "email_code" });
       window.location.href = redirect;
     } catch {
