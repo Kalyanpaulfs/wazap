@@ -49,15 +49,20 @@ export default function BillingManager({
   async function cancel() {
     setBusy(true);
     setNotice("");
-    const response = await fetch("/api/billing", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ reason }),
-    });
-    const result = await response.json();
-    setBusy(false);
-    setNotice(result.notice || result.error || "Unable to update billing.");
-    if (response.ok) setOpen(false);
+    try {
+      const response = await fetch("/api/billing", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ reason }),
+      });
+      const result = await response.json();
+      setNotice(result.notice || result.error || "Unable to update billing.");
+      if (response.ok) setOpen(false);
+    } catch {
+      setNotice("We could not confirm the billing change. Please check again or contact support.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (

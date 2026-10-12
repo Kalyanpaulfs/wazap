@@ -8,6 +8,10 @@ import { notifySupportMessage } from "@/lib/support-notify";
 import { normalizeLanguage } from "@/lib/localization";
 import { recordFunnelEvent } from "@/lib/funnel";
 
+import { currentSubscriptionRecord } from "@/lib/subscription-record";
+import { sameSiteRequest } from "@/lib/crm";
+import { sharedRateLimit } from "@/lib/shared-rate-limit";
+
 export const runtime = "nodejs";
 
 type PayPalSubscriptionResponse = {
@@ -37,6 +41,7 @@ const PAYPAL_LOCALE_BY_LANGUAGE: Record<string, string> = {
 };
 
 export async function POST(req: Request) {
+  if (!sameSiteRequest(req)) return NextResponse.json({ error: "Invalid request origin." }, { status: 403 });
   let checkoutUserId: string | null = null;
   let checkoutPlan: string | null = null;
   try {
@@ -66,6 +71,10 @@ export async function POST(req: Request) {
     if (!user || user.email !== email) {
       return NextResponse.json({ error: "Account not found. Please sign in again." }, { status: 401 });
     }
+
+    const existingSubscription = await currentSubscriptionRecord(user.id);
+    if (existingSubscription) return NextResponse.json({ error: "You already have a subscription. Manage your current plan in the dashboard before starting another.", manageUrl: "/dashboard#billing" }, { status: 409 });
+    if (!(await sharedRateLimit(`checkout:${user.id}`, 10, 60_000))) return NextResponse.json({ error: "Please wait a minute before trying checkout again." }, { status: 429 });
 
     if (!planId || !process.env.PAYPAL_CLIENT_ID || !process.env.PAYPAL_CLIENT_SECRET) {
       const amount = PLAN_PRICES[plan];
@@ -123,7 +132,7 @@ export async function POST(req: Request) {
           locale: paypalLocale,
           shipping_preference: "NO_SHIPPING",
           user_action: "SUBSCRIBE_NOW",
-          return_url: `${base}/dashboard?upgraded=1&provider=paypal`,
+          return_url: `${base}/dashboard?upgraded=1&provider=paypal&plan=${encodeURIComponent(plan)}`,
           cancel_url: `${base}/pricing?cancelled=1`,
         },
       }),

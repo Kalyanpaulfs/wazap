@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { CreditCard, Loader2, Wallet } from "lucide-react";
 import { PLAN_PRICES } from "@/lib/billing";
 
@@ -23,12 +24,14 @@ export default function WazapCardPayment({
 }) {
   const [loadingProvider, setLoadingProvider] = useState<CheckoutProvider | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [manageUrl, setManageUrl] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
   async function pay(provider: CheckoutProvider) {
     setLoadingProvider(provider);
     setError(null);
     setNotice(null);
+    setManageUrl(null);
     window.gtag?.("event", "begin_checkout", {
       currency: "USD",
       value: PLAN_PRICES[planName as keyof typeof PLAN_PRICES],
@@ -54,6 +57,8 @@ export default function WazapCardPayment({
           payment_provider: provider,
           response_status: res.status,
         });
+        if (res.status === 401) { window.location.href = `/login?redirect=${encodeURIComponent(`/pricing?plan=${planName}`)}`; return; }
+        if (data.manageUrl === "/dashboard#billing") setManageUrl(data.manageUrl);
         setError(data.error ?? "Could not start checkout. Please try again.");
         setLoadingProvider(null);
         return;
@@ -90,6 +95,8 @@ export default function WazapCardPayment({
         </span>
       </button>
       )}
+      {manageUrl && <Link href={manageUrl} className="block text-center text-sm font-semibold text-[#25D366]">Manage existing subscription →</Link>}
+      <p className="text-center text-xs leading-5 text-slate-400">Monthly renewal. Cancel from your dashboard. Taxes, if applicable, are shown at checkout.</p>
       {error && <p className="mt-2 text-xs text-red-400 text-center">{error}</p>}
       {notice && <p className="mt-2 text-xs text-[#25D366] text-center">{notice}</p>}
     </div>

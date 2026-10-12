@@ -1,3 +1,4 @@
+import {activeCrmContacts} from "./crm-trash";
 import { renderLuxuryCampaign } from './email-marketing-template';
 import { emailIdentity } from "./email-brand";
 import {createHash, createHmac, timingSafeEqual, randomUUID} from 'node:crypto';
@@ -11,7 +12,7 @@ export function cleanFilters(value:unknown):AudienceFilters {
  return {stage:CRM_STAGES.includes(stage as typeof CRM_STAGES[number])?stage:'',source:crmText(raw.source,60),tag:crmText(raw.tag,40).toLowerCase(),query:crmText(raw.query,100),permission:['none','pending','subscribed','unsubscribed'].includes(permission)?permission:''};
 }
 export function audienceWhere(filters:AudienceFilters):Prisma.CrmLeadWhereInput {
- return {...(filters.stage?{stage:filters.stage}:{}),...(filters.source?{source:filters.source}:{}),...(filters.tag?{tags:{has:filters.tag}}:{}),...(filters.permission?{marketingStatus:filters.permission}:{}),...(filters.query?{OR:[{name:{contains:filters.query,mode:'insensitive'}},{email:{contains:filters.query,mode:'insensitive'}},{company:{contains:filters.query,mode:'insensitive'}}]}:{})};
+ return {...activeCrmContacts,...(filters.stage?{stage:filters.stage}:{}),...(filters.source?{source:filters.source}:{}),...(filters.tag?{tags:{has:filters.tag}}:{}),...(filters.permission?{marketingStatus:filters.permission}:{}),...(filters.query?{OR:[{name:{contains:filters.query,mode:'insensitive'}},{email:{contains:filters.query,mode:'insensitive'}},{company:{contains:filters.query,mode:'insensitive'}}]}:{})};
 }
 export async function eligibleAudience(db:Prisma.TransactionClient|typeof prisma,filters:AudienceFilters){
  const optedOut=await db.user.findMany({where:{marketingOptOutAt:{not:null}},select:{email:true}});

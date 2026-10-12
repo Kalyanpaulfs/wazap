@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import PricingPlans from "./PricingPlans";
 import PricingViewTracker from "./PricingViewTracker";
+import { currentSubscriptionRecord } from "@/lib/subscription-record";
 
 export const metadata: Metadata = {
   title: "Pricing — WhatsApp Lead Router Plans",
@@ -61,6 +62,8 @@ export default async function PricingPage({
     ? requestedPlan ?? null
     : null;
   const isLoggedIn = !!session?.user;
+  const sessionUserId = (session?.user as { id?: string } | undefined)?.id;
+  const activeSubscription = sessionUserId ? await currentSubscriptionRecord(sessionUserId) : null;
   const userEmail = session?.user?.email ?? null;
   const cardCheckoutEnabled =
     process.env.DODO_ENVIRONMENT === "live_mode" &&
@@ -99,7 +102,7 @@ export default async function PricingPage({
             </div>
           </div>
 
-          <PricingPlans isLoggedIn={isLoggedIn} userEmail={userEmail} cardCheckoutEnabled={cardCheckoutEnabled} selectedPlan={selectedPlan} />
+          <PricingPlans isLoggedIn={isLoggedIn} userEmail={userEmail} cardCheckoutEnabled={cardCheckoutEnabled} selectedPlan={selectedPlan} activeSubscriptionPlan={activeSubscription?.plan || null} />
 
           <div className="mt-10 rounded-2xl border border-slate-800 bg-[#111811] p-6 text-center">
             <h2 className="text-xl font-semibold text-white">Paid plans keep your routing links active beyond the free allowance</h2>

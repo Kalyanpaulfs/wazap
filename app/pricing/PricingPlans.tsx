@@ -41,11 +41,13 @@ export default function PricingPlans({
   userEmail,
   cardCheckoutEnabled,
   selectedPlan,
+  activeSubscriptionPlan,
 }: {
   isLoggedIn: boolean;
   userEmail: string | null;
   cardCheckoutEnabled: boolean;
   selectedPlan?: string | null;
+  activeSubscriptionPlan?: string | null;
 }) {
   const localization = useLocalization();
   const text = usePricingText(localization.language);
@@ -54,7 +56,7 @@ export default function PricingPlans({
     <>
       <div className="mb-6 flex items-center justify-center gap-2 text-center text-xs text-slate-500">
         <span className="h-1.5 w-1.5 rounded-full bg-[#25D366]" aria-hidden="true" />
-        <span>{text.estimated} · {localization.currency}{localization.currency !== "USD" ? ` · ${text.billedUsd}` : ""}</span>
+        <span>Prices before applicable taxes. {text.estimated} · {localization.currency}{localization.currency !== "USD" ? ` · ${text.billedUsd}` : ""}</span>
       </div>
 
       {/* Not logged in — account gate */}
@@ -62,7 +64,7 @@ export default function PricingPlans({
         <div className="rounded-2xl border border-[#25D366]/30 bg-[#25D366]/5 p-5 mb-8 flex items-center justify-between gap-4 flex-wrap">
           <div>
             <p className="text-white font-semibold">{text.accountRequired}</p>
-            <p className="text-slate-400 text-sm mt-0.5">Payments are only accepted from signed-in Wazap accounts so access can be linked to the correct customer. {text.paymentMethods}</p>
+            <p className="text-slate-400 text-sm mt-0.5">Sign in or create an account, then choose your payment method. {text.paymentMethods}</p>
             <div className="mt-3 flex flex-wrap gap-2 text-xs font-semibold">
               <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-700 bg-black/20 px-3 py-1 text-slate-200">
                 <Wallet className="h-3.5 w-3.5" />
@@ -96,7 +98,9 @@ export default function PricingPlans({
         </div>
       )}
 
-      {selectedPlan && (
+      {activeSubscriptionPlan && <div className="mb-6 rounded-2xl border border-[#25D366]/40 bg-[#25D366]/10 p-4 text-center text-sm text-green-200">You already have a subscription. <Link href="/dashboard#billing" className="font-semibold underline">Manage your existing plan</Link> before starting another.</div>}
+
+      {selectedPlan && !activeSubscriptionPlan && (
         <div className="mb-6 rounded-2xl border border-[#25D366]/40 bg-[#25D366]/10 p-4 text-center text-sm text-green-200">
           {isLoggedIn ? "Your account is ready. Continue with your selected plan below and choose PayPal or card checkout." : "Your selected plan is highlighted below. Create an account to continue to secure checkout."}
         </div>
@@ -113,7 +117,7 @@ export default function PricingPlans({
           }`}>
             {plan.highlighted && (
               <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 flex items-center gap-1 rounded-full bg-[#25D366] px-4 py-1 text-xs font-semibold text-black">
-                <Star className="h-3 w-3 fill-black" /> Most Popular
+                <Star className="h-3 w-3 fill-black" /> For growing teams
               </div>
             )}
 
@@ -142,6 +146,8 @@ export default function PricingPlans({
                 </Link>
                 <p className="text-center text-xs text-slate-500">Tailored confirmation before billing</p>
               </div>
+            ) : activeSubscriptionPlan ? (
+              <Link href="/dashboard#billing" className="block rounded-full border border-[#25D366] py-3 text-center text-sm font-semibold text-[#25D366]">Manage existing subscription →</Link>
             ) : isLoggedIn ? (
               <WazapCardPayment
                 planName={plan.id}
@@ -171,6 +177,9 @@ export default function PricingPlans({
                 >
                   <LogIn className="h-4 w-4" />
                   Create account, then {plan.name} — {localPrice}/{text.month}
+                </Link>
+                <Link href={`/login?redirect=${encodeURIComponent(`/pricing?plan=${plan.id}`)}`} className="block text-center text-sm text-[#25D366] hover:underline">
+                  Already have an account? Sign in for {plan.name}
                 </Link>
               </div>
             )}

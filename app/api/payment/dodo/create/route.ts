@@ -5,6 +5,10 @@ import { authOptions } from "@/lib/auth";
 import { PLAN_PRICES } from "@/lib/billing";
 import { recordFunnelEvent } from "@/lib/funnel";
 
+import { currentSubscriptionRecord } from "@/lib/subscription-record";
+import { sameSiteRequest } from "@/lib/crm";
+import { sharedRateLimit } from "@/lib/shared-rate-limit";
+
 export const runtime = "nodejs";
 
 const PRODUCT_BY_PLAN: Record<string, string | undefined> = {
@@ -15,6 +19,7 @@ const PRODUCT_BY_PLAN: Record<string, string | undefined> = {
 };
 
 export async function POST(req: Request) {
+  if (!sameSiteRequest(req)) return NextResponse.json({ error: "Invalid request origin." }, { status: 403 });
   let checkoutUserId: string | null = null;
   let checkoutPlan: string | null = null;
   try {
@@ -55,6 +60,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Account not found. Please sign in again." }, { status: 401 });
     }
 
+    const existingSubscription = await currentSubscriptionRecord(user.id);
+    if (existingSubscription) return NextResponse.json({ error: "You already have a subscription. Manage your current plan in the dashboard before starting another.", manageUrl: "/dashboard#billing" }, { status: 409 });
+    if (!(await sharedRateLimit(`checkout:${user.id}`, 10, 60_000))) return NextResponse.json({ error: "Please wait a minute before trying checkout again." }, { status: 429 });
+
     const { default: DodoPayments } = await import("dodopayments");
     const client = new DodoPayments({
       bearerToken: apiKey,
@@ -64,7 +73,7 @@ export async function POST(req: Request) {
     const sessionResponse = await client.checkoutSessions.create({
       product_cart: [{ product_id: productId, quantity: 1 }],
       customer: { email, name: user.name || undefined },
-      return_url: `${base}/dashboard?upgraded=1`,
+      return_url: `${base}/dashboard?upgraded=1&provider=dodo&plan=${encodeURIComponent(plan)}`,
       metadata: { user_id: user.id, plan, email },
     });
     const checkout = sessionResponse as { checkout_url?: string; payment_link?: string; session_id?: string; id?: string };

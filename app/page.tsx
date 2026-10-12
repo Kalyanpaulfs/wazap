@@ -1,3 +1,4 @@
+import { publicOffers } from "@/lib/marketing-offer";
 import GrowthResources from "./components/GrowthResources";
 import HomeExperience from "./design/HomeExperience";
 import type { Metadata } from "next";
@@ -15,7 +16,7 @@ export const metadata: Metadata = {
 const jsonLd = {
   "@context": "https://schema.org", "@type": "SoftwareApplication", name: "Wazap WhatsApp Lead Router", url: "https://wazap.lt",
   description: "A WhatsApp link rotator that distributes click-to-chat leads across sales and support teams in round-robin order.",
-  applicationCategory: "BusinessApplication", operatingSystem: "Web", offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+  applicationCategory: "BusinessApplication", operatingSystem: "Web", offers: publicOffers,
 };
 
 

@@ -6,7 +6,7 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: "*",
         allow: ["/", "/tools/", "/qr", "/pricing"],
-        disallow: ["/api/"],
+        disallow: ["/api/", "/r/"],
       },
     ],
     sitemap: "https://wazap.lt/sitemap.xml",
