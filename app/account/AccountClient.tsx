@@ -2,6 +2,7 @@
 
 import { useCallback, useState } from "react";
 import Link from "next/link";
+import EmailCodeConfirm from "@/app/components/EmailCodeConfirm";
 import { Download, RotateCcw, ShieldAlert, Trash2 } from "lucide-react";
 
 export type Lifecycle = {
@@ -16,7 +17,7 @@ export type Lifecycle = {
 
 export default function AccountClient({ initial }: { initial: Lifecycle }) {
   const [data, setData] = useState<Lifecycle>(initial);
-  const [password, setPassword] = useState("");
+  const [emailCode, setEmailCode] = useState("");
   const [confirmation, setConfirmation] = useState("");
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
@@ -35,13 +36,13 @@ export default function AccountClient({ initial }: { initial: Lifecycle }) {
     const response = await fetch("/api/account/lifecycle", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ action, password, confirmation }),
+      body: JSON.stringify({ action, emailCode, confirmation }),
     });
     const result = await response.json();
     setBusy(false);
     setNotice(result.notice || result.error || "Unable to update the account.");
     if (response.ok) {
-      setPassword("");
+      setEmailCode("");
       setConfirmation("");
       await load();
     }
@@ -113,16 +114,7 @@ export default function AccountClient({ initial }: { initial: Lifecycle }) {
                   </div>
                 </div>
               )}
-              <label className="mt-5 block text-xs font-semibold text-slate-400">
-                Current password
-                <input
-                  type="password"
-                  autoComplete="current-password"
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                  className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white"
-                />
-              </label>
+              <EmailCodeConfirm id="delete-email-code" className="mt-5" value={emailCode} onChange={setEmailCode} />
               <label className="mt-4 block text-xs font-semibold text-slate-400">
                 Type DELETE MY WAZAP ACCOUNT
                 <input
@@ -133,7 +125,7 @@ export default function AccountClient({ initial }: { initial: Lifecycle }) {
               </label>
               <button
                 type="button"
-                disabled={blocked || busy || !password || confirmation !== "DELETE MY WAZAP ACCOUNT"}
+                disabled={blocked || busy || !emailCode || confirmation !== "DELETE MY WAZAP ACCOUNT"}
                 onClick={() => mutate("request_deletion")}
                 className="mt-5 rounded-full bg-red-500 px-5 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-40"
               >

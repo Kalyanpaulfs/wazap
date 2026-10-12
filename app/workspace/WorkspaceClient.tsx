@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import EmailCodeConfirm from "@/app/components/EmailCodeConfirm";
 import { History, KeyRound, MailPlus, ShieldCheck, Trash2, Users } from "lucide-react";
 
 type Member = { id: string; userId: string; name: string | null; email: string; role: string; joinedAt: string };
@@ -42,7 +43,7 @@ export default function WorkspaceClient() {
   const [email, setEmail] = useState("");
   const [role, setRole] = useState("member");
   const [transferMemberId, setTransferMemberId] = useState("");
-  const [transferPassword, setTransferPassword] = useState("");
+  const [transferCode, setTransferCode] = useState("");
   const [transferConfirmation, setTransferConfirmation] = useState("");
   const [transferNotice, setTransferNotice] = useState("");
   const [activities, setActivities] = useState<Activity[]>([]);
@@ -90,14 +91,14 @@ export default function WorkspaceClient() {
       body: JSON.stringify({
         workspaceId: active.id,
         targetMemberId: transferMemberId,
-        password: transferPassword,
+        emailCode: transferCode,
         confirmation: transferConfirmation,
       }),
     });
     const data = await response.json();
     if (!response.ok) { setError(data.error ?? "Ownership could not be transferred."); return; }
     setError("");
-    setTransferPassword("");
+    setTransferCode("");
     setTransferConfirmation("");
     setTransferNotice(data.notice ?? "Workspace ownership transferred.");
     await load();
@@ -123,7 +124,7 @@ export default function WorkspaceClient() {
           {canManage && <div className="mt-7 border-t border-slate-800 pt-6"><div className="flex items-center gap-2"><History className="h-4 w-4 text-[#25D366]"/><h3 className="text-sm font-semibold text-white">Security activity</h3></div><p className="mt-1 text-xs text-slate-500">The latest privileged workspace changes. Message content and credentials are never included.</p>{activities.length ? <div className="mt-3 space-y-2">{activities.slice(0, 20).map((activity) => { const targetEmail = typeof activity.metadata?.targetEmail === "string" ? activity.metadata.targetEmail : null; const subject = activity.target?.name || activity.target?.email || targetEmail; return <div key={activity.id} className="rounded-xl border border-slate-800 bg-slate-950/50 px-3 py-3"><div className="flex flex-wrap items-center justify-between gap-2"><p className="text-xs font-semibold text-slate-200">{activityLabels[activity.eventType] || activity.eventType.replaceAll("_", " ")}</p><time className="text-[11px] text-slate-600">{new Date(activity.createdAt).toLocaleString()}</time></div><p className="mt-1 text-[11px] text-slate-500">{activity.actor?.name || activity.actor?.email || "System"}{subject ? ` · ${subject}` : ""}</p></div>; })}</div> : <p className="mt-3 text-xs text-slate-500">No security activity has been recorded yet.</p>}</div>}
         </div>
         <aside className="space-y-5">{canManage && <form onSubmit={invite} className="rounded-3xl border border-[#25D366]/20 bg-[#25D366]/5 p-5"><MailPlus className="text-[#25D366]"/><h2 className="mt-3 font-bold text-white">Invite a teammate</h2><input required type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="teammate@company.com" className="mt-4 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-3 text-sm text-white"/><select value={role} onChange={(event) => setRole(event.target.value)} className="mt-3 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-3 text-sm text-white"><option value="member">Member</option>{active.role === "owner" && <option value="admin">Admin</option>}</select><button className="mt-3 w-full rounded-xl bg-[#25D366] px-4 py-3 text-sm font-bold text-black">Send secure invitation</button></form>}
-          {active.role === "owner" && active.members.length > 1 && <form onSubmit={transferOwnership} className="rounded-3xl border border-amber-500/25 bg-amber-500/5 p-5"><KeyRound className="text-amber-300"/><h2 className="mt-3 font-bold text-white">Transfer ownership</h2><p className="mt-2 text-sm leading-relaxed text-slate-400">Shared data and integrations stay with this workspace. Your role becomes Admin, and limits immediately follow the new owner’s plan.</p><label className="mt-4 block text-xs font-semibold text-slate-300">New owner</label><select required value={transferMemberId} onChange={(event) => setTransferMemberId(event.target.value)} className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-3 text-sm text-white"><option value="">Choose a member</option>{active.members.filter((member) => member.role !== "owner").map((member) => <option key={member.id} value={member.id}>{member.name || member.email} · {member.role}</option>)}</select><label className="mt-3 block text-xs font-semibold text-slate-300">Current password</label><input required type="password" autoComplete="current-password" value={transferPassword} onChange={(event) => setTransferPassword(event.target.value)} className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-3 text-sm text-white"/><label className="mt-3 block text-xs font-semibold text-slate-300">Type <span className="text-white">TRANSFER {active.name}</span></label><input required value={transferConfirmation} onChange={(event) => setTransferConfirmation(event.target.value)} className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-3 text-sm text-white"/><button disabled={!transferMemberId || !transferPassword || transferConfirmation !== `TRANSFER ${active.name}`} className="mt-3 w-full rounded-xl bg-amber-300 px-4 py-3 text-sm font-bold text-black disabled:cursor-not-allowed disabled:opacity-40">Transfer workspace ownership</button></form>}
+          {active.role === "owner" && active.members.length > 1 && <form onSubmit={transferOwnership} className="rounded-3xl border border-amber-500/25 bg-amber-500/5 p-5"><KeyRound className="text-amber-300"/><h2 className="mt-3 font-bold text-white">Transfer ownership</h2><p className="mt-2 text-sm leading-relaxed text-slate-400">Shared data and integrations stay with this workspace. Your role becomes Admin, and limits immediately follow the new owner’s plan.</p><label className="mt-4 block text-xs font-semibold text-slate-300">New owner</label><select required value={transferMemberId} onChange={(event) => setTransferMemberId(event.target.value)} className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-3 text-sm text-white"><option value="">Choose a member</option>{active.members.filter((member) => member.role !== "owner").map((member) => <option key={member.id} value={member.id}>{member.name || member.email} · {member.role}</option>)}</select><EmailCodeConfirm id="transfer-email-code" className="mt-3" value={transferCode} onChange={setTransferCode}/><label className="mt-3 block text-xs font-semibold text-slate-300">Type <span className="text-white">TRANSFER {active.name}</span></label><input required value={transferConfirmation} onChange={(event) => setTransferConfirmation(event.target.value)} className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-3 text-sm text-white"/><button disabled={!transferMemberId || !transferCode || transferConfirmation !== `TRANSFER ${active.name}`} className="mt-3 w-full rounded-xl bg-amber-300 px-4 py-3 text-sm font-bold text-black disabled:cursor-not-allowed disabled:opacity-40">Transfer workspace ownership</button></form>}
           <div className="rounded-3xl border border-slate-800 bg-[#111811] p-5"><ShieldCheck className="text-[#25D366]"/><h2 className="mt-3 font-bold text-white">Designed for accountable teams</h2><p className="mt-2 text-sm leading-relaxed text-slate-400">Invitations expire after seven days and can only be accepted by the invited email. Owners control roles and access.</p></div>
         </aside>
       </section>

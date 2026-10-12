@@ -1,4 +1,4 @@
-import bcrypt from "bcryptjs";
+import { verifyEmailCode } from "@/lib/email-code";
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -20,7 +20,6 @@ async function currentUser() {
       id: true,
       email: true,
       name: true,
-      password: true,
       accountDeletionRequestedAt: true,
       accountDeletionScheduledFor: true,
     },
@@ -52,7 +51,7 @@ export async function POST(req: Request) {
   if (!await sharedRateLimit(`account-lifecycle:${user.id}`, 6, 60 * 60_000)) {
     return NextResponse.json({ error: "Too many account changes. Please wait." }, { status: 429 });
   }
-  const body = (await req.json().catch(() => ({}))) as { action?: string; password?: string; confirmation?: string };
+  const body = (await req.json().catch(() => ({}))) as { action?: string; emailCode?: string; confirmation?: string };
   const action = String(body.action || "");
   const base = process.env.NEXTAUTH_URL || "https://wazap.lt";
 
@@ -80,8 +79,8 @@ export async function POST(req: Request) {
   if (body.confirmation !== "DELETE MY WAZAP ACCOUNT") {
     return NextResponse.json({ error: "Type the complete confirmation phrase." }, { status: 400 });
   }
-  if (!user.password || !body.password || !(await bcrypt.compare(body.password, user.password))) {
-    return NextResponse.json({ error: "Your current password is incorrect." }, { status: 403 });
+  if (!(await verifyEmailCode(user.email, "confirm", String(body.emailCode || "")))) {
+    return NextResponse.json({ error: "Enter the latest code we emailed you." }, { status: 403 });
   }
   const blockers = await accountClosureBlockers(user.id);
   if (blockers.billing || blockers.sharedOwnedWorkspaces.length) {

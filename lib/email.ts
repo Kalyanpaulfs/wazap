@@ -151,6 +151,25 @@ export function renderPasswordResetEmail(opts: { name: string | null; resetUrl: 
   </div>`;
 }
 
+export function renderEmailCodeEmail(opts: { code: string; purpose: "login" | "confirm"; minutes: number }): string {
+  const code = escapeHtml(opts.code);
+  const title = opts.purpose === "login" ? "Your Wazap sign-in code" : "Confirm this account action";
+  const intro = opts.purpose === "login"
+    ? "Enter this code on the Wazap sign-in page to continue."
+    : "Enter this code in Wazap to confirm the change you requested.";
+  return `
+  <div style="font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif;max-width:600px;margin:0 auto;background:#0b120d;border-radius:20px;overflow:hidden;border:1px solid #1d3323">
+    <div style="background:#0d1710;padding:22px 28px;border-bottom:1px solid #1d3323"><span style="color:#25D366;font-weight:800;font-size:20px">Wazap</span></div>
+    <div style="padding:30px 28px;color:#cbd5e1;font-size:15px;line-height:1.65">
+      <h1 style="margin:0 0 12px;color:#fff;font-size:27px;line-height:1.2">${title}</h1>
+      <p style="margin:0 0 20px;color:#9fb0a3">${intro}</p>
+      <p style="margin:22px 0;font-size:36px;font-weight:800;letter-spacing:10px;color:#25D366;font-family:Menlo,Consolas,monospace">${code}</p>
+      <p style="margin:18px 0 0;color:#718078;font-size:12px">The code expires in ${opts.minutes} minutes and works once. If you did not request it, ignore this email. Nobody can sign in without it. Wazap will never ask you for this code by phone or chat.</p>
+    </div>
+    <div style="padding:16px 28px;background:#080e09;color:#5f6f63;font-size:11px;text-align:center">Wazap.lt · Secure business conversation workspace</div>
+  </div>`;
+}
+
 export function renderAccountClosureEmail(opts: { name: string | null; scheduledFor: Date; accountUrl: string }): string {
   const greeting = opts.name ? `Hi ${escapeHtml(opts.name)},` : "Hi,";
   const date = escapeHtml(opts.scheduledFor.toLocaleDateString("en-GB", { dateStyle: "long" }));

@@ -1,4 +1,4 @@
-import bcrypt from "bcryptjs";
+import { verifyEmailCode } from "@/lib/email-code";
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -28,7 +28,7 @@ export async function POST(req: Request) {
   const body = (await req.json().catch(() => ({}))) as {
     workspaceId?: string;
     targetMemberId?: string;
-    password?: string;
+    emailCode?: string;
     confirmation?: string;
   };
   const workspaceId = String(body.workspaceId || "");
@@ -36,7 +36,7 @@ export async function POST(req: Request) {
   const [actor, workspace, target] = await Promise.all([
     prisma.user.findUnique({
       where: { id: actorId },
-      select: { id: true, name: true, email: true, password: true },
+      select: { id: true, name: true, email: true },
     }),
     prisma.workspace.findUnique({
       where: { id: workspaceId },
@@ -74,8 +74,8 @@ export async function POST(req: Request) {
   if (body.confirmation !== `TRANSFER ${workspace.name}`) {
     return NextResponse.json({ error: `Type TRANSFER ${workspace.name} exactly.` }, { status: 400 });
   }
-  if (!actor.password || !body.password || !(await bcrypt.compare(body.password, actor.password))) {
-    return NextResponse.json({ error: "Your current password is incorrect." }, { status: 403 });
+  if (!(await verifyEmailCode(actor.email, "confirm", String(body.emailCode || "")))) {
+    return NextResponse.json({ error: "Enter the latest code we emailed you." }, { status: 403 });
   }
 
   const actorMembership = await prisma.workspaceMember.findUnique({

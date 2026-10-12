@@ -11,9 +11,9 @@ export default function GoogleSignInButton({ callbackUrl }: { callbackUrl: strin
   return <div className="mb-5">
     <button type="button" disabled={busy} onClick={async () => {
       setBusy(true); setError("");
-      try { await signIn("google", { callbackUrl }); } catch { setError("Google sign-in could not start. Please try again or use your password."); setBusy(false); }
+      try { await signIn("google", { callbackUrl }); } catch { setError("Google sign-in could not start. Please try again or use an email code."); setBusy(false); }
     }} className="wp-auth-google disabled:opacity-50">{busy ? "Opening Google…" : "Continue with Google"}</button>
     {error && <p role="alert" className="mt-2 text-xs text-red-400">{error}</p>}
-    <p className="wp-auth-divider">Or continue with email and password</p>
+    <p className="wp-auth-divider">Or continue with email</p>
   </div>;
 }

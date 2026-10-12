@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import bcrypt from "bcryptjs";
+import { verifyEmailCode } from "@/lib/email-code";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { base32, mfaState, pendingStep, sealMfa, recoveryHash } from "@/lib/mfa";
@@ -22,7 +22,9 @@ export async function POST(req: Request) {
   if (!await sharedRateLimit(`mfa-setup:${userId}`, 8, 15 * 60_000)) return NextResponse.json({ error: "Please wait 15 minutes before trying again." }, { status: 429 });
   const body = await req.json().catch(() => null);
   const user = await prisma.user.findUnique({ where: { id: userId } });
-  if (!body || typeof body.password !== "string" || body.password.length > 128 || !user?.password || !await bcrypt.compare(body.password, user.password)) return NextResponse.json({ error: "Confirm your current password." }, { status: 400 });
+  if (!body || !user) return NextResponse.json({ error: "Please sign in again." }, { status: 401 });
+  // The email code proves the request on "begin"; "confirm" relies on the pending secret it created.
+  if (body.action === "begin" && !await verifyEmailCode(user.email, "confirm", String(body.emailCode || ""))) return NextResponse.json({ error: "Enter the latest code we emailed you." }, { status: 400 });
   const state = await mfaState(userId);
   if (state?.enabled) return NextResponse.json({ error: "Two-factor authentication is already enabled." }, { status: 409 });
   if (body.action === "begin") {

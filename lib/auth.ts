@@ -6,12 +6,12 @@ import { trustedGoogleIdentity } from "./google-identity";
 import { prisma } from "./prisma";
 import { sharedRateLimit } from "./shared-rate-limit";
 import { isPlanExpired } from "./billing";
-import bcrypt from "bcryptjs";
 import { effectivePlan, newProductTrial } from "./entitlements";
 import { createHash } from "node:crypto";
 import { requestIp } from "./request-ip";
-
-const DUMMY_PASSWORD_HASH = "$2b$10$0DE6z2y1FufGUqELY2ClweF7ggBV.RdMWnyu8QaBQZeSTcKxoHpsq";
+import { checkEmailCode, consumeEmailCode, normalizeEmail } from "./email-code";
+import { cleanAttribution, createVerifiedAccount } from "./account-create";
+import { readPartnerTouchCookie } from "./partner-attribution";
 
 export const TRIAL_DAYS = 30;
 
@@ -57,9 +57,13 @@ export const authOptions: NextAuthOptions = {
           const existing = await tx.user.findUnique({ where: { email: identity.email } });
           if (existing) {
             if (existing.googleSubject) throw new Error("Account already linked to another Google identity");
-            return tx.user.update({ where: { id: existing.id }, data: { googleSubject: identity.subject } });
+            // An unverified legacy account may have been pre-registered by someone
+            // else: Google proves ownership, so drop any password and old sessions.
+            return tx.user.update({ where: { id: existing.id }, data: existing.emailVerifiedAt
+              ? { googleSubject: identity.subject }
+              : { googleSubject: identity.subject, emailVerifiedAt: new Date(), password: null, sessionVersion: { increment: 1 } } });
           }
-          const created = await tx.user.create({ data: { email: identity.email, name: String(profile.name || "").slice(0, 100) || null, googleSubject: identity.subject, ...newProductTrial() } });
+          const created = await tx.user.create({ data: { email: identity.email, name: String(profile.name || "").slice(0, 100) || null, googleSubject: identity.subject, emailVerifiedAt: new Date(), ...newProductTrial() } });
           const workspace = await tx.workspace.create({ data: { name: `${created.name || identity.email.split("@")[0]}'s workspace`, slug: `workspace-${created.id.slice(-12).toLowerCase()}`, ownerId: created.id } });
           await tx.workspaceMember.create({ data: { workspaceId: workspace.id, userId: created.id, role: "owner" } });
           return tx.user.update({ where: { id: created.id }, data: { activeWorkspaceId: workspace.id } });
@@ -69,26 +73,50 @@ export const authOptions: NextAuthOptions = {
       },
     })] : []),
     CredentialsProvider({
-      name: "credentials",
+      id: "email-code",
+      name: "Email code",
       credentials: {
         email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" },
+        code: { label: "Email code", type: "text" },
         otp: { label: "Authenticator or recovery code", type: "text" },
+        name: { label: "Name", type: "text" },
+        attribution: { label: "Attribution", type: "text" },
       },
       async authorize(credentials, req) {
-        if (!credentials?.email || !credentials?.password || credentials.password.length > 128) return null;
-        const email = credentials.email.trim().toLowerCase().slice(0, 320);
+        const email = normalizeEmail(credentials?.email);
+        if (!email || !credentials?.code) return null;
         const requestHeaders = new Headers((req as any)?.headers || {});
         const ip = requestIp(requestHeaders);
         const accountKey = createHash("sha256").update(email).digest("hex");
         if (!await sharedRateLimit(`login-ip:${ip}`, 20, 15 * 60_000)) return null;
         if (!await sharedRateLimit(`login-account:${accountKey}`, 8, 15 * 60_000)) return null;
-        const user = await prisma.user.findUnique({ where: { email } });
-        const valid = await bcrypt.compare(credentials.password, user?.password || DUMMY_PASSWORD_HASH);
-        if (!user || !user.password || !valid) return null;
-        const factor = await mfaState(user.id);
-        const mfaVerified = factor?.enabled ? await verifyMfa(user.id, String(credentials.otp || "").slice(0, 64)) : false;
-        if (factor?.enabled && !mfaVerified) return null;
+        const codeId = await checkEmailCode(email, "login", credentials.code);
+        if (!codeId) return null;
+        let user = await prisma.user.findUnique({ where: { email } });
+        let mfaVerified = false;
+        if (user) {
+          const factor = await mfaState(user.id);
+          if (factor?.enabled) {
+            // The email code stays valid so the user can add the authenticator code.
+            const otp = String(credentials.otp || "").slice(0, 64);
+            if (!otp) throw new Error("MFA_REQUIRED");
+            mfaVerified = await verifyMfa(user.id, otp);
+            if (!mfaVerified) throw new Error("MFA_INVALID");
+          }
+        }
+        if (!await consumeEmailCode(codeId)) return null;
+        if (!user) {
+          user = await createVerifiedAccount({
+            email,
+            name: String(credentials.name || "").trim().slice(0, 100) || null,
+            attribution: cleanAttribution(credentials.attribution),
+            partnerTouchToken: readPartnerTouchCookie(new Request("https://wazap.lt", { headers: requestHeaders })),
+          });
+        } else if (!user.emailVerifiedAt) {
+          // First proof of ownership for a legacy account: remove any password
+          // (possibly set by someone else) and sign out older sessions.
+          user = await prisma.user.update({ where: { id: user.id }, data: { emailVerifiedAt: new Date(), password: null, sessionVersion: { increment: 1 } } });
+        }
         if (isPlanExpired(user.plan, user.planExpiresAt)) {
           await prisma.user.update({ where: { id: user.id }, data: { plan: "free", planExpiresAt: null } });
           return { id: user.id, email: user.email, name: user.name ?? "", plan: effectivePlan({ ...user, plan: "free" }), isAdmin: user.isAdmin, sessionVersion: user.sessionVersion, mfaVerified };

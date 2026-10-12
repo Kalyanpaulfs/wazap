@@ -12,6 +12,7 @@ model User {
   email                       String    @unique
   password                    String?
   googleSubject               String?   @unique
+  emailVerifiedAt             DateTime?
   sessionVersion              Int       @default(0)
   name                        String?
   plan                        String    @default("free")
@@ -55,6 +56,22 @@ model User {
   securityMfa SecurityMfa?
   securitySubscriptionStates SecuritySubscriptionState[]
   securityBillingState SecurityUserBilling?
+}
+
+// One-time email codes for passwordless sign-in ("login") and for confirming
+// sensitive account actions ("confirm"). Only an HMAC of the code is stored.
+model EmailCode {
+  id        String    @id @default(cuid())
+  email     String
+  purpose   String
+  codeHash  String
+  attempts  Int       @default(0)
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([email, purpose, createdAt])
+  @@index([expiresAt])
 }
 
 model PasswordResetToken {
