@@ -1,7 +1,7 @@
 import { prisma } from "./prisma";
 import type { Prisma } from "@prisma/client";
 import { queueBillingNotice, queuePaidReceipt } from "./billing-email";
-import { extendPlanExpiry, planExpiry } from "./billing";
+import { extendPlanExpiry, planExpiry, withGrace } from "./billing";
 import { recordCrmPayment } from "./crm-payment";
 
 async function subscriptionRecord(tx: Prisma.TransactionClient, opts: { provider: string; subscriptionId: string; userId: string; plan: string }, email: string, status: "subscription_active" | "subscription_inactive") {
@@ -13,6 +13,8 @@ async function subscriptionRecord(tx: Prisma.TransactionClient, opts: { provider
 export async function recordVerifiedCharge(opts: {
   provider: "dodo" | "paypal"; chargeId: string; userId: string; plan: string;
   amount: number; currency: string; subscriptionId: string; occurredAt: Date; checkoutId?: string;
+  // Provider's next billing date, when known. Access runs until then plus grace.
+  periodEnd?: Date | null;
 }) {
   if (!opts.chargeId || opts.chargeId.length > 200 || !Number.isFinite(opts.amount) || opts.amount <= 0 || !/^[A-Z]{3}$/.test(opts.currency)) throw new Error("Invalid verified charge data");
   if (!opts.subscriptionId || !Number.isFinite(opts.occurredAt.getTime())) throw new Error("Invalid provider event time or subscription");
@@ -27,8 +29,13 @@ export async function recordVerifiedCharge(opts: {
       await tx.$executeRaw`INSERT INTO "SecurityPaymentCharge" ("provider", "chargeId", "paymentId", "currency") VALUES (${opts.provider}, ${opts.chargeId}, ${historical.id}, ${opts.currency})`;
       return { duplicate: true };
     }
-    const expiry = user.plan === opts.plan && user.planExpiresAt && user.planExpiresAt.getTime() > Date.now() + 20 * 86_400_000
-      ? user.planExpiresAt : user.plan === opts.plan ? extendPlanExpiry(opts.plan, user.planExpiresAt) : planExpiry(opts.plan);
+    const providerEnd = opts.periodEnd && Number.isFinite(opts.periodEnd.getTime()) && opts.periodEnd.getTime() > Date.now() ? withGrace(opts.periodEnd) : null;
+    const fallback = user.plan === opts.plan && user.planExpiresAt && user.planExpiresAt.getTime() > Date.now() + 20 * 86_400_000
+      ? user.planExpiresAt : user.plan === opts.plan ? extendPlanExpiry(opts.plan, user.planExpiresAt) : withGrace(planExpiry(opts.plan)!);
+    // Prefer the provider's real billing date; never shorten existing paid access.
+    const expiry = providerEnd
+      ? (user.plan === opts.plan && user.planExpiresAt && user.planExpiresAt > providerEnd ? user.planExpiresAt : providerEnd)
+      : fallback;
     const newer = await tx.$queryRaw<Array<{ occurredAt: Date }>>`SELECT "occurredAt" FROM "SecurityUserBilling" WHERE "userId" = ${user.id}`;
     const subscriptionState = await tx.$queryRaw<Array<{ occurredAt: Date }>>`SELECT "occurredAt" FROM "SecuritySubscriptionState" WHERE "provider" = ${opts.provider} AND "subscriptionId" = ${opts.subscriptionId}`;
     if ((!newer[0] || newer[0].occurredAt <= opts.occurredAt) && (!subscriptionState[0] || subscriptionState[0].occurredAt <= opts.occurredAt)) {
@@ -70,7 +77,7 @@ export async function applyVerifiedLifecycle(opts: {
       if (opts.endAccess && ownsCurrentAccess) await tx.user.update({ where: { id: user.id }, data: { plan: "free", planExpiresAt: null } });
       if (ownsCurrentAccess) await tx.$executeRaw`UPDATE "SecurityUserBilling" SET "occurredAt" = GREATEST("occurredAt", ${opts.occurredAt}) WHERE "userId" = ${user.id}`;
     } else {
-      const supplied = opts.periodEnd && Number.isFinite(opts.periodEnd.getTime()) ? opts.periodEnd : planExpiry(opts.plan);
+      const supplied = opts.periodEnd && Number.isFinite(opts.periodEnd.getTime()) ? withGrace(opts.periodEnd) : withGrace(planExpiry(opts.plan)!);
       const expiry = user.plan === opts.plan && user.planExpiresAt && supplied && user.planExpiresAt > supplied ? user.planExpiresAt : supplied;
       await tx.user.update({ where: { id: user.id }, data: { plan: opts.plan, planExpiresAt: expiry } });
       if (opts.subscriptionId !== ("chargeId" in opts ? opts.chargeId : undefined)) await subscriptionRecord(tx, opts, user.email, "subscription_active");
@@ -78,5 +85,38 @@ export async function applyVerifiedLifecycle(opts: {
     }
     await tx.$executeRaw`INSERT INTO "SecuritySubscriptionState" ("provider", "subscriptionId", "userId", "occurredAt") VALUES (${opts.provider}, ${opts.subscriptionId}, ${user.id}, ${opts.occurredAt}) ON CONFLICT ("provider", "subscriptionId") DO UPDATE SET "occurredAt" = EXCLUDED."occurredAt"`;
     return { duplicate: false, stale: false };
+  }, { timeout: 15_000 });
+}
+
+export type ReversalKind = "refund" | "chargeback" | "dispute_opened";
+
+// Applies a verified refund, chargeback or dispute to the charge it belongs to.
+// A full refund or a lost chargeback ends the paid access that charge bought,
+// unless a newer verified charge already covers the user.
+export async function applyVerifiedReversal(opts: {
+  provider: "dodo" | "paypal"; eventId: string; chargeId: string; occurredAt: Date; kind: ReversalKind; amount?: number | null; partial?: boolean;
+}) {
+  if (!opts.eventId || !opts.chargeId || !Number.isFinite(opts.occurredAt.getTime())) throw new Error("Incomplete verified reversal event");
+  const payment = await prisma.payment.findFirst({ where: { method: opts.provider, txId: opts.chargeId, userId: { not: null } }, orderBy: { createdAt: "asc" } });
+  if (!payment?.userId) return { matched: false as const };
+  const userId = payment.userId;
+  return prisma.$transaction(async tx => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${"billing:" + userId}, 0))`;
+    const seen = await tx.$queryRaw<Array<{ eventId: string }>>`SELECT "eventId" FROM "SecurityBillingEvent" WHERE "provider" = ${opts.provider} AND "eventId" = ${opts.eventId}`;
+    if (seen.length) return { matched: true as const, duplicate: true, userId, paymentId: payment.id, status: payment.status, accessEnded: false };
+    await tx.$executeRaw`INSERT INTO "SecurityBillingEvent" ("provider", "eventId", "occurredAt") VALUES (${opts.provider}, ${opts.eventId}, ${opts.occurredAt})`;
+    const partial = opts.kind === "refund" && (opts.partial === true || (opts.amount != null && opts.amount < payment.amount - 0.005));
+    const status = opts.kind === "dispute_opened" ? "disputed" : partial ? "partially_refunded" : opts.kind === "refund" ? "refunded" : "charged_back";
+    await tx.payment.update({ where: { id: payment.id }, data: { status } });
+    let accessEnded = false;
+    if (status === "refunded" || status === "charged_back") {
+      const user = await tx.user.findUniqueOrThrow({ where: { id: userId } });
+      const newer = await tx.payment.findFirst({ where: { userId, status: "active", method: { in: ["dodo", "paypal"] }, createdAt: { gt: payment.createdAt } } });
+      if (!newer && user.plan === payment.plan) {
+        await tx.user.update({ where: { id: userId }, data: { plan: "free", planExpiresAt: null } });
+        accessEnded = true;
+      }
+    }
+    return { matched: true as const, duplicate: false, userId, paymentId: payment.id, status, accessEnded };
   }, { timeout: 15_000 });
 }

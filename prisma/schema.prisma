@@ -1545,6 +1545,26 @@ model SecurityMfa {
   enabledAt DateTime? @db.Timestamptz(6)
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
+// Verified payment events Wazap could not apply automatically (unknown user or
+// plan, refunds, chargebacks, disputes). Shown to admins until resolved.
+model BillingAttention {
+  id         String    @id @default(cuid())
+  provider   String
+  eventId    String
+  eventType  String
+  reason     String
+  chargeId   String?
+  userId     String?
+  email      String?
+  amount     Float?
+  currency   String?
+  createdAt  DateTime  @default(now())
+  resolvedAt DateTime?
+
+  @@unique([provider, eventId])
+  @@index([resolvedAt, createdAt])
+}
+
 model SecurityBillingEvent {
   provider String
   eventId String

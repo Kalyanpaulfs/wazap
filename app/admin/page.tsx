@@ -11,13 +11,6 @@ export default async function AdminPage() {
   const session = await getServerSession(authOptions);
   if (!(session?.user as { isAdmin?: boolean } | undefined)?.isAdmin) redirect("/login");
 
-  await prisma.user.updateMany({
-    where: {
-      plan: { not: "free" },
-      planExpiresAt: { not: null, lte: new Date() },
-    },
-    data: { plan: "free", planExpiresAt: null },
-  });
 
   const nowD = new Date();
   const thirtyDaysAgo = new Date(nowD.getTime() - 30 * 86_400_000);

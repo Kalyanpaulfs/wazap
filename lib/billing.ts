@@ -1,4 +1,11 @@
 export const PAID_PLAN_DAYS = 30;
+// Extra days after the provider's next billing date before access ends, so a
+// renewal that arrives a little late never drops a paying customer to free.
+export const BILLING_GRACE_DAYS = 3;
+
+export function withGrace(date: Date) {
+  return new Date(date.getTime() + BILLING_GRACE_DAYS * 86_400_000);
+}
 
 export const PLAN_PRICES: Record<string, number> = {
   basic: 9,

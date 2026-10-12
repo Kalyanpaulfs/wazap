@@ -6,6 +6,7 @@ import { trustedGoogleIdentity } from "./google-identity";
 import { prisma } from "./prisma";
 import { sharedRateLimit } from "./shared-rate-limit";
 import { isPlanExpired } from "./billing";
+import { downgradeIfExpired } from "./billing-expiry";
 import { effectivePlan, newProductTrial } from "./entitlements";
 import { createHash } from "node:crypto";
 import { requestIp } from "./request-ip";
@@ -122,7 +123,7 @@ export const authOptions: NextAuthOptions = {
           user = await prisma.user.update({ where: { id: user.id }, data: { emailVerifiedAt: new Date(), password: null, sessionVersion: { increment: 1 } } });
         }
         if (isPlanExpired(user.plan, user.planExpiresAt)) {
-          await prisma.user.update({ where: { id: user.id }, data: { plan: "free", planExpiresAt: null } });
+          await downgradeIfExpired(user);
           return { id: user.id, email: user.email, name: user.name ?? "", plan: effectivePlan({ ...user, plan: "free" }), isAdmin: user.isAdmin, sessionVersion: user.sessionVersion, mfaVerified };
         }
         return { id: user.id, email: user.email, name: user.name ?? "", plan: effectivePlan(user), isAdmin: user.isAdmin, sessionVersion: user.sessionVersion, mfaVerified };
@@ -154,7 +155,7 @@ export const authOptions: NextAuthOptions = {
           return token;
         }
         if (isPlanExpired(fresh.plan, fresh.planExpiresAt)) {
-          await prisma.user.update({ where: { id: fresh.id }, data: { plan: "free", planExpiresAt: null } });
+          await downgradeIfExpired(fresh);
           token.plan = effectivePlan({ ...fresh, plan: "free" });
         } else {
           token.plan = effectivePlan(fresh);

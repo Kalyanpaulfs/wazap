@@ -29,6 +29,7 @@ import {
 } from "@/app/tools/ToolIcons";
 import { TOOL_LIMITS } from "@/lib/tool-access";
 import { getPlanDaysLeft, isPlanExpired } from "@/lib/billing";
+import { downgradeIfExpired } from "@/lib/billing-expiry";
 import { notifySupportReplySeen } from "@/lib/support-notify";
 import ToolShortcuts from "./ToolShortcuts";
 import SetupGuide from "../product/SetupGuide";
@@ -149,10 +150,7 @@ export default async function DashboardPage({
 
   let plan = effectivePlan(user) || sessionPlan;
   if (user && isPlanExpired(plan, user.planExpiresAt)) {
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { plan: "free", planExpiresAt: null },
-    });
+    await downgradeIfExpired(user);
     plan = effectivePlan({ ...user, plan: "free" });
     user.planExpiresAt = null;
   }

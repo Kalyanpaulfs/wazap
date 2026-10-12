@@ -1,4 +1,5 @@
-import { applyVerifiedLifecycle, recordVerifiedCharge } from "@/lib/payment-integrity";
+import { applyVerifiedLifecycle, applyVerifiedReversal, recordVerifiedCharge, type ReversalKind } from "@/lib/payment-integrity";
+import { recordBillingAttention } from "@/lib/billing-attention";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { extendPlanExpiry, planExpiry, PLAN_PRICES } from "@/lib/billing";
@@ -26,6 +27,23 @@ const DEACTIVATE_EVENTS = new Set([
   "BILLING.SUBSCRIPTION.PAYMENT.FAILED",
 ]);
 const END_ACCESS_EVENTS = new Set(["BILLING.SUBSCRIPTION.EXPIRED"]);
+// Refunds, reversals (chargebacks) and disputes.
+const REVERSAL_EVENTS: Record<string, ReversalKind> = {
+  "PAYMENT.SALE.REFUNDED": "refund",
+  "PAYMENT.CAPTURE.REFUNDED": "refund",
+  "PAYMENT.SALE.REVERSED": "chargeback",
+  "PAYMENT.CAPTURE.REVERSED": "chargeback",
+  "CUSTOMER.DISPUTE.CREATED": "dispute_opened",
+};
+
+// The original charge a refund/reversal/dispute refers to.
+function reversedChargeId(type: string, resource: Record<string, any>): string {
+  if (type.startsWith("CUSTOMER.DISPUTE.")) return String(resource.disputed_transactions?.[0]?.seller_transaction_id || "");
+  if (resource.sale_id) return String(resource.sale_id);
+  const up = Array.isArray(resource.links) ? resource.links.find((link: { rel?: string; href?: string }) => link.rel === "up")?.href : "";
+  if (up) return String(up).split("/").pop() || "";
+  return type.endsWith(".REVERSED") ? String(resource.id || "") : "";
+}
 
 type PayPalWebhookEvent = {
   id?: string;
@@ -38,6 +56,7 @@ type PayPalSubscription = {
   id?: string;
   custom_id?: string;
   plan_id?: string;
+  billing_info?: { next_billing_time?: string };
   subscriber?: { email_address?: string; name?: { given_name?: string; surname?: string } };
 };
 
@@ -52,6 +71,8 @@ function hasPayPalSignatureHeaders(req: Request) {
 }
 
 async function verifyPayPalWebhook(req: Request, event: PayPalWebhookEvent) {
+  // Local development only: PayPal cannot sign events sent to localhost.
+  if (process.env.NODE_ENV !== "production" && process.env.PAYMENT_WEBHOOK_DEV_SKIP_VERIFY === "true") return;
   const webhookId = process.env.PAYPAL_WEBHOOK_ID;
   if (!webhookId) throw new Error("PayPal webhook ID is not configured.");
   if (!hasPayPalSignatureHeaders(req)) {
@@ -89,18 +110,18 @@ function renewalExpiry(plan: string, currentExpiresAt: Date | null | undefined) 
   return extendPlanExpiry(plan, currentExpiresAt);
 }
 
-async function getSubscription(resource: Record<string, any>) {
+async function getSubscription(resource: Record<string, any>): Promise<{ subscription: PayPalSubscription | null; failed: boolean }> {
   const id =
     resource.billing_agreement_id ||
     resource.subscription_id ||
     resource.supplementary_data?.related_ids?.subscription_id ||
     resource.supplementary_data?.related_ids?.billing_agreement_id;
-  if (!id) return null;
+  if (!id) return { subscription: null, failed: false };
   try {
-    return await paypalRequest<PayPalSubscription>(`/v1/billing/subscriptions/${id}`);
+    return { subscription: await paypalRequest<PayPalSubscription>(`/v1/billing/subscriptions/${id}`), failed: false };
   } catch (error) {
     console.error("[paypal/webhook] subscription lookup failed", { id: String(id).slice(0, 12), error });
-    return null;
+    return { subscription: null, failed: true };
   }
 }
 
@@ -123,14 +144,31 @@ export async function POST(req: Request) {
   }
 
   const type = String(event.event_type || "");
+  const resource = event.resource || {};
+  if (type in REVERSAL_EVENTS) {
+    const chargeId = reversedChargeId(type, resource);
+    const occurredAt = new Date(String(event.create_time || ""));
+    if (!event.id || !chargeId || !Number.isFinite(occurredAt.getTime())) return NextResponse.json({ error: "Missing verified event identity." }, { status: 422 });
+    const amountValue = Number(resource.amount?.total ?? resource.amount?.value ?? resource.disputed_transactions?.[0]?.gross_amount?.value);
+    const amount = Number.isFinite(amountValue) && amountValue > 0 ? amountValue : null;
+    const currency = String(resource.amount?.currency ?? resource.amount?.currency_code ?? resource.disputed_transactions?.[0]?.gross_amount?.currency_code ?? "").toUpperCase() || null;
+    const result = await applyVerifiedReversal({ provider: "paypal", eventId: event.id, chargeId, occurredAt, kind: REVERSAL_EVENTS[type], amount });
+    await recordBillingAttention({ provider: "paypal", eventId: event.id, eventType: type, chargeId, userId: result.matched ? result.userId : null, amount, currency,
+      reason: !result.matched ? "Refund, reversal or dispute for a payment Wazap has no record of." : result.accessEnded ? `Payment ${result.status}. Paid access was removed.` : `Payment ${result.status}. Access unchanged; review the customer.` });
+    return NextResponse.json({ ok: true, event: type, ...result });
+  }
   if (!ACTIVATE_EVENTS.has(type) && !RENEWAL_EVENTS.has(type) && !DEACTIVATE_EVENTS.has(type)) {
     return NextResponse.json({ ok: true, ignored: type });
   }
 
-  const resource = event.resource || {};
-  const subscription = ACTIVATE_EVENTS.has(type)
-    ? (resource as PayPalSubscription)
+  const lookup = ACTIVATE_EVENTS.has(type)
+    ? { subscription: resource as PayPalSubscription, failed: false }
     : await getSubscription(resource);
+  // Without the subscription we may not know the plan or customer: let PayPal retry.
+  if (lookup.failed) return NextResponse.json({ error: "Subscription lookup failed." }, { status: 503 });
+  const subscription = lookup.subscription;
+  const nextBilling = subscription?.billing_info?.next_billing_time ? new Date(subscription.billing_info.next_billing_time) : null;
+  const periodEnd = nextBilling && Number.isFinite(nextBilling.getTime()) ? nextBilling : null;
 
   const subscriptionId = subscription?.id || resource.billing_agreement_id || resource.subscription_id || resource.supplementary_data?.related_ids?.subscription_id || null;
   const pendingBySubscription = subscriptionId
@@ -138,6 +176,7 @@ export async function POST(req: Request) {
     : null;
   const plan = getPlanFromPayPalPlanId(subscription?.plan_id || resource.plan_id) || pendingBySubscription?.plan || "";
   if (!(plan in PLAN_PRICES)) {
+    await recordBillingAttention({ provider: "paypal", eventId: String(event.id || ""), eventType: type, reason: "Verified PayPal event without a Wazap plan.", chargeId: resource.id || subscriptionId });
     return NextResponse.json({ ok: true, note: "no Wazap plan in PayPal event" });
   }
 
@@ -149,7 +188,10 @@ export async function POST(req: Request) {
     : email
       ? await prisma.user.findUnique({ where: { email } })
       : null;
-  if (!user) return NextResponse.json({ ok: true, note: "user not found" });
+  if (!user) {
+    await recordBillingAttention({ provider: "paypal", eventId: String(event.id || ""), eventType: type, reason: `Verified ${plan} PayPal event for an unknown Wazap account.`, chargeId: resource.id || subscriptionId, email: email || null });
+    return NextResponse.json({ error: "User not found." }, { status: 503 });
+  }
 
   const occurredAt = new Date(String(event.create_time || ""));
   if (!event.id || !subscriptionId || !Number.isFinite(occurredAt.getTime())) return NextResponse.json({ error: "Missing verified event identity." }, { status: 422 });
@@ -157,7 +199,7 @@ export async function POST(req: Request) {
     const amount = Number(resource.amount?.total ?? resource.amount?.value);
     const currency = String(resource.amount?.currency ?? resource.amount?.currency_code ?? "").toUpperCase();
     if (!resource.id || !Number.isFinite(amount) || amount <= 0 || !/^[A-Z]{3}$/.test(currency)) return NextResponse.json({ error: "Missing verified charge data." }, { status: 422 });
-    const result = await recordVerifiedCharge({ provider: "paypal", chargeId: String(resource.id), userId: user.id, plan, amount, currency, subscriptionId, occurredAt });
+    const result = await recordVerifiedCharge({ provider: "paypal", chargeId: String(resource.id), userId: user.id, plan, amount, currency, subscriptionId, occurredAt, periodEnd });
     if (!result.duplicate) {
       await recordFunnelEvent("subscription_renewed", { userId: user.id, source: "paypal", metadata: { plan, event: type } });
       await markPartnerCustomer(user.id);
@@ -167,7 +209,7 @@ export async function POST(req: Request) {
 
   const deactivating = DEACTIVATE_EVENTS.has(type);
   const state = deactivating ? type === "BILLING.SUBSCRIPTION.PAYMENT.FAILED" ? "failed" : type === "BILLING.SUBSCRIPTION.EXPIRED" ? "expired" : type === "BILLING.SUBSCRIPTION.SUSPENDED" ? "paused" : "cancelled" : undefined;
-  const result = await applyVerifiedLifecycle({ provider: "paypal", eventId: event.id, subscriptionId, occurredAt, userId: user.id, plan, endAccess: END_ACCESS_EVENTS.has(type), state });
+  const result = await applyVerifiedLifecycle({ provider: "paypal", eventId: event.id, subscriptionId, occurredAt, userId: user.id, plan, endAccess: END_ACCESS_EVENTS.has(type), state, periodEnd: state ? null : periodEnd });
   if (!result.duplicate && !result.stale && !deactivating) await markPartnerCustomer(user.id);
   return NextResponse.json({ ok: true, event: type, ...result });
 }
