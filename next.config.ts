@@ -12,7 +12,7 @@ const securityHeaders = [
     key: "Content-Security-Policy",
     value: [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://connect.facebook.net https://embed.tawk.to https://*.tawk.to",
+      `script-src 'self' 'unsafe-inline'${process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : ""} https://www.googletagmanager.com https://connect.facebook.net https://embed.tawk.to https://*.tawk.to`,
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://embed.tawk.to",
       "font-src 'self' https://fonts.gstatic.com https://embed.tawk.to",
       "img-src 'self' data: blob: https:",
