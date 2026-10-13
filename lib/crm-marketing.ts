@@ -5,18 +5,42 @@ import {createHash, createHmac, timingSafeEqual, randomUUID} from 'node:crypto';
 import type {Prisma, CrmCampaign, CrmLead} from '@prisma/client';
 import {prisma} from './prisma';
 import {CRM_STAGES, crmText} from './crm';
-export type AudienceFilters={stage?:string;source?:string;tag?:string;query?:string;permission?:string};
+import {customerSegment} from './entitlements';
+export const CUSTOMER_GROUPS=['all','paid','trial','expired','free'] as const;
+export type CustomerGroup=typeof CUSTOMER_GROUPS[number];
+export const CUSTOMER_GROUP_LABELS:Record<CustomerGroup,string>={all:'All users',paid:'Paid active',trial:'Free trial',expired:'Expired',free:'Free'};
+export type AudienceFilters={stage?:string;source?:string;tag?:string;query?:string;permission?:string;customerGroup?:string};
 export function cleanFilters(value:unknown):AudienceFilters {
  const raw=(value&&typeof value==='object'?value:{}) as Record<string,unknown>;
- const stage=crmText(raw.stage);const permission=crmText(raw.permission);
- return {stage:CRM_STAGES.includes(stage as typeof CRM_STAGES[number])?stage:'',source:crmText(raw.source,60),tag:crmText(raw.tag,40).toLowerCase(),query:crmText(raw.query,100),permission:['none','pending','subscribed','unsubscribed'].includes(permission)?permission:''};
+ const stage=crmText(raw.stage);const permission=crmText(raw.permission);const customerGroup=crmText(raw.customerGroup);
+ return {stage:CRM_STAGES.includes(stage as typeof CRM_STAGES[number])?stage:'',source:crmText(raw.source,60),tag:crmText(raw.tag,40).toLowerCase(),query:crmText(raw.query,100),permission:['none','pending','subscribed','unsubscribed'].includes(permission)?permission:'',customerGroup:(CUSTOMER_GROUPS as readonly string[]).includes(customerGroup)?customerGroup:''};
 }
-export function audienceWhere(filters:AudienceFilters):Prisma.CrmLeadWhereInput {
- return {...activeCrmContacts,...(filters.stage?{stage:filters.stage}:{}),...(filters.source?{source:filters.source}:{}),...(filters.tag?{tags:{has:filters.tag}}:{}),...(filters.permission?{marketingStatus:filters.permission}:{}),...(filters.query?{OR:[{name:{contains:filters.query,mode:'insensitive'}},{email:{contains:filters.query,mode:'insensitive'}},{company:{contains:filters.query,mode:'insensitive'}}]}:{})};
+// Resolves a "Send to" group to the lowercase emails of matching Wazap accounts. Returns
+// null for "all"/unset, meaning no extra constraint is applied.
+export async function customerGroupEmails(db:Prisma.TransactionClient|typeof prisma,group:string):Promise<string[]|null> {
+ if(!group||group==='all')return null;
+ const now=new Date();const users=await db.user.findMany({select:{email:true,plan:true,planExpiresAt:true,trialEndsAt:true,trialPlan:true}});
+ return users.filter(u=>customerSegment(u,now)===group).map(u=>u.email.toLowerCase());
+}
+export async function audienceWhere(filters:AudienceFilters,db:Prisma.TransactionClient|typeof prisma=prisma):Promise<Prisma.CrmLeadWhereInput> {
+ const base:Prisma.CrmLeadWhereInput={...activeCrmContacts,...(filters.stage?{stage:filters.stage}:{}),...(filters.source?{source:filters.source}:{}),...(filters.tag?{tags:{has:filters.tag}}:{}),...(filters.permission?{marketingStatus:filters.permission}:{}),...(filters.query?{OR:[{name:{contains:filters.query,mode:'insensitive'}},{email:{contains:filters.query,mode:'insensitive'}},{company:{contains:filters.query,mode:'insensitive'}}]}:{})};
+ if(!filters.customerGroup||filters.customerGroup==='all')return base;
+ const emails=await customerGroupEmails(db,filters.customerGroup);
+ return {AND:[base,{email:{in:emails||[]}}]};
 }
 export async function eligibleAudience(db:Prisma.TransactionClient|typeof prisma,filters:AudienceFilters){
- const optedOut=await db.user.findMany({where:{marketingOptOutAt:{not:null}},select:{email:true}});
- return {AND:[audienceWhere(filters),{marketingStatus:'subscribed',consentAt:{not:null},doNotContact:false,emailSuppressedAt:null,email:{notIn:optedOut.map(u=>u.email.toLowerCase())}}]} satisfies Prisma.CrmLeadWhereInput;
+ const [optedOut,where]=await Promise.all([db.user.findMany({where:{marketingOptOutAt:{not:null}},select:{email:true}}),audienceWhere(filters,db)]);
+ return {AND:[where,{marketingStatus:'subscribed',consentAt:{not:null},doNotContact:false,emailSuppressedAt:null,email:{notIn:optedOut.map(u=>u.email.toLowerCase())}}]} satisfies Prisma.CrmLeadWhereInput;
+}
+// Hidden, deterministic per-group segment used by Broadcast campaigns so the existing
+// campaign/segment/worker pipeline (and its consent gating) is reused unchanged.
+export async function resolveGroupSegmentId(db:Prisma.TransactionClient|typeof prisma,actorId:string,group:string):Promise<string|null> {
+ if(!group||group==='all')return null;
+ const label=CUSTOMER_GROUP_LABELS[group as CustomerGroup];if(!label)return null;
+ const name=`Broadcast: ${label}`;
+ const existing=await db.crmSegment.findFirst({where:{name}});if(existing)return existing.id;
+ const row=await db.crmSegment.create({data:{name,description:'Automatically managed audience for Broadcast emails.',filters:{customerGroup:group} as Prisma.InputJsonValue,createdBy:actorId}});
+ return row.id;
 }
 export function htmlEscape(value:string){return value.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));}
 export function campaignUrl(value:unknown){const text=crmText(value,1000);if(!text)return '';try{const url=new URL(text);return url.protocol==='https:'&&!url.username&&!url.password?url.href:null;}catch{return null;}}

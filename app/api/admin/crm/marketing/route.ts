@@ -1,47 +1,68 @@
-import {activeCrmContacts,isCrmTrashed} from "@/lib/crm-trash";
+import {isCrmTrashed} from "@/lib/crm-trash";
 import {NextResponse} from 'next/server';
 import {getServerSession} from 'next-auth';
 import {authOptions} from '@/lib/auth';
 import {prisma} from '@/lib/prisma';
 import {crmText, sameSiteRequest, validEmail, normalizeContactPhone, captureCrmLead} from '@/lib/crm';
-import {audienceFingerprint,cleanFilters,audienceWhere,eligibleAudience,renderCampaign,campaignUrl,marketingReadiness,unsubscribeLead} from '@/lib/crm-marketing';
+import {audienceFingerprint,cleanFilters,audienceWhere,eligibleAudience,renderCampaign,campaignUrl,marketingReadiness,unsubscribeLead,resolveGroupSegmentId,CUSTOMER_GROUPS} from '@/lib/crm-marketing';
+import {customerSegment} from '@/lib/entitlements';
 import {rateLimit} from '@/lib/rate-limit';
-import type {Prisma} from '@prisma/client';
 const noStore={'Cache-Control':'no-store'};
 async function admin(){const s=await getServerSession(authOptions);const u=s?.user as {id?:string;isAdmin?:boolean}|undefined;return u?.isAdmin?u.id:null;}
 const error=(message:string,status=400)=>NextResponse.json({error:message},{status});
+const monthKey=(d:Date)=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+function last12Months(){const months:string[]=[];const now=new Date();for(let i=11;i>=0;i--){const d=new Date(now.getFullYear(),now.getMonth()-i,1);months.push(monthKey(d));}return months;}
 export async function GET(req:Request){
  if(!await admin())return error('Forbidden',403);const params=new URL(req.url).searchParams;
  try{
- if(params.get('view')==='pipeline'){
- const stages=['new','contacted','qualified','proposal','won','lost'];const columns=await Promise.all(stages.map(async stage=>({stage,total:await prisma.crmLead.count({where:{...activeCrmContacts,stage}}),leads:await prisma.crmLead.findMany({where:{...activeCrmContacts,stage},orderBy:{lastActivityAt:'desc'},take:50,select:{id:true,name:true,email:true,company:true,value:true,currency:true,ownerId:true,lastActivityAt:true}})})));return NextResponse.json({columns},{headers:noStore});
- }
  if(params.get('view')==='export'){
- const filters=cleanFilters(Object.fromEntries(params));const leads=await prisma.crmLead.findMany({where:audienceWhere(filters),orderBy:{createdAt:'desc'},take:10001});if(leads.length>10000)return error('Narrow this export to 10,000 contacts or fewer.');const cell=(value:unknown)=>{let v=String(value??'');if(/^[\s]*[=+@-]/.test(v))v="'"+v;return '"'+v.replaceAll('"','""')+'"';};const keys=['name','email','phone','company','stage','source','marketingStatus','consentAt','consentSource','doNotContact','tags'];const csv=[keys.join(','),...leads.map(l=>keys.map(k=>cell(k==='tags'?l.tags.join(';'):(l as unknown as Record<string,unknown>)[k])).join(','))].join('\r\n');return new Response(csv,{headers:{...noStore,'Content-Type':'text/csv; charset=utf-8','Content-Disposition':'attachment; filename="wazap-contacts.csv"'}});
+ const filters=cleanFilters(Object.fromEntries(params));const leads=await prisma.crmLead.findMany({where:await audienceWhere(filters),orderBy:{createdAt:'desc'},take:10001});if(leads.length>10000)return error('Narrow this export to 10,000 contacts or fewer.');const cell=(value:unknown)=>{let v=String(value??'');if(/^[\s]*[=+@-]/.test(v))v="'"+v;return '"'+v.replaceAll('"','""')+'"';};const keys=['name','email','phone','company','stage','source','marketingStatus','consentAt','consentSource','doNotContact','tags'];const csv=[keys.join(','),...leads.map(l=>keys.map(k=>cell(k==='tags'?l.tags.join(';'):(l as unknown as Record<string,unknown>)[k])).join(','))].join('\r\n');return new Response(csv,{headers:{...noStore,'Content-Type':'text/csv; charset=utf-8','Content-Disposition':'attachment; filename="wazap-contacts.csv"'}});
  }
  if(params.get('view')==='audience'){
- const segmentId=crmText(params.get('segment'));const segment=segmentId?await prisma.crmSegment.findUnique({where:{id:segmentId}}):null;if(segmentId&&!segment)return error('Audience not found.',404);const filters=cleanFilters(segment?.filters||Object.fromEntries(params));const where=audienceWhere(filters);const eligible=await eligibleAudience(prisma,filters);const [total,count,sample,identities]=await Promise.all([prisma.crmLead.count({where}),prisma.crmLead.count({where:eligible}),prisma.crmLead.findMany({where:eligible,take:10,select:{name:true,email:true}}),prisma.crmLead.findMany({where:eligible,take:1001,select:{id:true,email:true}})]);return NextResponse.json({total,eligible:count,excluded:total-count,sample,filters,fingerprint:count<=1000?audienceFingerprint(identities):null},{headers:noStore});
+ const segmentId=crmText(params.get('segment'));const segment=segmentId?await prisma.crmSegment.findUnique({where:{id:segmentId}}):null;if(segmentId&&!segment)return error('Audience not found.',404);const filters=cleanFilters(segment?.filters||Object.fromEntries(params));const where=await audienceWhere(filters);const eligible=await eligibleAudience(prisma,filters);const [total,count,sample,identities]=await Promise.all([prisma.crmLead.count({where}),prisma.crmLead.count({where:eligible}),prisma.crmLead.findMany({where:eligible,take:10,select:{name:true,email:true}}),prisma.crmLead.findMany({where:eligible,take:1001,select:{id:true,email:true}})]);return NextResponse.json({total,eligible:count,excluded:total-count,sample,filters,fingerprint:count<=1000?audienceFingerprint(identities):null},{headers:noStore});
  }
  if(params.get('campaign')){
  const campaign=await prisma.crmCampaign.findUnique({where:{id:params.get('campaign')!},include:{segment:true}});if(!campaign)return error('Campaign not found.',404);const counts=await prisma.crmCampaignRecipient.groupBy({by:['status'],where:{campaignId:campaign.id},_count:{_all:true}});const recipients=await prisma.crmCampaignRecipient.findMany({where:{campaignId:campaign.id},orderBy:{createdAt:'desc'},take:100,select:{id:true,email:true,status:true,attempts:true,sentAt:true,deliveredAt:true,lastError:true}});const html=renderCampaign(campaign,'https://wazap.lt/newsletter');return NextResponse.json({campaign,counts,recipients,html},{headers:noStore});
  }
- const [total,permissions,stages,sources,tags,tasks,segments,campaigns,statuses,values,recent,opened,clicked,dueTotal,taskTotal,campaignTotal]=await Promise.all([
- prisma.crmLead.count({where:activeCrmContacts}),prisma.crmLead.groupBy({where:activeCrmContacts,by:['marketingStatus'],_count:{_all:true}}),prisma.crmLead.groupBy({where:activeCrmContacts,by:['stage'],_count:{_all:true}}),prisma.crmLead.groupBy({where:activeCrmContacts,by:['source'],_count:{_all:true}}),prisma.crmLead.findMany({where:activeCrmContacts,select:{tags:true}}),prisma.crmTask.findMany({where:{completedAt:null,lead:{doNotContact:false}},orderBy:{dueAt:'asc'},take:100,include:{lead:{select:{id:true,name:true,email:true,stage:true}}}}),prisma.crmSegment.findMany({orderBy:{updatedAt:'desc'}}),prisma.crmCampaign.findMany({orderBy:{updatedAt:'desc'},take:100,include:{segment:{select:{name:true}},_count:{select:{recipients:true}}}}),prisma.crmCampaignRecipient.groupBy({by:['status'],_count:{_all:true}}),prisma.crmLead.groupBy({where:activeCrmContacts,by:['currency','stage'],_sum:{value:true}}),prisma.crmActivity.findMany({where:{lead:activeCrmContacts},orderBy:{createdAt:'desc'},take:10,include:{lead:{select:{id:true,name:true}}}}),prisma.crmCampaignRecipient.count({where:{openedAt:{not:null}}}),prisma.crmCampaignRecipient.count({where:{clickedAt:{not:null}}}),prisma.crmTask.count({where:{completedAt:null,dueAt:{lte:new Date()},lead:{doNotContact:false}}}),prisma.crmTask.count({where:{completedAt:null,lead:{doNotContact:false}}}),prisma.crmCampaign.count()]);
- const readiness=params.get('view')==='settings'?await marketingReadiness(params.get('refresh')==='1'):null;
- return NextResponse.json({total,permissions,stages,sources,tags:[...new Set(tags.flatMap(t=>t.tags.filter(tag=>!tag.startsWith("__crm_"))))].sort(),tasks,segments,campaigns,statuses,values,recent,opened,clicked,dueTotal,taskTotal,campaignTotal,readiness},{headers:noStore});
+ if(params.get('view')==='overview'){
+ const now=new Date();const weekAgo=new Date(now.getTime()-7*86400000);
+ const users=await prisma.user.findMany({select:{plan:true,planExpiresAt:true,trialEndsAt:true,trialPlan:true,createdAt:true}});
+ let paidActive=0,trial=0,expired=0,free=0,newSignups7d=0;
+ for(const u of users){const segment=customerSegment(u,now);if(segment==='paid')paidActive++;else if(segment==='trial')trial++;else if(segment==='expired')expired++;else free++;if(u.createdAt>=weekAgo)newSignups7d++;}
+ return NextResponse.json({totalUsers:users.length,paidActive,trial,expired,free,newSignups7d},{headers:noStore});
+ }
+ if(params.get('view')==='reports'){
+ const months=last12Months();const since=new Date(`${months[0]}-01T00:00:00.000Z`);
+ const [payments,expiredUsers]=await Promise.all([
+ prisma.payment.findMany({where:{createdAt:{gte:since}},select:{userId:true,plan:true,amount:true,currency:true,status:true,createdAt:true}}),
+ prisma.user.findMany({where:{plan:{not:'free'},planExpiresAt:{gte:since,lte:new Date()}},select:{planExpiresAt:true}}),
+ ]);
+ const income:Record<string,Record<string,number>>={},plansSold:Record<string,Record<string,number>>={},refunds:Record<string,Record<string,number>>={},refundCount:Record<string,number>={},newPaidCustomers:Record<string,Set<string>>={},expiredByMonth:Record<string,number>={};
+ for(const m of months){income[m]={};plansSold[m]={};refunds[m]={};refundCount[m]=0;newPaidCustomers[m]=new Set();expiredByMonth[m]=0;}
+ for(const p of payments){
+ const m=monthKey(p.createdAt);if(!(m in income))continue;
+ if(p.status==='active'){income[m][p.currency]=(income[m][p.currency]||0)+p.amount;plansSold[m][p.plan]=(plansSold[m][p.plan]||0)+1;if(p.userId)newPaidCustomers[m].add(p.userId);}
+ else if(['refunded','partially_refunded','charged_back'].includes(p.status)){refundCount[m]++;refunds[m][p.currency]=(refunds[m][p.currency]||0)+p.amount;}
+ }
+ for(const u of expiredUsers){if(u.planExpiresAt){const m=monthKey(u.planExpiresAt);if(m in expiredByMonth)expiredByMonth[m]++;}}
+ const newPaidByMonth=Object.fromEntries(months.map(m=>[m,newPaidCustomers[m].size]));
+ return NextResponse.json({months,income,plansSold,refunds,refundCount,newPaidByMonth,expiredByMonth},{headers:noStore});
+ }
+ if(params.get('view')==='broadcast'||!params.get('view')){
+ const [campaigns,readiness]=await Promise.all([prisma.crmCampaign.findMany({orderBy:{updatedAt:'desc'},take:100,include:{segment:{select:{name:true}},_count:{select:{recipients:true}}}}),marketingReadiness(params.get('refresh')==='1')]);
+ return NextResponse.json({campaigns,readiness},{headers:noStore});
+ }
+ return error('Unknown view.',404);
  }catch{return error('This workspace could not be loaded. Please retry.',503);}
 }
 export async function POST(req:Request){
  const actorId=await admin();if(!actorId)return error('Forbidden',403);if(!sameSiteRequest(req))return error('Invalid origin.',403);if(!rateLimit(`crm-marketing:${actorId}`,90,60000))return error('Please wait before trying again.',429);const body=await req.json().catch(()=>({}));const action=crmText(body.action);
  try{
- if(action==='saveSegment'){
- const name=crmText(body.name);if(!name)return error('Give this audience a name.');const data={name,description:crmText(body.description,500),filters:cleanFilters(body.filters) as Prisma.InputJsonValue};
- if(body.id){const changed=await prisma.crmSegment.updateMany({where:{id:crmText(body.id),updatedAt:new Date(body.updatedAt)},data});if(!changed.count)return error('Audience changed. Reload before saving.',409);return NextResponse.json({id:body.id});}
- const row=await prisma.crmSegment.create({data:{...data,createdBy:actorId}});return NextResponse.json({id:row.id},{status:201});
- }
  if(action==='saveCampaign'){
- const ctaUrl=campaignUrl(body.ctaUrl);const data={name:crmText(body.name),subject:crmText(body.subject,150),preheader:crmText(body.preheader,180),heading:crmText(body.heading,180),body:crmText(body.body,20000),ctaLabel:crmText(body.ctaLabel,60),ctaUrl:ctaUrl||'',segmentId:crmText(body.segmentId)||null};
- if(!data.name||!data.subject||!data.heading||!data.body||ctaUrl===null||!!data.ctaLabel!==!!data.ctaUrl)return error('Complete the name, subject, heading and message. A button needs both a label and an HTTPS URL.');if(data.segmentId&&!await prisma.crmSegment.findUnique({where:{id:data.segmentId}}))return error('Audience not found.',404);
+ const ctaUrl=campaignUrl(body.ctaUrl);const group=crmText(body.customerGroup)||'all';if(!(CUSTOMER_GROUPS as readonly string[]).includes(group))return error('Choose a valid audience group.');
+ const segmentId=await resolveGroupSegmentId(prisma,actorId,group);
+ const data={name:crmText(body.name),subject:crmText(body.subject,150),preheader:crmText(body.preheader,180),heading:crmText(body.heading,180),body:crmText(body.body,20000),ctaLabel:crmText(body.ctaLabel,60),ctaUrl:ctaUrl||'',segmentId};
+ if(!data.name||!data.subject||!data.heading||!data.body||ctaUrl===null||!!data.ctaLabel!==!!data.ctaUrl)return error('Complete the name, subject, heading and message. A button needs both a label and an HTTPS URL.');
  if(body.id){const updatedAt=new Date(body.updatedAt);if(Number.isNaN(updatedAt.getTime()))return error('Reload the campaign.');const result=await prisma.crmCampaign.updateMany({where:{id:crmText(body.id),status:'draft',updatedAt},data});if(!result.count)return error('This campaign changed or has already launched. Reload before editing.',409);return NextResponse.json({id:body.id});}
  const campaign=await prisma.crmCampaign.create({data:{...data,createdBy:actorId}});return NextResponse.json({id:campaign.id},{status:201});
  }

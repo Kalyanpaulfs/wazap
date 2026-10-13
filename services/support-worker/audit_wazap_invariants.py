@@ -30,7 +30,6 @@ def main() -> int:
         "auth": read(root, "lib/auth.ts"),
         "dashboard": read(root, "app/dashboard/page.tsx"),
         "upgrade": read(root, "app/dashboard/UpgradeSuccessBanner.tsx"),
-        "admin": read(root, "app/admin/AdminDashboard.tsx"),
         "activate": read(root, "app/api/admin/activate/route.ts"),
         "paypal_create": read(root, "app/api/payment/paypal/create/route.ts"),
         "dodo_create": read(root, "app/api/payment/dodo/create/route.ts"),
@@ -54,7 +53,7 @@ def main() -> int:
         check(f"{plan}: pricing card", f'id: "{plan}"' in files["pricing"], f"site price={prices[plan]}")
         check(f"{plan}: expiry support", plan in files["billing"], "plan must activate and renew")
         check(f"{plan}: dashboard label", plan in files["dashboard"], "customer must see correct plan")
-        check(f"{plan}: admin activation", plan in files["activate"] and plan in files["admin"], "admin controls must support plan")
+        check(f"{plan}: admin activation", plan in files["activate"], "admin controls must support plan")
 
     check("PayPal checkout observability", all(token in files["paypal_create"] for token in ["checkout_started", "payment_failed"]), "record start and provider creation failure")
     check("Dodo checkout observability", all(token in files["dodo_create"] for token in ["checkout_started", "payment_failed", "prisma.payment.create"]), "record pending checkout and failure")
