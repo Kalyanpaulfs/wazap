@@ -39,7 +39,7 @@ release_dir="$(cd "$release_dir" && pwd)"
 [[ "$release_dir" != "$app_dir" ]] || fail "The release folder must not be the live folder."
 [[ -f "$app_dir/.env" ]] || fail "$app_dir/.env not found."
 for m in "${migrations[@]}"; do [[ -f "$release_dir/$m" ]] || fail "Migration not found in release: $m"; done
-free_kb="$(df -Pk "$HOME" | awk 'NR==2 {print $4}')"
+free_kb="$(df -k --output=avail "$HOME" | tail -1 | tr -d ' ')"
 [[ "$free_kb" -gt 4194304 ]] || fail "Less than 4 GB free disk. Clean old backups first."
 grep -q '"process":"ready"' <(curl -fsS -m 10 "$health_url/api/health" || true) || fail "The live app is not healthy right now. Not deploying on top of a broken app."
 
