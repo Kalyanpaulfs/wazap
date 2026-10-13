@@ -41,7 +41,7 @@ step() { echo; echo "==> $*"; }
 release_dir="$(cd "$release_dir" && pwd)"
 [[ "$release_dir" != "$app_dir" ]] || fail "The release folder must not be the live folder."
 [[ -f "$app_dir/.env" ]] || fail "$app_dir/.env not found."
-if grep -rlI --include='*.ts' --include='*.tsx' --include='*.sh' --include='*.json' $'' "$release_dir" 2>/dev/null | head -1 | grep -q .; then
+if grep -rlI --include='*.ts' --include='*.tsx' --include='*.sh' --include='*.json' $'\r' "$release_dir" 2>/dev/null | head -1 | grep -q .; then
   fail "Release has Windows (CRLF) line endings. Make it with: git -c core.autocrlf=false archive --format=tar.gz -o release.tar.gz HEAD"
 fi
 for m in "${migrations[@]}"; do [[ -f "$release_dir/$m" ]] || fail "Migration not found in release: $m"; done
