@@ -187,6 +187,8 @@ export async function POST(req: Request) {
   if (action === "activate") {
     if (!install.lastTestedAt)
       return NextResponse.json({ error: "Run and review a safe test before activation." }, { status: 409 });
+    if (agent.planPausedAt)
+      return NextResponse.json({ error: "This agent was paused automatically because it is over your plan's limit. Upgrade to activate it.", upgrade: true }, { status: 409 });
     const execution = await aiExecutionState(ctx.workspaceId);
     if (execution.workspacePaused || execution.globalPaused)
       return NextResponse.json({ error: execution.reason }, { status: 423 });

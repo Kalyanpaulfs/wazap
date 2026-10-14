@@ -172,7 +172,7 @@ const PLAN_BADGES = [
   { name: "Free", accessKey: "free" as const },
   { name: "Solo", accessKey: "basic" as const },
   { name: "Growth", accessKey: "pro" as const },
-  { name: "Team", accessKey: "ultimate" as const },
+  { name: "Agency", accessKey: "ultimate" as const },
   { name: "Business", accessKey: "ultimate" as const },
 ];
 

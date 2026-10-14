@@ -34,7 +34,7 @@ export async function POST(req: Request) {
   if (!/^\S+@\S+\.\S+$/.test(email)) return NextResponse.json({ error: "Enter a valid email address." }, { status: 400 });
 
   const [memberCount, existingUser] = await Promise.all([
-    prisma.workspaceMember.count({ where: { workspaceId } }),
+    prisma.workspaceMember.count({ where: { workspaceId, planPausedAt: null } }),
     prisma.user.findUnique({ where: { email }, select: { id: true } }),
   ]);
   const limit = workspaceMemberLimit(membership.workspace.owner.plan);

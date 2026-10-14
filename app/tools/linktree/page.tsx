@@ -3,9 +3,10 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { MessageCircle, Plus, Trash2, Copy, Check, ExternalLink } from "lucide-react";
 import { COUNTRIES } from "@/lib/countries";
+import PlanPausedBadge from "@/app/components/PlanPausedBadge";
 
 interface WaLink { label: string; number: string; note: string; }
-interface Page { id: string; slug: string; title: string; bio: string; color: string; links: WaLink[]; views: number; }
+interface Page { id: string; slug: string; title: string; bio: string; color: string; links: WaLink[]; views: number; planPausedAt?: string | null; }
 
 const COLORS = ["#25D366","#128C7E","#7c3aed","#0070ba","#dc2626","#ea580c","#000000"];
 
@@ -170,7 +171,7 @@ export default function LinktreePage() {
                     <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold shrink-0"
                       style={{ backgroundColor: page.color }}>{page.title[0]}</div>
                     <div>
-                      <h3 className="font-semibold text-white">{page.title}</h3>
+                      <div className="flex items-center gap-2"><h3 className="font-semibold text-white">{page.title}</h3>{page.planPausedAt && <PlanPausedBadge />}</div>
                       <p className="text-xs text-slate-500">{pageLinks.length} links · {page.views} views</p>
                     </div>
                   </div>

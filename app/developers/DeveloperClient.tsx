@@ -11,12 +11,14 @@ import {
   Trash2,
   Webhook,
 } from "lucide-react";
+import PlanPausedBadge from "@/app/components/PlanPausedBadge";
 type Key = {
   id: string;
   name: string;
   prefix: string;
   scopes: string[];
   status: string;
+  planPausedAt?: string | null;
   lastUsedAt: string | null;
   expiresAt: string;
 };
@@ -33,6 +35,7 @@ type Endpoint = {
   url: string;
   events: string[];
   status: string;
+  planPausedAt?: string | null;
   secretPrefix: string;
   failureCount: number;
   lastDeliveredAt: string | null;
@@ -269,9 +272,12 @@ export default function DeveloperClient() {
                   className="flex items-center justify-between rounded-xl border border-slate-800 p-3"
                 >
                   <div>
-                    <p className="text-sm font-semibold text-white">
-                      {key.name}
-                    </p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-semibold text-white">
+                        {key.name}
+                      </p>
+                      {key.planPausedAt && <PlanPausedBadge />}
+                    </div>
                     <p className="text-xs text-slate-500">
                       {key.prefix}… · {key.status}
                     </p>
@@ -385,9 +391,12 @@ export default function DeveloperClient() {
                   className="rounded-xl border border-slate-800 p-3"
                 >
                   <div className="flex justify-between gap-2">
-                    <p className="truncate text-sm font-semibold text-white">
-                      {endpoint.url}
-                    </p>
+                    <div className="flex items-center gap-2">
+                      <p className="truncate text-sm font-semibold text-white">
+                        {endpoint.url}
+                      </p>
+                      {endpoint.planPausedAt && <PlanPausedBadge />}
+                    </div>
                     {endpoint.status === "active" && (
                       <button
                         onClick={() =>

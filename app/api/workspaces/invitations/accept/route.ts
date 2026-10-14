@@ -31,7 +31,7 @@ export async function POST(req: Request) {
   }
   if (invitation.email !== email) return NextResponse.json({ error: `Sign in as ${invitation.email} to accept this invitation.` }, { status: 403 });
 
-  const memberCount = await prisma.workspaceMember.count({ where: { workspaceId: invitation.workspaceId } });
+  const memberCount = await prisma.workspaceMember.count({ where: { workspaceId: invitation.workspaceId, planPausedAt: null } });
   const limit = workspaceMemberLimit(invitation.workspace.owner.plan);
   const existing = await prisma.workspaceMember.findUnique({ where: { workspaceId_userId: { workspaceId: invitation.workspaceId, userId } } });
   if (!existing && memberCount >= limit) return NextResponse.json({ error: "This workspace has reached its member limit." }, { status: 403 });

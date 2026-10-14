@@ -39,7 +39,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Branded short links are a paid feature. Upgrade to create trackable links.", upgrade: true }, { status: 403 });
   }
   if (limit !== -1) {
-    const count = await prisma.shortLink.count({ where: { userId } });
+    const count = await prisma.shortLink.count({ where: { userId, planPausedAt: null } });
     if (count >= limit) {
       return NextResponse.json({ error: `Plan limit reached — your ${plan} plan allows ${limit} short link${limit !== 1 ? "s" : ""}. Upgrade for more.`, upgrade: true }, { status: 403 });
     }

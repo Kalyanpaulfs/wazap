@@ -71,7 +71,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Rotators require a paid plan. Upgrade to create your first rotator.", upgrade: true }, { status: 403 });
   }
   if (limit !== -1) {
-    const count = await prisma.rotatorLink.count({ where: { userId } });
+    const count = await prisma.rotatorLink.count({ where: { userId, planPausedAt: null } });
     if (count >= limit) {
       return NextResponse.json({ error: `Plan limit reached. Your ${plan} plan allows ${limit} rotator${limit !== 1 ? "s" : ""}. Upgrade for more.`, upgrade: true }, { status: 403 });
     }

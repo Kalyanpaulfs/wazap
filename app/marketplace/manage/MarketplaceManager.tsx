@@ -1,10 +1,11 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import PlanPausedBadge from "@/app/components/PlanPausedBadge";
 type PublisherListing={id:string;name:string;description:string;packageType:string;status:string;manifest?:{roleType?:string;instructions?:string;launchUrl?:string}};
 type Publisher = { id: string; displayName: string; status: string; listings?:PublisherListing[] };
 type Listing = { id: string; name: string; pricingModel: string; requestedScopes: string[]; publisher: { displayName: string } };
-type Install = { id: string; status:string; statusReason?:string|null; setupStatus: string; listing: { id:string; name: string; status:string; packageType?: string; requestedScopes: string[]; manifest?: { launchUrl?: string } }; version: { version: string } };
+type Install = { id: string; status:string; statusReason?:string|null; planPausedAt?:string|null; setupStatus: string; listing: { id:string; name: string; status:string; packageType?: string; requestedScopes: string[]; manifest?: { launchUrl?: string } }; version: { version: string } };
 type Data = { publisher?: Publisher | null };
 export default function MarketplaceManager({
   installId,
@@ -131,7 +132,10 @@ export default function MarketplaceManager({
                 className="flex items-center justify-between rounded-xl bg-slate-950 p-3"
               >
                 <div>
-                  <p className="font-semibold text-white">{i.listing.name}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="font-semibold text-white">{i.listing.name}</p>
+                    {i.planPausedAt && <PlanPausedBadge />}
+                  </div>
                   <p className="text-xs text-slate-500">
                     v{i.version.version} · {i.status} ·{" "}
                     {i.listing.requestedScopes.join(", ") || "No data scopes"}

@@ -33,6 +33,7 @@ export async function GET() {
     count: Array.isArray(c.items) ? (c.items as unknown[]).length : 0,
     inquiries: c.orders.length,
     won: c.orders.filter((order) => order.status === "won").length,
+    planPausedAt: c.planPausedAt,
   })));
 }
 
@@ -45,7 +46,7 @@ export async function POST(req: Request) {
 
   if (limit === 0) return NextResponse.json({ error: "Catalog pages are a paid feature. Upgrade to publish your WhatsApp order page.", upgrade: true }, { status: 403 });
   if (limit !== -1) {
-    const count = await prisma.catalogPage.count({ where: { userId } });
+    const count = await prisma.catalogPage.count({ where: { userId, planPausedAt: null } });
     if (count >= limit) return NextResponse.json({ error: `Plan limit reached — your ${plan} plan allows ${limit} catalog${limit !== 1 ? "s" : ""}. Upgrade for more.`, upgrade: true }, { status: 403 });
   }
 

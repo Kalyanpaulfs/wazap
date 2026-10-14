@@ -4,19 +4,13 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { PLAN_PRICES } from "@/lib/billing";
 import { recordFunnelEvent } from "@/lib/funnel";
+import { dodoProductForPlan, getDodoClient } from "@/lib/dodo";
 
 import { currentSubscriptionRecord } from "@/lib/subscription-record";
 import { sameSiteRequest } from "@/lib/crm";
 import { sharedRateLimit } from "@/lib/shared-rate-limit";
 
 export const runtime = "nodejs";
-
-const PRODUCT_BY_PLAN: Record<string, string | undefined> = {
-  basic: process.env.DODO_PRODUCT_ID_BASIC,
-  pro: process.env.DODO_PRODUCT_ID_PRO,
-  ultimate: process.env.DODO_PRODUCT_ID_ULTIMATE,
-  business: process.env.DODO_PRODUCT_ID_BUSINESS,
-};
 
 export async function POST(req: Request) {
   if (!sameSiteRequest(req)) return NextResponse.json({ error: "Invalid request origin." }, { status: 403 });
@@ -33,10 +27,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Create or sign in to your Wazap account before payment." }, { status: 401 });
     }
 
-    if (
-      process.env.DODO_ENVIRONMENT !== "live_mode" ||
-      process.env.DODO_CHECKOUT_ENABLED !== "true"
-    ) {
+    const dodoEnvAllowed =
+      process.env.DODO_ENVIRONMENT === "live_mode" ||
+      (process.env.DODO_ENVIRONMENT === "test_mode" && process.env.NODE_ENV !== "production");
+    if (!dodoEnvAllowed || process.env.DODO_CHECKOUT_ENABLED !== "true") {
       return NextResponse.json({ error: "Card checkout is not available yet. Please use PayPal." }, { status: 503 });
     }
 
@@ -50,7 +44,7 @@ export async function POST(req: Request) {
     const plan = (body.plan ?? "").toLowerCase();
     checkoutUserId = userId;
     checkoutPlan = plan;
-    const productId = PRODUCT_BY_PLAN[plan];
+    const productId = dodoProductForPlan(plan);
     if (!productId || !(plan in PLAN_PRICES)) {
       return NextResponse.json({ error: "This Wazap plan is still being connected to Dodo." }, { status: 501 });
     }
@@ -64,11 +58,7 @@ export async function POST(req: Request) {
     if (existingSubscription) return NextResponse.json({ error: "You already have a subscription. Manage your current plan in the dashboard before starting another.", manageUrl: "/dashboard#billing" }, { status: 409 });
     if (!(await sharedRateLimit(`checkout:${user.id}`, 10, 60_000))) return NextResponse.json({ error: "Please wait a minute before trying checkout again." }, { status: 429 });
 
-    const { default: DodoPayments } = await import("dodopayments");
-    const client = new DodoPayments({
-      bearerToken: apiKey,
-      environment: (process.env.DODO_ENVIRONMENT as "test_mode" | "live_mode") || "test_mode",
-    });
+    const client = await getDodoClient();
     const base = process.env.NEXTAUTH_URL ?? "https://wazap.lt";
     const sessionResponse = await client.checkoutSessions.create({
       product_cart: [{ product_id: productId, quantity: 1 }],

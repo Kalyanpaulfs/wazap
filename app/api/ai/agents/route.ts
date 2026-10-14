@@ -31,7 +31,7 @@ export async function POST(req: Request) {
   const ctx = await currentAiContext();
   if (!ctx) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if (!rateLimit(`ai-agent:${ctx.workspaceId}`, 20, 60_000)) return NextResponse.json({ error: "Too many agent changes. Please wait." }, { status: 429 });
-  const count = await prisma.aiAgent.count({ where: { workspaceId: ctx.workspaceId, archivedAt: null } });
+  const count = await prisma.aiAgent.count({ where: { workspaceId: ctx.workspaceId, archivedAt: null, planPausedAt: null } });
   if (count >= ctx.agentLimit) return NextResponse.json({ error: `Your ${ctx.plan} plan supports ${ctx.agentLimit} AI agent profile${ctx.agentLimit === 1 ? "" : "s"}.`, upgrade: true }, { status: 403 });
   const body = await req.json().catch(() => ({}));
   const name = cleanInboxText(body.name, 80);
@@ -59,6 +59,7 @@ export async function PATCH(req: Request) {
   if (requestedMode === "autonomous") return NextResponse.json({ error: "Autonomous sending stays locked until a verified channel provider, delivery receipts, and workspace approval policy are active." }, { status: 409 });
   const status = ["draft", "active", "paused"].includes(body.status) ? body.status : undefined;
   if (status === "active") {
+    if (existing.planPausedAt) return NextResponse.json({ error: "This agent was paused automatically because it is over your plan's limit. Upgrade to turn it back on.", upgrade: true }, { status: 409 });
     if (!["owner", "admin"].includes(ctx.role))
       return NextResponse.json({ error: "A workspace owner or admin must activate AI agents." }, { status: 403 });
     const marketplaceInstall = await prisma.marketplaceInstall.findFirst({

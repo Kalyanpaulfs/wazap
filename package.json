@@ -14,7 +14,9 @@
     "qa:account-export": "node scripts/qa-account-export.mjs",
     "qa:account-export:runtime": "node scripts/qa-account-export-runtime.mjs",
     "qa:incidents": "node scripts/qa-operational-incidents.mjs",
-    "qa:partner": "node scripts/qa-partner-conversion.mjs"
+    "qa:partner": "node scripts/qa-partner-conversion.mjs",
+    "test": "vitest run",
+    "test:integration": "vitest run --config vitest.integration.config.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
@@ -45,7 +47,8 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "tailwindcss": "^4",
     "typescript": "^5",
-    "typescript-eslint": "^8.71.1"
+    "typescript-eslint": "^8.71.1",
+    "vitest": "^3.2.7"
   },
   "overrides": {
     "brace-expansion": "^5.0.12",

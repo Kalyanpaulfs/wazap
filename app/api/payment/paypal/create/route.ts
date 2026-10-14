@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { PLAN_PRICES } from "@/lib/billing";
-import { getPayPalPlanId, paypalRequest } from "@/lib/paypal";
+import { createPayPalSubscription, getPayPalPlanId } from "@/lib/paypal";
 import { notifySupportMessage } from "@/lib/support-notify";
 import { normalizeLanguage } from "@/lib/localization";
 import { recordFunnelEvent } from "@/lib/funnel";
@@ -13,11 +13,6 @@ import { sameSiteRequest } from "@/lib/crm";
 import { sharedRateLimit } from "@/lib/shared-rate-limit";
 
 export const runtime = "nodejs";
-
-type PayPalSubscriptionResponse = {
-  id?: string;
-  links?: Array<{ href: string; rel: string; method?: string }>;
-};
 
 const PAYPAL_LOCALE_BY_LANGUAGE: Record<string, string> = {
   ar: "ar-AE",
@@ -116,29 +111,16 @@ export async function POST(req: Request) {
     }
 
     const base = process.env.NEXTAUTH_URL ?? "https://wazap.lt";
-    const subscription = await paypalRequest<PayPalSubscriptionResponse>("/v1/billing/subscriptions", {
-      method: "POST",
-      headers: { Prefer: "return=representation" },
-      body: JSON.stringify({
-        plan_id: planId,
-        custom_id: user.id,
-        quantity: "1",
-        subscriber: {
-          email_address: email,
-          name: user.name ? { given_name: user.name.slice(0, 140) } : undefined,
-        },
-        application_context: {
-          brand_name: "Wazap",
-          locale: paypalLocale,
-          shipping_preference: "NO_SHIPPING",
-          user_action: "SUBSCRIBE_NOW",
-          return_url: `${base}/dashboard?upgraded=1&provider=paypal&plan=${encodeURIComponent(plan)}`,
-          cancel_url: `${base}/pricing?cancelled=1`,
-        },
-      }),
+    const { id: subscriptionId, approvalUrl } = await createPayPalSubscription({
+      planId,
+      userId: user.id,
+      email,
+      name: user.name,
+      locale: paypalLocale,
+      returnUrl: `${base}/dashboard?upgraded=1&provider=paypal&plan=${encodeURIComponent(plan)}`,
+      cancelUrl: `${base}/pricing?cancelled=1`,
     });
 
-    const approvalUrl = subscription.links?.find((link) => link.rel === "approve")?.href;
     if (!approvalUrl) {
       await recordFunnelEvent("payment_failed", {
         userId: user.id,
@@ -155,7 +137,7 @@ export async function POST(req: Request) {
         plan,
         amount: PLAN_PRICES[plan],
         method: "paypal",
-        txId: subscription.id ?? null,
+        txId: subscriptionId ?? null,
         status: "pending",
       },
     });

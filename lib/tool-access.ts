@@ -112,6 +112,14 @@ export const TOOL_LIMITS = {
   },
 };
 
+// Shared by app/api/leads (web) and app/api/v1/leads (public API, PAY-10) so
+// both enforce the exact same active-lead cap.
+export function leadLimit(plan: string) {
+  const limits = TOOL_LIMITS.leads;
+  const key = plan === "business" ? "ultimate" : plan;
+  return (limits[key as keyof typeof limits] ?? limits.free).uses;
+}
+
 export const PLANS = [
   {
     name: "Free",

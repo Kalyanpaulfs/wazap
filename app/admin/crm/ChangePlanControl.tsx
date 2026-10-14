@@ -3,7 +3,7 @@
 import {useState} from "react";
 import {useRouter} from "next/navigation";
 
-const PLAN_OPTIONS=[["free","Free"],["basic","Solo"],["pro","Growth"],["ultimate","Team"],["business","Business"]] as const;
+const PLAN_OPTIONS=[["free","Free"],["basic","Solo"],["pro","Growth"],["ultimate","Agency"],["business","Business"]] as const;
 
 export default function ChangePlanControl({userId,currentPlan}:{userId:string;currentPlan:string}){
  const router=useRouter();
@@ -13,24 +13,28 @@ export default function ChangePlanControl({userId,currentPlan}:{userId:string;cu
  const [busy,setBusy]=useState(false);
  const [error,setError]=useState("");
  const [success,setSuccess]=useState("");
+ const [warning,setWarning]=useState("");
 
- function startOpen(){setOpen(true);setSelected(currentPlan);setConfirming(false);setError("");setSuccess("");}
+ function startOpen(){setOpen(true);setSelected(currentPlan);setConfirming(false);setError("");setSuccess("");setWarning("");}
  function cancel(){setOpen(false);setConfirming(false);setError("");}
 
  async function apply(){
-  setBusy(true);setError("");setSuccess("");
+  setBusy(true);setError("");setSuccess("");setWarning("");
   try{
    const res=selected==="free"
     ?await fetch("/api/admin/activate",{method:"DELETE",headers:{"Content-Type":"application/json"},body:JSON.stringify({userId})})
     :await fetch("/api/admin/activate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({userId,plan:selected})});
-   if(!res.ok){const j=await res.json().catch(()=>({}));throw new Error(j.error||"Plan update failed");}
-   setSuccess("Plan updated.");setConfirming(false);setOpen(false);
+   const j=await res.json().catch(()=>({}));
+   if(!res.ok)throw new Error(j.error||"Plan update failed");
+   setSuccess("Plan updated.");
+   if(j.warning)setWarning(j.warning);
+   setConfirming(false);setOpen(false);
    router.refresh();
   }catch(e){setError(e instanceof Error?e.message:"Plan update failed");}
   finally{setBusy(false);}
  }
 
- if(!open)return <div><button onClick={startOpen} className="wp-crm-secondary">Change plan</button>{success&&<p className="text-xs text-emerald-400 mt-1">{success}</p>}</div>;
+ if(!open)return <div><button onClick={startOpen} className="wp-crm-secondary">Change plan</button>{success&&<p className="text-xs text-emerald-400 mt-1">{success}</p>}{warning&&<p className="text-xs text-amber-300 mt-1">{warning}</p>}</div>;
 
  return <div className="flex flex-col gap-2">
   <select value={selected} onChange={e=>{setSelected(e.target.value);setConfirming(false);}} disabled={busy}

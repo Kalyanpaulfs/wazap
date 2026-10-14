@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { MessageCircle } from "lucide-react";
 import CatalogOrderButton from "./CatalogOrderButton";
 
@@ -11,6 +11,7 @@ export default async function CatalogPublicPage({ params }: { params: Promise<{ 
   const { slug } = await params;
   const cat = await prisma.catalogPage.findUnique({ where: { slug: slug.toLowerCase() } });
   if (!cat) notFound();
+  if (cat.planPausedAt) redirect("/link-paused?type=catalog");
 
   prisma.catalogPage.update({ where: { id: cat!.id }, data: { views: { increment: 1 } } }).catch(() => {});
   const items = (Array.isArray(cat!.items) ? cat!.items : []) as unknown as Item[];

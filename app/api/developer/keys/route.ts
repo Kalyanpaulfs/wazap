@@ -13,7 +13,7 @@ function sameOrigin(req: Request) {
 
 export async function GET() {
   const ctx = await currentAiContext(); if (!ctx) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const [keys, requestLogs] = await Promise.all([prisma.apiKey.findMany({ where: { workspaceId: ctx.workspaceId }, select: { id: true, name: true, prefix: true, scopes: true, status: true, lastUsedAt: true, expiresAt: true, revokedAt: true, createdAt: true }, orderBy: { createdAt: "desc" } }), prisma.apiRequestLog.findMany({ where: { workspaceId: ctx.workspaceId }, select: { requestId: true, method: true, path: true, statusCode: true, latencyMs: true, errorCode: true, createdAt: true }, orderBy: { createdAt: "desc" }, take: 25 })]);
+  const [keys, requestLogs] = await Promise.all([prisma.apiKey.findMany({ where: { workspaceId: ctx.workspaceId }, select: { id: true, name: true, prefix: true, scopes: true, status: true, lastUsedAt: true, expiresAt: true, revokedAt: true, createdAt: true, planPausedAt: true }, orderBy: { createdAt: "desc" } }), prisma.apiRequestLog.findMany({ where: { workspaceId: ctx.workspaceId }, select: { requestId: true, method: true, path: true, statusCode: true, latencyMs: true, errorCode: true, createdAt: true }, orderBy: { createdAt: "desc" }, take: 25 })]);
   return NextResponse.json({ keys, requestLogs, availableScopes: API_SCOPES, limit: API_KEY_LIMITS[ctx.plan] ?? 0, plan: ctx.plan });
 }
 export async function POST(req: Request) {
@@ -21,7 +21,7 @@ export async function POST(req: Request) {
   const ctx = await currentAiContext(); if (!ctx) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if (!["owner", "admin"].includes(ctx.role)) return NextResponse.json({ error: "Only workspace owners and admins can create API keys." }, { status: 403 });
   if (!rateLimit(`developer-keys:${ctx.workspaceId}`, 20, 60_000)) return NextResponse.json({ error: "Too many API key changes. Please wait." }, { status: 429 });
-  const limit = API_KEY_LIMITS[ctx.plan] ?? 0; const count = await prisma.apiKey.count({ where: { workspaceId: ctx.workspaceId, status: "active" } });
+  const limit = API_KEY_LIMITS[ctx.plan] ?? 0; const count = await prisma.apiKey.count({ where: { workspaceId: ctx.workspaceId, status: "active", planPausedAt: null } });
   if (count >= limit) return NextResponse.json({ error: limit ? `Your ${ctx.plan} plan supports ${limit} active API key${limit === 1 ? "" : "s"}.` : "API access is available on Solo and higher plans.", upgrade: true }, { status: 403 });
   const body = await req.json().catch(() => ({})); const name = cleanInboxText(body.name, 80); const scopes: string[] = Array.isArray(body.scopes) ? [...new Set<string>(body.scopes.map(String).filter((scope: string) => API_SCOPES.includes(scope as typeof API_SCOPES[number])))] : [];
   if (!name || !scopes.length) return NextResponse.json({ error: "Key name and at least one valid scope are required." }, { status: 400 });
@@ -40,10 +40,10 @@ export async function DELETE(req: Request) {
   if (!["owner", "admin"].includes(ctx.role)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   if (!rateLimit(`developer-keys:${ctx.workspaceId}`, 20, 60_000)) return NextResponse.json({ error: "Too many API key changes. Please wait." }, { status: 429 });
   const body = await req.json().catch(() => ({}));
-  const existing = await prisma.apiKey.findFirst({ where: { id: String(body.id ?? ""), workspaceId: ctx.workspaceId, status: "active" }, select: { id: true, name: true, prefix: true } });
+  const existing = await prisma.apiKey.findFirst({ where: { id: String(body.id ?? ""), workspaceId: ctx.workspaceId, status: { in: ["active", "paused"] } }, select: { id: true, name: true, prefix: true } });
   if (!existing) return NextResponse.json({ error: "Active API key not found." }, { status: 404 });
   await prisma.$transaction([
-    prisma.apiKey.update({ where: { id: existing.id }, data: { status: "revoked", revokedAt: new Date() } }),
+    prisma.apiKey.update({ where: { id: existing.id }, data: { status: "revoked", revokedAt: new Date(), planPausedAt: null, planPausedFromStatus: null } }),
     prisma.workspaceAuditEvent.create({ data: { workspaceId: ctx.workspaceId, eventType: "api_key_revoked", actorUserId: ctx.userId, metadata: { keyId: existing.id, name: existing.name, prefix: existing.prefix } } }),
   ]);
   return NextResponse.json({ success: true });

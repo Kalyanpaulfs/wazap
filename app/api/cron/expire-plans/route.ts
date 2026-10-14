@@ -1,6 +1,8 @@
 import { queueBillingNotice } from "@/lib/billing-email";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { syncPlanLimits } from "@/lib/plan-limit-sync";
+import { recordBillingAttention } from "@/lib/billing-attention";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +22,46 @@ export async function GET(req: Request) {
       if(result.count)await queueBillingNotice({key:`expiry:${user.id}:${user.planExpiresAt!.toISOString()}`,userId:user.id,email:user.email,name:user.name,plan:user.plan,state:"expired",accessUntil:user.planExpiresAt},tx);
       return result.count;
     });
+    if(changed){
+      try{await syncPlanLimits(user.id);}
+      catch(err){console.error("[plan-limit-sync] failed after expiry downgrade",user.id,err instanceof Error?err.message:String(err));}
+    }
     expired+=changed;
   }
-  return NextResponse.json({ ok: true, expired });
+
+  // Trial end never otherwise runs the pause engine - a user whose product
+  // trial lapsed without upgrading can be sitting on trial-era extras over
+  // the free plan's real limits. Catch those within a lookback window (wider
+  // than the cron interval so a missed run never skips anyone), capped to a
+  // bounded batch per run. syncPlanLimits is itself a no-op while the flag
+  // is off, so this is safe to ship ahead of turning it on.
+  const trialLookback = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000);
+  const trialCandidates = await prisma.user.findMany({
+    where: { plan: "free", trialEndsAt: { not: null, lte: new Date(), gte: trialLookback } },
+    select: { id: true },
+    take: 500,
+  });
+  let trialSynced = 0;
+  for (const user of trialCandidates) {
+    try { await syncPlanLimits(user.id); trialSynced++; }
+    catch (err) { console.error("[plan-limit-sync] failed after trial end", user.id, err instanceof Error ? err.message : String(err)); }
+  }
+
+  // A refund still 'requested' after 15 minutes means the server stopped
+  // mid-refund: the money may or may not have gone back. Never retry it
+  // automatically (could refund twice) - flag it for a human to check.
+  const stuckRefunds = await prisma.billingRefund.findMany({
+    where: { status: "requested", createdAt: { lte: new Date(Date.now() - 15 * 60_000) } },
+    take: 100,
+  });
+  for (const refund of stuckRefunds) {
+    const payment = await prisma.payment.findUnique({ where: { id: refund.paymentId }, select: { userId: true, email: true, txId: true } });
+    await recordBillingAttention({
+      provider: refund.provider === "dodo" ? "dodo" : "paypal", eventId: `refund-stuck:${refund.id}`, eventType: "refund_stuck",
+      reason: "Refund was started but never confirmed. Check the provider dashboard: if refunded there, mark resolved; if not, refund again.",
+      chargeId: payment?.txId ?? null, userId: payment?.userId ?? null, email: payment?.email ?? null, amount: refund.amount, currency: refund.currency,
+    });
+  }
+
+  return NextResponse.json({ ok: true, expired, trialSynced, stuckRefunds: stuckRefunds.length });
 }

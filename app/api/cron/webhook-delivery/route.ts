@@ -19,9 +19,10 @@ export async function GET(req: Request) {
   });
   const ids = await prisma.$transaction(async (tx) => {
     const rows = await tx.$queryRaw<Array<{ id: string }>>(Prisma.sql`
-      SELECT "id" FROM "WebhookDelivery"
-      WHERE "status" = 'queued' AND "nextAttemptAt" <= ${now} AND "attempts" < 8
-      ORDER BY "createdAt" ASC FOR UPDATE SKIP LOCKED LIMIT 25
+      SELECT wd."id" FROM "WebhookDelivery" wd
+      JOIN "WebhookEndpoint" we ON we."id" = wd."endpointId"
+      WHERE wd."status" = 'queued' AND wd."nextAttemptAt" <= ${now} AND wd."attempts" < 8 AND we."status" = 'active'
+      ORDER BY wd."createdAt" ASC FOR UPDATE OF wd SKIP LOCKED LIMIT 25
     `);
     if (rows.length) await tx.webhookDelivery.updateMany({ where: { id: { in: rows.map((row) => row.id) } }, data: { status: "processing" } });
     return rows.map((row) => row.id);

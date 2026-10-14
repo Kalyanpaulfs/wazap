@@ -1,4 +1,5 @@
 import { applyVerifiedLifecycle, applyVerifiedReversal, recordVerifiedCharge, type ReversalKind } from "@/lib/payment-integrity";
+import { completeOldSubscriptionCancel, cancelProviderSubscription, refundPayment } from "@/lib/billing-actions";
 import { recordBillingAttention } from "@/lib/billing-attention";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
@@ -110,6 +111,35 @@ function renewalExpiry(plan: string, currentExpiresAt: Date | null | undefined) 
   return extendPlanExpiry(plan, currentExpiresAt);
 }
 
+// Post-transaction follow-ups (cancelling an old subscription, auto-refunding
+// a duplicate) call out to providers and must never turn a successfully
+// processed webhook into a non-2xx response - failures only go to BillingAttention.
+async function runPostTransactionActions(opts: {
+  cancelOld?: { provider: string; subscriptionId: string; planChangeId?: string | null } | null;
+  duplicateSubscription?: { paymentId?: string; provider: string; subscriptionId: string } | null;
+  userId: string;
+}) {
+  try {
+    if (opts.cancelOld) {
+      await completeOldSubscriptionCancel({ id: opts.cancelOld.planChangeId ?? null, userId: opts.userId, provider: opts.cancelOld.provider, oldSubscriptionId: opts.cancelOld.subscriptionId });
+    }
+    if (opts.duplicateSubscription) {
+      if (opts.duplicateSubscription.paymentId) {
+        await refundPayment({ paymentId: opts.duplicateSubscription.paymentId, kind: "duplicate", actorUserId: null, reason: "Automatic duplicate subscription refund", now: new Date(), subscriptionId: opts.duplicateSubscription.subscriptionId });
+      } else {
+        const cancelResult = await cancelProviderSubscription(opts.duplicateSubscription.provider as "paypal" | "dodo", opts.duplicateSubscription.subscriptionId, "duplicate_subscription");
+        await recordBillingAttention({
+          provider: opts.duplicateSubscription.provider as "paypal" | "dodo", eventId: `dup-activation:${opts.duplicateSubscription.provider}:${opts.duplicateSubscription.subscriptionId}`,
+          eventType: "second_live_subscription_activated", userId: opts.userId,
+          reason: cancelResult.ok ? "Second live subscription detected and cancelled automatically." : `Second live subscription detected; cancel failed: ${cancelResult.error}`,
+        });
+      }
+    }
+  } catch (err) {
+    console.error("[paypal/webhook] post-transaction billing action failed", err);
+  }
+}
+
 async function getSubscription(resource: Record<string, any>): Promise<{ subscription: PayPalSubscription | null; failed: boolean }> {
   const id =
     resource.billing_agreement_id ||
@@ -153,15 +183,20 @@ export async function POST(req: Request) {
     const amount = Number.isFinite(amountValue) && amountValue > 0 ? amountValue : null;
     const currency = String(resource.amount?.currency ?? resource.amount?.currency_code ?? resource.disputed_transactions?.[0]?.gross_amount?.currency_code ?? "").toUpperCase() || null;
     const result = await applyVerifiedReversal({ provider: "paypal", eventId: event.id, chargeId, occurredAt, kind: REVERSAL_EVENTS[type], amount });
-    await recordBillingAttention({ provider: "paypal", eventId: event.id, eventType: type, chargeId, userId: result.matched ? result.userId : null, amount, currency,
-      reason: !result.matched ? "Refund, reversal or dispute for a payment Wazap has no record of." : result.accessEnded ? `Payment ${result.status}. Paid access was removed.` : `Payment ${result.status}. Access unchanged; review the customer.` });
+    if (!(result.matched && result.ourRefund)) {
+      await recordBillingAttention({ provider: "paypal", eventId: event.id, eventType: type, chargeId, userId: result.matched ? result.userId : null, amount, currency,
+        reason: !result.matched ? "Refund, reversal or dispute for a payment Wazap has no record of." : result.accessEnded ? `Payment ${result.status}. Paid access was removed.` : `Payment ${result.status}. Access unchanged; review the customer.` });
+    }
     return NextResponse.json({ ok: true, event: type, ...result });
   }
   if (!ACTIVATE_EVENTS.has(type) && !RENEWAL_EVENTS.has(type) && !DEACTIVATE_EVENTS.has(type)) {
     return NextResponse.json({ ok: true, ignored: type });
   }
 
-  const lookup = ACTIVATE_EVENTS.has(type)
+  // Every BILLING.SUBSCRIPTION.* event (activate, cancel, suspend, expire,
+  // payment failed) carries the subscription itself as the resource; only
+  // sale/capture events need a lookup.
+  const lookup = type.startsWith("BILLING.SUBSCRIPTION.")
     ? { subscription: resource as PayPalSubscription, failed: false }
     : await getSubscription(resource);
   // Without the subscription we may not know the plan or customer: let PayPal retry.
@@ -204,6 +239,7 @@ export async function POST(req: Request) {
       await recordFunnelEvent("subscription_renewed", { userId: user.id, source: "paypal", metadata: { plan, event: type } });
       await markPartnerCustomer(user.id);
     }
+    await runPostTransactionActions({ cancelOld: result.cancelOld, duplicateSubscription: result.duplicateSubscription, userId: user.id });
     return NextResponse.json({ ok: true, activated: user.id, event: type, duplicate: result.duplicate });
   }
 
@@ -211,5 +247,21 @@ export async function POST(req: Request) {
   const state = deactivating ? type === "BILLING.SUBSCRIPTION.PAYMENT.FAILED" ? "failed" : type === "BILLING.SUBSCRIPTION.EXPIRED" ? "expired" : type === "BILLING.SUBSCRIPTION.SUSPENDED" ? "paused" : "cancelled" : undefined;
   const result = await applyVerifiedLifecycle({ provider: "paypal", eventId: event.id, subscriptionId, occurredAt, userId: user.id, plan, endAccess: END_ACCESS_EVENTS.has(type), state, periodEnd: state ? null : periodEnd });
   if (!result.duplicate && !result.stale && !deactivating) await markPartnerCustomer(user.id);
-  return NextResponse.json({ ok: true, event: type, ...result });
+  if (!result.duplicate && !result.stale && !deactivating) {
+    // A scheduled (future-dated) subscription has just been approved by the
+    // buyer. Downgrade: cancel the old subscription now, but the change
+    // stays 'pending' until the first charge on the new one. Renew: the old
+    // subscription was already cancelled when auto-pay was turned off, so
+    // there is nothing to cancel - applyVerifiedLifecycle already set
+    // SecurityUserBilling.autoRenew back to true for that case.
+    await runPostTransactionActions({
+      // Dodo changes plans in place (old === new): never cancel the subscription itself.
+      cancelOld: result.scheduledActivated?.kind === "downgrade" && result.scheduledActivated.oldSubscriptionId && result.scheduledActivated.oldSubscriptionId !== result.scheduledActivated.newSubscriptionId
+        ? { provider: result.scheduledActivated.provider, subscriptionId: result.scheduledActivated.oldSubscriptionId, planChangeId: result.scheduledActivated.id }
+        : null,
+      duplicateSubscription: result.duplicateSubscription,
+      userId: user.id,
+    });
+  }
+  return NextResponse.json({ ok: true, event: type, duplicate: result.duplicate, stale: result.stale, scheduled: Boolean(result.scheduledActivated), secondSubscription: Boolean(result.duplicateSubscription) });
 }

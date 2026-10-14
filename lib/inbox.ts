@@ -8,6 +8,10 @@ export async function currentInboxContext() {
   if (!session?.user) return null;
   const userId = (session.user as { id: string }).id;
   const membership = await getActiveWorkspace(userId);
+  // A plan-paused member loses access to workspace features without being
+  // removed (billing spec 12g). This is the shared gate behind automations,
+  // AI agents/knowledge, channels, API keys, and webhooks.
+  if (membership.planPausedAt) return null;
   return { userId, workspaceId: membership.workspaceId, memberId: membership.id, role: membership.role };
 }
 

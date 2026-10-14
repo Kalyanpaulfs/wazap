@@ -6,7 +6,7 @@ import { cacheRoute, readCachedRoute } from "@/lib/routing-cache";
 export async function GET(req: Request, { params }: { params: Promise<{ code: string }> }) {
   const { code } = await params;
   const normalizedCode = code.toUpperCase();
-  let rotator: { id?: string; userId?: string; name?: string; code: string; numbers: string[]; fallbackNumber?: string | null; message?: string | null; currentIdx: number } | null = null;
+  let rotator: { id?: string; userId?: string; name?: string; code: string; numbers: string[]; fallbackNumber?: string | null; message?: string | null; currentIdx: number; planPausedAt?: Date | null } | null = null;
   try {
     rotator = await Promise.race([
       prisma.rotatorLink.findUnique({ where: { code: normalizedCode } }),
@@ -17,6 +17,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ code: st
     rotator = await readCachedRoute(normalizedCode);
   }
   if (!rotator) redirect("/");
+  // Only checked on the live DB path (not the degraded-cache fallback, which
+  // intentionally fails open for availability - see the catch above).
+  if (rotator.planPausedAt) redirect("/link-paused?type=rotator");
 
   const validNumbers = rotator.numbers.map(number => number.replace(/\D/g, "")).filter(number => number.length >= 8);
   const fallback = (rotator.fallbackNumber || process.env.WAZAP_DEFAULT_WHATSAPP_NUMBER || validNumbers[0] || "").replace(/\D/g, "");

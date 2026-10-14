@@ -60,7 +60,7 @@ export async function POST(req: Request) {
       await tx.$executeRaw(Prisma.sql`SELECT pg_advisory_xact_lock(hashtext(${ctx.workspaceId}))`);
       const existing = await tx.marketplaceInstall.findUnique({ where: { workspaceId_listingId: { workspaceId: ctx.workspaceId, listingId } } });
       if (existing?.status === "active") return existing;
-      const active = await tx.marketplaceInstall.count({ where: { workspaceId: ctx.workspaceId, status: "active" } });
+      const active = await tx.marketplaceInstall.count({ where: { workspaceId: ctx.workspaceId, status: "active", planPausedAt: null } });
       const limit = MARKETPLACE_INSTALL_LIMITS[ctx.plan] || 1;
       if (active >= limit) throw new MarketplaceInstallError("INSTALL_LIMIT");
 
@@ -86,7 +86,7 @@ export async function POST(req: Request) {
       const saved = await tx.marketplaceInstall.upsert({
         where: { workspaceId_listingId: { workspaceId: ctx.workspaceId, listingId } },
         create: { workspaceId: ctx.workspaceId, listingId, versionId: listing.versions[0].id, installedByMemberId: ctx.memberId, installedAgentId, config: {}, status: "active", setupStatus: "installed" },
-        update: { versionId: listing.versions[0].id, installedByMemberId: ctx.memberId, installedAgentId, status: "active", setupStatus: "installed", lastTestedAt: null, activatedAt: null, uninstalledAt: null },
+        update: { versionId: listing.versions[0].id, installedByMemberId: ctx.memberId, installedAgentId, status: "active", setupStatus: "installed", lastTestedAt: null, activatedAt: null, uninstalledAt: null, planPausedAt: null, planPausedFromStatus: null },
       });
       const activeForListing = await tx.marketplaceInstall.count({ where: { listingId, status: "active" } });
       await tx.marketplaceListing.update({ where: { id: listingId }, data: { installCount: activeForListing } });
@@ -120,7 +120,7 @@ export async function DELETE(req: Request) {
     const install = await tx.marketplaceInstall.findFirst({ where: { id: installId, workspaceId: ctx.workspaceId, status: { in: ["active", "suspended", "revoked"] } } });
     if (!install) return null;
     if (install.installedAgentId) await tx.aiAgent.updateMany({ where: { id: install.installedAgentId, workspaceId: ctx.workspaceId, archivedAt: null }, data: { status: "paused", responseMode: "draft_only", archivedAt: new Date() } });
-    await tx.marketplaceInstall.update({ where: { id: install.id }, data: { status: "uninstalled", setupStatus: "uninstalled", uninstalledAt: new Date(), installedAgentId: null } });
+    await tx.marketplaceInstall.update({ where: { id: install.id }, data: { status: "uninstalled", setupStatus: "uninstalled", uninstalledAt: new Date(), installedAgentId: null, planPausedAt: null, planPausedFromStatus: null } });
     const activeForListing = await tx.marketplaceInstall.count({ where: { listingId: install.listingId, status: "active" } });
     await tx.marketplaceListing.update({ where: { id: install.listingId }, data: { installCount: activeForListing } });
     return install;

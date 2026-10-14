@@ -30,6 +30,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
       prisma.linktreePage.findUnique({ where: { slug } }),
       new Promise<never>((_, reject) => setTimeout(() => reject(new Error("link-page lookup timeout")), 1200)),
     ]);
+    if (page?.planPausedAt) return NextResponse.redirect(`${PUBLIC_BASE}/link-paused?type=linktree`, 307);
     const links = (page && Array.isArray(page.links) ? page.links : []) as PageLink[];
     const link = Number.isInteger(itemIndex) ? links[itemIndex] : null;
     const number = String(link?.number ?? "").replace(/\D/g, "").slice(0, 20);

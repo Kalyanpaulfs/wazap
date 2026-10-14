@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { MessageCircle } from "lucide-react";
@@ -9,6 +9,7 @@ export default async function LinktreePublicPage({ params }: { params: Promise<{
   const { slug } = await params;
   const page = await prisma.linktreePage.findUnique({ where: { slug } });
   if (!page) notFound();
+  if (page.planPausedAt) redirect("/link-paused?type=linktree");
 
   await prisma.linktreePage.update({ where: { id: page.id }, data: { views: { increment: 1 } } });
 

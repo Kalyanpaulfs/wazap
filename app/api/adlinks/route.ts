@@ -31,7 +31,7 @@ export async function POST(req: Request) {
   const limit = getLimit(plan);
 
   if (limit !== -1) {
-    const count = await prisma.adLink.count({ where: { userId } });
+    const count = await prisma.adLink.count({ where: { userId, planPausedAt: null } });
     if (count >= limit) {
       return NextResponse.json({ error: `Plan limit reached. Your ${plan} plan allows ${limit} ad link${limit !== 1 ? "s" : ""}. Upgrade for more.`, upgrade: true }, { status: 403 });
     }

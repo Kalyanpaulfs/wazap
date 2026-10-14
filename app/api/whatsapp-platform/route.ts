@@ -121,6 +121,9 @@ export async function POST(req: Request) {
       const wabaId = String(waba.id || ""), phoneNumberId = String(phone.id || "");
       const duplicate = await prisma.channelConnection.findFirst({ where: { workspaceId: ctx.workspaceId, provider: "meta_cloud", externalAccountId: phoneNumberId, status: { not: "disabled" } } });
       if (duplicate) return NextResponse.json({ notice: "This WhatsApp number is already connected.", connection: { id: duplicate.id, status: duplicate.status } });
+      const activeConnections = await prisma.channelConnection.count({ where: { workspaceId: ctx.workspaceId, status: { not: "disabled" }, planPausedAt: null } });
+      const connectionLimit = CHANNEL_LIMITS[ctx.plan] || 1;
+      if (activeConnections >= connectionLimit) return NextResponse.json({ error: `Your ${ctx.plan} plan supports ${connectionLimit} channel connection${connectionLimit === 1 ? "" : "s"}.`, upgrade: true }, { status: 403 });
       const credential = createChannelCredential();
       const connection = await prisma.channelConnection.create({ data: {
         workspaceId: ctx.workspaceId, createdByMemberId: ctx.memberId, channel: "whatsapp", provider: "meta_cloud",

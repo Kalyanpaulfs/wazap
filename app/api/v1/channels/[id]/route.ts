@@ -57,6 +57,11 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     await logApiRequest(ctx, req, 409, "invalid_state");
     return error(409, "invalid_state", "Only verified active connections can be paused, and only paused connections can be resumed.", ctx.requestId);
   }
+  if (status === "active" && existing.planPausedAt) {
+    await abandonApiMutation(mutation.keyHash);
+    await logApiRequest(ctx, req, 409, "invalid_state");
+    return error(409, "invalid_state", "This connection was paused automatically because it is over your plan's limit. Upgrade to turn it back on.", ctx.requestId);
+  }
   const connection = await prisma.channelConnection.update({ where: { id }, data: { status } });
   const eventType = status === "paused" ? "channel.paused" : "channel.resumed";
   await enqueueWebhookEvent(ctx.workspaceId, eventType, { connectionId: id, channel: connection.channel, provider: connection.provider, status, source: "api" });

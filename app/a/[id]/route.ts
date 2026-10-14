@@ -28,6 +28,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       new Promise<never>((_, reject) => setTimeout(() => reject(new Error("ad-link lookup timeout")), 1200)),
     ]);
     if (!link) return NextResponse.redirect(fallback || `${PUBLIC_BASE}/tools/ad-builder`, 307);
+    if (link.planPausedAt) return NextResponse.redirect(`${PUBLIC_BASE}/link-paused?type=ad`, 307);
     const target = `https://wa.me/${link.number}${link.message ? `?text=${encodeURIComponent(link.message)}` : ""}`;
     if (rateLimit(`ad-click:${ip}:${id}`, 30, 60_000)) {
       await Promise.allSettled([

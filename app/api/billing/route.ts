@@ -7,7 +7,7 @@ import { rateLimit } from "@/lib/rate-limit";
 import { recordFunnelEvent } from "@/lib/funnel";
 import { currentSubscriptionRecord } from "@/lib/subscription-record";
 import { sameSiteRequest } from "@/lib/crm";
-import { isPlanExpired } from "@/lib/billing";
+import { getBillingSummary } from "@/lib/billing-summary";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -35,15 +35,13 @@ async function currentUser() {
 export async function GET() {
   const user = await currentUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const payment = await currentSubscriptionRecord(user.id);
+  const summary = await getBillingSummary(user.id);
+  if (!summary) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
   return NextResponse.json({
-    plan: user.plan,
-    accessActive: user.plan !== "free" && !isPlanExpired(user.plan, user.planExpiresAt),
-    renewsOrExpiresAt: user.planExpiresAt,
-    method: payment?.method || null,
-    dodoPortalUrl: payment?.method === "dodo" ? "https://customer.dodopayments.com" : null,
-    canCancel: payment?.method === "paypal",
-    hasSubscription: Boolean(payment),
+    ...summary,
+    // The Dodo customer portal is not linked: it could allow plan changes outside Wazap's rules.
+    dodoPortalUrl: null,
   });
 }
 

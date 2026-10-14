@@ -36,6 +36,7 @@ import SetupGuide from "../product/SetupGuide";
 import UpgradeSuccessBanner from "./UpgradeSuccessBanner";
 import BillingManager from "./BillingManager";
 import { currentSubscriptionRecord } from "@/lib/subscription-record";
+import { getBillingSummary } from "@/lib/billing-summary";
 import {
   effectivePlan,
   isProductTrialActive,
@@ -51,7 +52,7 @@ const PLAN_LABELS: Record<string, string> = {
   free: "Free",
   basic: "Solo",
   pro: "Growth",
-  ultimate: "Team",
+  ultimate: "Agency",
   business: "Business",
 };
 const PLAN_COLORS: Record<string, string> = {
@@ -76,10 +77,11 @@ function usagePercent(used: number, limit: number | null) {
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ upgraded?: string; workspace?: string; plan?: string }>;
+  searchParams: Promise<{ upgraded?: string; workspace?: string; plan?: string; change?: string }>;
 }) {
   const params = await searchParams;
   const justUpgraded = params?.upgraded === "1";
+  const billingPlanChangesEnabled = process.env.BILLING_PLAN_CHANGES_ENABLED === "true";
   const session = await getServerSession(authOptions);
   if (!session?.user) redirect("/login");
 
@@ -112,6 +114,7 @@ export default async function DashboardPage({
     routedLinkCount,
     savedLeadCount,
     followUpCount,
+    billingSummary,
   ] = await Promise.all([
     prisma.user.findUnique({ where: { id: userId } }),
     prisma.dailyUsage.findUnique({
@@ -146,6 +149,7 @@ export default async function DashboardPage({
     prisma.rotatorLink.count({where:{userId,totalClicks:{gt:0}}}),
     prisma.lead.count({where:{userId}}),
     prisma.lead.count({where:{userId,nextFollowUpAt:{not:null}}}),
+    getBillingSummary(userId),
   ]);
 
   let plan = effectivePlan(user) || sessionPlan;
@@ -348,7 +352,7 @@ export default async function DashboardPage({
     <>
       <main className="wp-overview px-4 py-7 sm:px-7 sm:py-9">
         <div className="mx-auto max-w-7xl space-y-6">
-          {justUpgraded && <UpgradeSuccessBanner plan={user?.plan || "free"} expiresAt={user?.planExpiresAt?.toISOString() || null} expectedPlan={params.plan} />}
+          {justUpgraded && <UpgradeSuccessBanner plan={user?.plan || "free"} expiresAt={user?.planExpiresAt?.toISOString() || null} expectedPlan={params.plan} change={params.change} />}
 
 
           <header className="wp-overview-heading"><div><p className="wp-eyebrow">YOUR BUSINESS WORKSPACE</p><h1>Overview</h1><p>Keep your conversations moving. Start with what needs your attention.</p></div><Link prefetch={false} href="/tools/follow-up" className="wp-primary">Open leads <ArrowRight size={16}/></Link></header>
@@ -501,6 +505,17 @@ export default async function DashboardPage({
                 <BillingManager
                   method={activeBillingPayment?.method || null}
                   expiresAt={user?.planExpiresAt?.toISOString() || null}
+                  billingPlanChangesEnabled={billingPlanChangesEnabled}
+                  autoRenew={billingSummary?.autoRenew ?? true}
+                  pendingChange={
+                    billingSummary?.pendingChange
+                      ? {
+                          kind: billingSummary.pendingChange.kind,
+                          toPlan: billingSummary.pendingChange.toPlan,
+                          effectiveAt: billingSummary.pendingChange.effectiveAt ? billingSummary.pendingChange.effectiveAt.toISOString() : null,
+                        }
+                      : null
+                  }
                 />
               )}
               {plan === "free" && (

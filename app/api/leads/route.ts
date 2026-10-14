@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { TOOL_LIMITS } from "@/lib/tool-access";
+import { leadLimit } from "@/lib/tool-access";
 import { recordFunnelEvent } from "@/lib/funnel";
 import { rateLimit } from "@/lib/rate-limit";
 import { getActiveWorkspace } from "@/lib/workspaces";
@@ -83,12 +83,6 @@ export async function GET() {
       sourceStarts: sourceStarts.map((row) => ({ source: row.source || "Direct", count: row._count._all })),
     },
   });
-}
-
-function leadLimit(plan: string) {
-  const limits = TOOL_LIMITS.leads;
-  if (plan === "business") plan = "ultimate";
-  return (limits[plan as keyof typeof limits] ?? limits.free).uses;
 }
 
 export async function POST(req: Request) {

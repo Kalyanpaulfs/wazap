@@ -3,8 +3,9 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { MessageCircle, Plus, Trash2, Copy, Check, RefreshCw } from "lucide-react";
 import { COUNTRIES } from "@/lib/countries";
+import PlanPausedBadge from "@/app/components/PlanPausedBadge";
 
-interface Rotator { id: string; name: string; fallbackNumber?: string | null; message?: string | null; code: string; numbers: string[]; totalClicks: number; last30Days: number; destinationClicks: Record<string, number>; createdAt: string; }
+interface Rotator { id: string; name: string; fallbackNumber?: string | null; message?: string | null; code: string; numbers: string[]; totalClicks: number; last30Days: number; destinationClicks: Record<string, number>; createdAt: string; planPausedAt?: string | null; }
 interface RouterQuota { plan: string; limit: number | null; used: number; remaining: number | null; allowed: boolean; grace: boolean; graceEndsAt: string | null; }
 
 export default function RotatorPage() {
@@ -190,7 +191,7 @@ export default function RotatorPage() {
                   <div key={r.id} className="rounded-2xl border border-slate-800 bg-[#111811] p-5">
                     <div className="flex items-start justify-between gap-3 flex-wrap mb-3">
                       <div>
-                        <h3 className="font-semibold text-white">{r.name}</h3>
+                        <div className="flex items-center gap-2"><h3 className="font-semibold text-white">{r.name}</h3>{r.planPausedAt && <PlanPausedBadge />}</div>
                         <p className="text-xs text-slate-500 mt-0.5">{r.numbers.length} destinations · {r.totalClicks} total routed handoffs · {r.last30Days} in the last 30 days</p>
                       </div>
                       <div className="flex items-center gap-2">

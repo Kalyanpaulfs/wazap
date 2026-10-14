@@ -92,6 +92,8 @@ export async function marketplaceContext() {
   const userId = (session?.user as { id?: string } | undefined)?.id;
   if (!userId) return null;
   const membership = await getActiveWorkspace(userId);
+  // A plan-paused member loses access without being removed (billing spec 12g).
+  if (membership.planPausedAt) return null;
   const owner = await prisma.user.findUnique({
     where: { id: membership.workspace.ownerId },
     select: { plan: true, trialPlan: true, trialEndsAt: true },

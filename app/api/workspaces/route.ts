@@ -43,7 +43,7 @@ export async function GET() {
       name: membership.workspace.name,
       slug: membership.workspace.slug,
       role: membership.role,
-      members: membership.workspace.members.map((member) => ({ id: member.id, userId: member.user.id, name: member.user.name, email: member.user.email, role: member.role, joinedAt: member.createdAt })),
+      members: membership.workspace.members.map((member) => ({ id: member.id, userId: member.user.id, name: member.user.name, email: member.user.email, role: member.role, joinedAt: member.createdAt, planPausedAt: member.planPausedAt })),
       invitations: ["owner", "admin"].includes(membership.role) ? membership.workspace.invitations.map((invitation) => ({ ...invitation, deliveryStatus: deliveryByEmail.get(invitation.email) ?? "queued" })) : [],
     })),
   });

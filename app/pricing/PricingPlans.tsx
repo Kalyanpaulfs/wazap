@@ -3,8 +3,22 @@
 import { CreditCard, LogIn, Star, Wallet } from "lucide-react";
 import Link from "next/link";
 import WazapCardPayment from "./WazapCardPayment";
+import PlanChangeAction from "./PlanChangeAction";
 import { PLAN_PRICES } from "@/lib/billing";
 import { formatLocalPrice, useLocalization, usePricingText } from "@/app/pricing/local-price";
+
+const PLAN_RANK: Record<string, number> = { free: 0, basic: 1, pro: 2, ultimate: 3, business: 4 };
+const PLAN_LABELS: Record<string, string> = { free: "Free", basic: "Solo", pro: "Growth", ultimate: "Agency", business: "Business" };
+
+type PendingPlanChange = { kind: string; toPlan: string; effectiveAt: string | null };
+type BillingInfo = {
+  plan: string;
+  accessActive: boolean;
+  renewsOrExpiresAt: string | null;
+  autoRenew: boolean;
+  hasSubscription: boolean;
+  pendingChange: PendingPlanChange | null;
+};
 
 const PLANS = [
   {
@@ -42,15 +56,26 @@ export default function PricingPlans({
   cardCheckoutEnabled,
   selectedPlan,
   activeSubscriptionPlan,
+  billingPlanChangesEnabled = false,
+  billing = null,
 }: {
   isLoggedIn: boolean;
   userEmail: string | null;
   cardCheckoutEnabled: boolean;
   selectedPlan?: string | null;
   activeSubscriptionPlan?: string | null;
+  billingPlanChangesEnabled?: boolean;
+  billing?: BillingInfo | null;
 }) {
   const localization = useLocalization();
   const text = usePricingText(localization.language);
+  const managedByPlanChanges = billingPlanChangesEnabled && !!billing && billing.hasSubscription && billing.accessActive;
+  const renewsOrExpiresAtLabel = billing?.renewsOrExpiresAt ? new Date(billing.renewsOrExpiresAt).toLocaleDateString("en-GB") : null;
+  const pendingNoteText = billing?.pendingChange
+    ? `Changes to ${PLAN_LABELS[billing.pendingChange.toPlan] || billing.pendingChange.toPlan} on ${
+        billing.pendingChange.effectiveAt ? new Date(billing.pendingChange.effectiveAt).toLocaleDateString("en-GB") : "your next billing date"
+      }`
+    : null;
 
   return (
     <>
@@ -98,9 +123,9 @@ export default function PricingPlans({
         </div>
       )}
 
-      {activeSubscriptionPlan && <div className="mb-6 rounded-2xl border border-[#25D366]/40 bg-[#25D366]/10 p-4 text-center text-sm text-green-200">You already have a subscription. <Link href="/dashboard#billing" className="font-semibold underline">Manage your existing plan</Link> before starting another.</div>}
+      {activeSubscriptionPlan && !managedByPlanChanges && <div className="mb-6 rounded-2xl border border-[#25D366]/40 bg-[#25D366]/10 p-4 text-center text-sm text-green-200">You already have a subscription. <Link href="/dashboard#billing" className="font-semibold underline">Manage your existing plan</Link> before starting another.</div>}
 
-      {selectedPlan && !activeSubscriptionPlan && (
+      {selectedPlan && !activeSubscriptionPlan && !managedByPlanChanges && (
         <div className="mb-6 rounded-2xl border border-[#25D366]/40 bg-[#25D366]/10 p-4 text-center text-sm text-green-200">
           {isLoggedIn ? "Your account is ready. Continue with your selected plan below and choose PayPal or card checkout." : "Your selected plan is highlighted below. Create an account to continue to secure checkout."}
         </div>
@@ -146,6 +171,50 @@ export default function PricingPlans({
                 </Link>
                 <p className="text-center text-xs text-slate-500">Tailored confirmation before billing</p>
               </div>
+            ) : managedByPlanChanges && billing ? (
+              billing.pendingChange ? (
+                plan.id === billing.plan ? (
+                  <p className="rounded-full border border-[#25D366]/40 bg-[#25D366]/10 py-3 text-center text-sm font-semibold text-[#25D366]">
+                    {pendingNoteText}
+                  </p>
+                ) : (
+                  <button type="button" disabled className="flex w-full cursor-not-allowed items-center justify-center rounded-full border border-slate-800 py-3 text-center text-sm font-semibold text-slate-500">
+                    {pendingNoteText}
+                  </button>
+                )
+              ) : plan.id === billing.plan ? (
+                billing.autoRenew ? (
+                  <button type="button" disabled className="flex w-full cursor-not-allowed items-center justify-center rounded-full border border-slate-800 py-3 text-center text-sm font-semibold text-slate-500">
+                    Current plan · renews automatically on {renewsOrExpiresAtLabel || "your renewal date"}
+                  </button>
+                ) : (
+                  <PlanChangeAction
+                    kind="renew"
+                    planId={plan.id}
+                    planLabel={plan.name}
+                    currentPlanLabel={PLAN_LABELS[billing.plan] || billing.plan}
+                    renewsOrExpiresAtLabel={renewsOrExpiresAtLabel}
+                    locale={localization.language}
+                    country={localization.country}
+                    cardCheckoutEnabled={cardCheckoutEnabled}
+                    subscribePaypalLabel={text.subscribePaypal}
+                    subscribeCardLabel={text.subscribeCard}
+                  />
+                )
+              ) : (
+                <PlanChangeAction
+                  kind={(PLAN_RANK[plan.id] ?? 0) > (PLAN_RANK[billing.plan] ?? 0) ? "upgrade" : "downgrade"}
+                  planId={plan.id}
+                  planLabel={plan.name}
+                  currentPlanLabel={PLAN_LABELS[billing.plan] || billing.plan}
+                  renewsOrExpiresAtLabel={renewsOrExpiresAtLabel}
+                  locale={localization.language}
+                  country={localization.country}
+                  cardCheckoutEnabled={cardCheckoutEnabled}
+                  subscribePaypalLabel={text.subscribePaypal}
+                  subscribeCardLabel={text.subscribeCard}
+                />
+              )
             ) : activeSubscriptionPlan ? (
               <Link href="/dashboard#billing" className="block rounded-full border border-[#25D366] py-3 text-center text-sm font-semibold text-[#25D366]">Manage existing subscription →</Link>
             ) : isLoggedIn ? (

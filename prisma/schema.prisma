@@ -30,32 +30,32 @@ model User {
   createdAt                   DateTime  @default(now())
   updatedAt                   DateTime  @updatedAt
 
-  dailyUsage               DailyUsage[]
-  payments                 Payment[]
-  rotatorLinks             RotatorLink[]
-  adLinks                  AdLink[]
-  linktreePages            LinktreePage[]
-  contactLists             ContactList[]
-  scheduledSends           ScheduledSend[]
-  shortLinks               ShortLink[]
-  catalogPages             CatalogPage[]
-  catalogOrders            CatalogOrder[]
-  funnelEvents             FunnelEvent[]
-  marketplaceReviews       MarketplaceReview[]
-  leads                    Lead[]
-  siteVisits               SiteVisit[]
-  outboundEmails           OutboundEmail[]
-  passwordResetTokens      PasswordResetToken[]
-  conversationStarts       ConversationStart[]
-  ownedWorkspaces          Workspace[]           @relation("WorkspaceOwner")
-  workspaceMemberships     WorkspaceMember[]
-  workspaceInvitesSent     WorkspaceInvitation[] @relation("WorkspaceInviter")
-  workspaceInvitesAccepted WorkspaceInvitation[] @relation("WorkspaceAcceptor")
+  dailyUsage                 DailyUsage[]
+  payments                   Payment[]
+  rotatorLinks               RotatorLink[]
+  adLinks                    AdLink[]
+  linktreePages              LinktreePage[]
+  contactLists               ContactList[]
+  scheduledSends             ScheduledSend[]
+  shortLinks                 ShortLink[]
+  catalogPages               CatalogPage[]
+  catalogOrders              CatalogOrder[]
+  funnelEvents               FunnelEvent[]
+  marketplaceReviews         MarketplaceReview[]
+  leads                      Lead[]
+  siteVisits                 SiteVisit[]
+  outboundEmails             OutboundEmail[]
+  passwordResetTokens        PasswordResetToken[]
+  conversationStarts         ConversationStart[]
+  ownedWorkspaces            Workspace[]                 @relation("WorkspaceOwner")
+  workspaceMemberships       WorkspaceMember[]
+  workspaceInvitesSent       WorkspaceInvitation[]       @relation("WorkspaceInviter")
+  workspaceInvitesAccepted   WorkspaceInvitation[]       @relation("WorkspaceAcceptor")
+  securityMfa                SecurityMfa?
+  securitySubscriptionStates SecuritySubscriptionState[]
+  securityBillingState       SecurityUserBilling?
 
   @@index([accountDeletionScheduledFor])
-  securityMfa SecurityMfa?
-  securitySubscriptionStates SecuritySubscriptionState[]
-  securityBillingState SecurityUserBilling?
 }
 
 // One-time email codes for passwordless sign-in ("login") and for confirming
@@ -156,6 +156,7 @@ model WorkspaceMember {
   userId                    String
   role                      String                @default("member")
   createdAt                 DateTime              @default(now())
+  planPausedAt              DateTime?
   workspace                 Workspace             @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   user                      User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
   assignedConversations     InboxConversation[]   @relation("InboxAssignee")
@@ -395,6 +396,8 @@ model ChannelConnection {
   lastError              String?
   createdAt              DateTime            @default(now())
   updatedAt              DateTime            @updatedAt
+  planPausedAt           DateTime?
+  planPausedFromStatus   String?
   workspace              Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   createdByMember        WorkspaceMember?    @relation("ChannelConnectionCreator", fields: [createdByMemberId], references: [id], onDelete: SetNull)
   conversations          InboxConversation[]
@@ -543,26 +546,28 @@ model ChannelEvent {
 }
 
 model AutomationRule {
-  id                String           @id @default(cuid())
-  workspaceId       String
-  createdByMemberId String?
-  name              String
-  trigger           String
-  status            String           @default("draft")
-  runMode           String           @default("dry_run")
-  conditions        Json
-  actions           Json
-  runCount          Int              @default(0)
-  successCount      Int              @default(0)
-  failureCount      Int              @default(0)
-  lastRunAt         DateTime?
-  lastError         String?
-  archivedAt        DateTime?
-  createdAt         DateTime         @default(now())
-  updatedAt         DateTime         @updatedAt
-  workspace         Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  createdByMember   WorkspaceMember? @relation("AutomationRuleCreator", fields: [createdByMemberId], references: [id], onDelete: SetNull)
-  runs              AutomationRun[]
+  id                   String           @id @default(cuid())
+  workspaceId          String
+  createdByMemberId    String?
+  name                 String
+  trigger              String
+  status               String           @default("draft")
+  runMode              String           @default("dry_run")
+  conditions           Json
+  actions              Json
+  runCount             Int              @default(0)
+  successCount         Int              @default(0)
+  failureCount         Int              @default(0)
+  lastRunAt            DateTime?
+  lastError            String?
+  archivedAt           DateTime?
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+  planPausedAt         DateTime?
+  planPausedFromStatus String?
+  workspace            Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdByMember      WorkspaceMember? @relation("AutomationRuleCreator", fields: [createdByMemberId], references: [id], onDelete: SetNull)
+  runs                 AutomationRun[]
 
   @@index([workspaceId, status, trigger])
   @@index([workspaceId, archivedAt, updatedAt])
@@ -722,6 +727,8 @@ model AiAgent {
   archivedAt           DateTime?
   createdAt            DateTime       @default(now())
   updatedAt            DateTime       @updatedAt
+  planPausedAt         DateTime?
+  planPausedFromStatus String?
   workspace            Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   runs                 AiRun[]
   drafts               AiDraft[]
@@ -764,16 +771,18 @@ model AiEvaluation {
 }
 
 model AiKnowledge {
-  id          String    @id @default(cuid())
-  workspaceId String
-  title       String
-  content     String
-  sourceType  String    @default("text")
-  sourceUrl   String?
-  status      String    @default("active")
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  id                   String    @id @default(cuid())
+  workspaceId          String
+  title                String
+  content              String
+  sourceType           String    @default("text")
+  sourceUrl            String?
+  status               String    @default("active")
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+  planPausedAt         DateTime?
+  planPausedFromStatus String?
+  workspace            Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@index([workspaceId, status])
 }
@@ -853,22 +862,24 @@ model AiHandoff {
 }
 
 model ApiKey {
-  id                 String                 @id @default(cuid())
-  workspaceId        String
-  createdByMemberId  String?
-  name               String
-  prefix             String                 @unique
-  keyHash            String                 @unique
-  scopes             String[]               @default([])
-  status             String                 @default("active")
-  lastUsedAt         DateTime?
-  expiresAt          DateTime?
-  revokedAt          DateTime?
-  createdAt          DateTime               @default(now())
-  workspace          Workspace              @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  createdByMember    WorkspaceMember?       @relation("ApiKeyCreator", fields: [createdByMemberId], references: [id], onDelete: SetNull)
-  requestLogs        ApiRequestLog[]
-  idempotencyRecords ApiIdempotencyRecord[]
+  id                   String                 @id @default(cuid())
+  workspaceId          String
+  createdByMemberId    String?
+  name                 String
+  prefix               String                 @unique
+  keyHash              String                 @unique
+  scopes               String[]               @default([])
+  status               String                 @default("active")
+  lastUsedAt           DateTime?
+  expiresAt            DateTime?
+  revokedAt            DateTime?
+  createdAt            DateTime               @default(now())
+  planPausedAt         DateTime?
+  planPausedFromStatus String?
+  workspace            Workspace              @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdByMember      WorkspaceMember?       @relation("ApiKeyCreator", fields: [createdByMemberId], references: [id], onDelete: SetNull)
+  requestLogs          ApiRequestLog[]
+  idempotencyRecords   ApiIdempotencyRecord[]
 
   @@index([workspaceId, status])
   @@index([expiresAt, status])
@@ -915,23 +926,25 @@ model ApiIdempotencyRecord {
 }
 
 model WebhookEndpoint {
-  id                String            @id @default(cuid())
-  workspaceId       String
-  createdByMemberId String?
-  url               String
-  description       String?
-  secretEncrypted   String
-  secretPrefix      String
-  events            String[]          @default([])
-  status            String            @default("active")
-  failureCount      Int               @default(0)
-  lastDeliveredAt   DateTime?
-  disabledAt        DateTime?
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
-  workspace         Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  createdByMember   WorkspaceMember?  @relation("WebhookEndpointCreator", fields: [createdByMemberId], references: [id], onDelete: SetNull)
-  deliveries        WebhookDelivery[]
+  id                   String            @id @default(cuid())
+  workspaceId          String
+  createdByMemberId    String?
+  url                  String
+  description          String?
+  secretEncrypted      String
+  secretPrefix         String
+  events               String[]          @default([])
+  status               String            @default("active")
+  failureCount         Int               @default(0)
+  lastDeliveredAt      DateTime?
+  disabledAt           DateTime?
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+  planPausedAt         DateTime?
+  planPausedFromStatus String?
+  workspace            Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdByMember      WorkspaceMember?  @relation("WebhookEndpointCreator", fields: [createdByMemberId], references: [id], onDelete: SetNull)
+  deliveries           WebhookDelivery[]
 
   @@index([workspaceId, status])
 }
@@ -1050,26 +1063,28 @@ model MarketplaceVersion {
 }
 
 model MarketplaceInstall {
-  id                  String             @id @default(cuid())
-  workspaceId         String
-  listingId           String
-  versionId           String
-  installedByMemberId String?
-  installedAgentId    String?
-  status              String             @default("active")
-  setupStatus         String             @default("installed")
-  config              Json?
-  installedAt         DateTime           @default(now())
-  lastTestedAt        DateTime?
-  activatedAt         DateTime?
-  updatedAt           DateTime           @updatedAt
-  uninstalledAt       DateTime?
-  suspendedAt         DateTime?
-  statusReason        String?
-  workspace           Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  listing             MarketplaceListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
-  version             MarketplaceVersion @relation(fields: [versionId], references: [id], onDelete: Restrict)
-  installedByMember   WorkspaceMember?   @relation("MarketplaceInstaller", fields: [installedByMemberId], references: [id], onDelete: SetNull)
+  id                   String             @id @default(cuid())
+  workspaceId          String
+  listingId            String
+  versionId            String
+  installedByMemberId  String?
+  installedAgentId     String?
+  status               String             @default("active")
+  setupStatus          String             @default("installed")
+  config               Json?
+  installedAt          DateTime           @default(now())
+  lastTestedAt         DateTime?
+  activatedAt          DateTime?
+  updatedAt            DateTime           @updatedAt
+  uninstalledAt        DateTime?
+  suspendedAt          DateTime?
+  statusReason         String?
+  planPausedAt         DateTime?
+  planPausedFromStatus String?
+  workspace            Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  listing              MarketplaceListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  version              MarketplaceVersion @relation(fields: [versionId], references: [id], onDelete: Restrict)
+  installedByMember    WorkspaceMember?   @relation("MarketplaceInstaller", fields: [installedByMemberId], references: [id], onDelete: SetNull)
 
   @@unique([workspaceId, listingId])
   @@index([workspaceId, status])
@@ -1214,48 +1229,50 @@ model DailyUsage {
 }
 
 model Payment {
-  id          String    @id @default(cuid())
-  userId      String?
-  email       String
-  plan        String
-  amount      Float
-  method      String
-  txId        String?
-  status      String    @default("pending")
-  activatedAt DateTime?
-  createdAt   DateTime  @default(now())
-  user        User?     @relation(fields: [userId], references: [id])
+  id             String                 @id @default(cuid())
+  userId         String?
+  email          String
+  plan           String
+  amount         Float
+  method         String
+  txId           String?
+  status         String                 @default("pending")
+  activatedAt    DateTime?
+  createdAt      DateTime               @default(now())
+  user           User?                  @relation(fields: [userId], references: [id])
   securityCharge SecurityPaymentCharge?
-  currency String @default("USD")
+  currency       String                 @default("USD")
 }
 
 model RotatorLink {
-  id             String   @id @default(cuid())
+  id             String    @id @default(cuid())
   userId         String
-  code           String   @unique
+  code           String    @unique
   name           String
   numbers        String[]
   fallbackNumber String?
   message        String?
-  currentIdx     Int      @default(0)
-  totalClicks    Int      @default(0)
-  createdAt      DateTime @default(now())
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  currentIdx     Int       @default(0)
+  totalClicks    Int       @default(0)
+  createdAt      DateTime  @default(now())
+  planPausedAt   DateTime?
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model AdLink {
-  id          String        @id @default(cuid())
-  userId      String
-  name        String
-  number      String
-  message     String?
-  utmSource   String?
-  utmMedium   String?
-  utmCampaign String?
-  clicks      Int           @default(0)
-  createdAt   DateTime      @default(now())
-  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  clickEvents AdLinkClick[]
+  id           String        @id @default(cuid())
+  userId       String
+  name         String
+  number       String
+  message      String?
+  utmSource    String?
+  utmMedium    String?
+  utmCampaign  String?
+  clicks       Int           @default(0)
+  createdAt    DateTime      @default(now())
+  planPausedAt DateTime?
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  clickEvents  AdLinkClick[]
 }
 
 model AdLinkClick {
@@ -1267,16 +1284,17 @@ model AdLinkClick {
 }
 
 model LinktreePage {
-  id        String   @id @default(cuid())
-  userId    String
-  slug      String   @unique
-  title     String
-  bio       String?
-  color     String   @default("#25D366")
-  links     Json
-  views     Int      @default(0)
-  createdAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id           String    @id @default(cuid())
+  userId       String
+  slug         String    @unique
+  title        String
+  bio          String?
+  color        String    @default("#25D366")
+  links        Json
+  views        Int       @default(0)
+  createdAt    DateTime  @default(now())
+  planPausedAt DateTime?
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model ContactMessage {
@@ -1293,23 +1311,24 @@ model ContactMessage {
 }
 
 model SupportConversation {
-  phone         String?
-  crmLeadId     String?
+  phone             String?
+  crmLeadId         String?
   contactCapturedAt DateTime?
-  crmLead       CrmLead? @relation(fields: [crmLeadId], references: [id], onDelete: SetNull)
-  id            String               @id @default(cuid())
-  visitorId     String               @unique
-  name          String?
-  email         String?
-  subject       String               @default("Live support")
-  status        String               @default("open")
-  intent        String               @default("general")
-  leadScore     Int                  @default(0)
-  aiSummary     String?
-  lastMessageAt DateTime             @default(now())
-  createdAt     DateTime             @default(now())
-  updatedAt     DateTime             @updatedAt
-  messages      SupportChatMessage[]
+  crmLead           CrmLead?             @relation(fields: [crmLeadId], references: [id], onDelete: SetNull)
+  id                String               @id @default(cuid())
+  visitorId         String               @unique
+  name              String?
+  email             String?
+  subject           String               @default("Live support")
+  status            String               @default("open")
+  intent            String               @default("general")
+  leadScore         Int                  @default(0)
+  aiSummary         String?
+  lastMessageAt     DateTime             @default(now())
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+  messages          SupportChatMessage[]
+
   @@index([crmLeadId])
 }
 
@@ -1357,31 +1376,33 @@ model ScheduledSend {
 }
 
 model ShortLink {
-  id        String   @id @default(cuid())
-  userId    String
-  code      String   @unique
-  name      String
-  phone     String
-  message   String   @default("")
-  clicks    Int      @default(0)
-  createdAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id           String    @id @default(cuid())
+  userId       String
+  code         String    @unique
+  name         String
+  phone        String
+  message      String    @default("")
+  clicks       Int       @default(0)
+  createdAt    DateTime  @default(now())
+  planPausedAt DateTime?
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }
 
 model CatalogPage {
-  id        String         @id @default(cuid())
-  userId    String
-  slug      String         @unique
-  title     String
-  bio       String         @default("")
-  phone     String
-  items     Json
-  views     Int            @default(0)
-  createdAt DateTime       @default(now())
-  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  orders    CatalogOrder[]
+  id           String         @id @default(cuid())
+  userId       String
+  slug         String         @unique
+  title        String
+  bio          String         @default("")
+  phone        String
+  items        Json
+  views        Int            @default(0)
+  createdAt    DateTime       @default(now())
+  planPausedAt DateTime?
+  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orders       CatalogOrder[]
 
   @@index([userId])
 }
@@ -1409,142 +1430,155 @@ model CatalogOrder {
 }
 
 model CrmLead {
-  id String @id @default(cuid())
-  email String @unique
-  name String
-  phone String?
-  company String?
-  stage String @default("new")
-  source String @default("manual")
-  ownerId String?
-  value Float @default(0)
-  currency String @default("USD")
-  doNotContact Boolean @default(false)
-  tags String[] @default([])
-  marketingStatus String @default("none")
-  consentAt DateTime?
-  consentSource String?
-  consentEvidence String?
-  confirmationNonce String @default(uuid())
+  id                      String                 @id @default(cuid())
+  email                   String                 @unique
+  name                    String
+  phone                   String?
+  company                 String?
+  stage                   String                 @default("new")
+  source                  String                 @default("manual")
+  ownerId                 String?
+  value                   Float                  @default(0)
+  currency                String                 @default("USD")
+  doNotContact            Boolean                @default(false)
+  tags                    String[]               @default([])
+  marketingStatus         String                 @default("none")
+  consentAt               DateTime?
+  consentSource           String?
+  consentEvidence         String?
+  confirmationNonce       String                 @default(uuid())
   confirmationRequestedAt DateTime?
-  unsubscribedAt DateTime?
-  emailSuppressedAt DateTime?
-  suppressionReason String?
-  campaignRecipients CrmCampaignRecipient[]
-  lastActivityAt DateTime @default(now())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  activities CrmActivity[]
-  tasks CrmTask[]
-  conversations SupportConversation[]
+  unsubscribedAt          DateTime?
+  emailSuppressedAt       DateTime?
+  suppressionReason       String?
+  campaignRecipients      CrmCampaignRecipient[]
+  lastActivityAt          DateTime               @default(now())
+  createdAt               DateTime               @default(now())
+  updatedAt               DateTime               @updatedAt
+  activities              CrmActivity[]
+  tasks                   CrmTask[]
+  conversations           SupportConversation[]
+
   @@index([stage, lastActivityAt])
   @@index([ownerId])
 }
+
 model CrmActivity {
-  id String @id @default(cuid())
-  leadId String
-  kind String
-  body String
-  actorId String?
-  sourceKey String? @unique
+  id        String   @id @default(cuid())
+  leadId    String
+  kind      String
+  body      String
+  actorId   String?
+  sourceKey String?  @unique
   createdAt DateTime @default(now())
-  lead CrmLead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  lead      CrmLead  @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
   @@index([leadId, createdAt])
 }
+
 model CrmTask {
-  id String @id @default(cuid())
-  leadId String
-  title String
-  dueAt DateTime
+  id          String    @id @default(cuid())
+  leadId      String
+  title       String
+  dueAt       DateTime
   completedAt DateTime?
-  createdAt DateTime @default(now())
-  lead CrmLead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+  lead        CrmLead   @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
   @@index([completedAt, dueAt])
   @@index([leadId])
 }
 
 model CrmSegment {
-  id String @id @default(cuid())
-  name String
-  description String @default("")
-  filters Json
-  createdBy String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  campaigns CrmCampaign[]
+  id          String        @id @default(cuid())
+  name        String
+  description String        @default("")
+  filters     Json
+  createdBy   String
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  campaigns   CrmCampaign[]
 }
+
 model CrmCampaign {
-  id String @id @default(cuid())
-  name String
-  subject String
-  preheader String @default("")
-  heading String
-  body String
-  ctaLabel String @default("")
-  ctaUrl String @default("")
-  segmentId String?
-  status String @default("draft")
+  id          String                 @id @default(cuid())
+  name        String
+  subject     String
+  preheader   String                 @default("")
+  heading     String
+  body        String
+  ctaLabel    String                 @default("")
+  ctaUrl      String                 @default("")
+  segmentId   String?
+  status      String                 @default("draft")
   scheduledAt DateTime?
-  launchedAt DateTime?
+  launchedAt  DateTime?
   completedAt DateTime?
-  createdBy String
-  approvedBy String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  segment CrmSegment? @relation(fields: [segmentId], references: [id], onDelete: SetNull)
-  recipients CrmCampaignRecipient[]
+  createdBy   String
+  approvedBy  String?
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
+  segment     CrmSegment?            @relation(fields: [segmentId], references: [id], onDelete: SetNull)
+  recipients  CrmCampaignRecipient[]
+
   @@index([status, scheduledAt])
 }
+
 model CrmCampaignRecipient {
-  id String @id @default(cuid())
-  campaignId String
-  leadId String
-  email String
-  status String @default("queued")
-  attempts Int @default(0)
-  nextAttemptAt DateTime @default(now())
-  claimedAt DateTime?
-  sentAt DateTime?
-  deliveredAt DateTime?
-  openedAt DateTime?
-  clickedAt DateTime?
-  providerMessageId String? @unique
-  lastError String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  campaign CrmCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
-  lead CrmLead @relation(fields: [leadId], references: [id], onDelete: Restrict)
+  id                String      @id @default(cuid())
+  campaignId        String
+  leadId            String
+  email             String
+  status            String      @default("queued")
+  attempts          Int         @default(0)
+  nextAttemptAt     DateTime    @default(now())
+  claimedAt         DateTime?
+  sentAt            DateTime?
+  deliveredAt       DateTime?
+  openedAt          DateTime?
+  clickedAt         DateTime?
+  providerMessageId String?     @unique
+  lastError         String?
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+  campaign          CrmCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  lead              CrmLead     @relation(fields: [leadId], references: [id], onDelete: Restrict)
+
   @@unique([campaignId, leadId])
   @@index([status, nextAttemptAt])
 }
 
-
 model SecurityRateLimit {
-  key String @id
-  count Int
+  key     String   @id
+  count   Int
   resetAt DateTime @db.Timestamptz(6)
+
   @@index([resetAt], map: "SecurityRateLimit_expiry")
 }
+
 model SecurityPaymentCharge {
-  provider String
-  chargeId String
-  paymentId String @unique
-  currency String
+  provider  String
+  chargeId  String
+  paymentId String   @unique
+  currency  String
   createdAt DateTime @default(now()) @db.Timestamptz(6)
-  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+  payment   Payment  @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+
   @@id([provider, chargeId])
 }
+
 model SecurityMfa {
-  userId String @id
-  enabled Boolean @default(false)
-  secret String?
-  pending String?
+  userId           String    @id
+  enabled          Boolean   @default(false)
+  secret           String?
+  pending          String?
   pendingExpiresAt DateTime? @db.Timestamptz(6)
-  lastStep BigInt @default(-1)
-  recoveryHashes String[] @default([])
-  enabledAt DateTime? @db.Timestamptz(6)
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lastStep         BigInt    @default(-1)
+  recoveryHashes   String[]  @default([])
+  enabledAt        DateTime? @db.Timestamptz(6)
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
+
 // Verified payment events Wazap could not apply automatically (unknown user or
 // plan, refunds, chargebacks, disputes). Shown to admins until resolved.
 model BillingAttention {
@@ -1566,31 +1600,92 @@ model BillingAttention {
 }
 
 model SecurityBillingEvent {
-  provider String
-  eventId String
-  occurredAt DateTime @db.Timestamptz(6)
+  provider    String
+  eventId     String
+  occurredAt  DateTime @db.Timestamptz(6)
   processedAt DateTime @default(now()) @db.Timestamptz(6)
+
   @@id([provider, eventId])
 }
+
 model SecuritySubscriptionState {
-  provider String
+  provider       String
   subscriptionId String
-  userId String
-  occurredAt DateTime @db.Timestamptz(6)
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId         String
+  occurredAt     DateTime @db.Timestamptz(6)
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@id([provider, subscriptionId])
 }
+
 model SecurityUserBilling {
-  userId String @id
-  provider String
+  userId         String   @id
+  provider       String
   subscriptionId String
-  occurredAt DateTime @db.Timestamptz(6)
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  occurredAt     DateTime @db.Timestamptz(6)
+  autoRenew      Boolean  @default(true)
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
+
+// Billing spec 12f: scheduled/queued upgrade or downgrade between two
+// provider subscriptions. Only one pending change per user, enforced by a
+// partial unique index on (userId) WHERE status = 'pending' — Prisma schema
+// cannot express a partial index, so it only exists in the raw SQL migration.
+model BillingPlanChange {
+  id                String    @id @default(cuid())
+  userId            String
+  kind              String
+  fromPlan          String
+  toPlan            String
+  provider          String
+  oldSubscriptionId String?
+  newSubscriptionId String?
+  effectiveAt       DateTime?
+  status            String    @default("pending")
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @default(now())
+
+  @@index([userId, createdAt])
+  @@index([status, effectiveAt])
+}
+
+// Billing spec 12f: one refund per payment, admin-issued or an automatic
+// duplicate-subscription refund.
+model BillingRefund {
+  id               String   @id @default(cuid())
+  paymentId        String   @unique
+  provider         String
+  providerRefundId String?
+  amount           Float
+  currency         String
+  reason           String?
+  kind             String   @default("admin")
+  requestedBy      String?
+  status           String   @default("requested")
+  error            String?
+  createdAt        DateTime @default(now())
+
+  @@index([status, createdAt])
+}
+
+// Billing spec 12f: audit trail for every billing action (plan change,
+// refund, auto-pay toggle, admin change-plan).
+model BillingAuditLog {
+  id          String   @id @default(cuid())
+  actorUserId String?
+  userId      String
+  action      String
+  detail      Json?
+  createdAt   DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([action, createdAt])
+}
+
 model SecurityPaymentReconciliation {
-  paymentId String @id
+  paymentId          String   @id
   canonicalPaymentId String?
-  original Json
-  reason String
-  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  original           Json
+  reason             String
+  createdAt          DateTime @default(now()) @db.Timestamptz(6)
 }

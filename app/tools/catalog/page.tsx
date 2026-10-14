@@ -3,8 +3,9 @@ import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { Copy, Check, Trash2, Plus, X, Store, Eye, Loader2, Crown, ExternalLink, TrendingUp } from "lucide-react";
+import PlanPausedBadge from "@/app/components/PlanPausedBadge";
 
-interface Cat { id: string; slug: string; title: string; views: number; count: number; inquiries: number; won: number; }
+interface Cat { id: string; slug: string; title: string; views: number; count: number; inquiries: number; won: number; planPausedAt?: string | null; }
 interface Order { id: string; leadId: string | null; itemName: string; itemPrice: string; customerName: string | null; customerPhone: string | null; customerEmail: string | null; status: string; createdAt: string; catalogPage: { title: string; slug: string }; }
 interface Row { name: string; price: string; desc: string; }
 const DIALS = ["971","966","974","965","973","968","1","44","91","20","961","962"];
@@ -140,7 +141,7 @@ export default function CatalogToolPage() {
                 return (
                   <div key={c.id} className="rounded-2xl border border-slate-800 bg-[#111811] p-4 flex items-center justify-between gap-3 flex-wrap">
                     <div className="min-w-0">
-                      <div className="text-sm font-medium text-white truncate">{c.title}</div>
+                      <div className="flex items-center gap-2"><div className="text-sm font-medium text-white truncate">{c.title}</div>{c.planPausedAt && <PlanPausedBadge />}</div>
                       <a href={url} target="_blank" rel="noopener noreferrer" className="text-xs font-mono text-[#25D366] hover:underline truncate">{url.replace(/^https?:\/\//,"")}</a>
                     </div>
                     <div className="flex items-center gap-3">

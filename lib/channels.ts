@@ -60,7 +60,7 @@ export function verifyChannelSignature(encrypted: string, timestamp: string, raw
 
 export async function channelSummary(workspaceId: string) {
   const [connections, failedEvents] = await Promise.all([
-    prisma.channelConnection.findMany({ where: { workspaceId }, orderBy: { createdAt: "desc" }, select: { id: true, channel: true, provider: true, displayName: true, externalAccountId: true, status: true, capabilities: true, secretPrefix: true, webhookPathToken: true, lastVerifiedAt: true, lastEventAt: true, lastError: true, createdAt: true, _count: { select: { conversations: true, events: true } } } }),
+    prisma.channelConnection.findMany({ where: { workspaceId }, orderBy: { createdAt: "desc" }, select: { id: true, channel: true, provider: true, displayName: true, externalAccountId: true, status: true, capabilities: true, secretPrefix: true, webhookPathToken: true, lastVerifiedAt: true, lastEventAt: true, lastError: true, createdAt: true, planPausedAt: true, _count: { select: { conversations: true, events: true } } } }),
     prisma.channelEvent.count({ where: { workspaceId, status: "failed" } }),
   ]);
   return { connections, failedEvents };

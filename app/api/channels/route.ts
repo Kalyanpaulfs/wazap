@@ -41,7 +41,7 @@ export async function POST(req: Request) {
     await enqueueWebhookEvent(ctx.workspaceId, "channel.rotated", { connectionId: connection.id, channel: connection.channel, provider: connection.provider, status: connection.status, source: "workspace" });
     return NextResponse.json({ connection: { id: connection.id, endpoint: endpoint(connection.webhookPathToken), secretPrefix: connection.secretPrefix }, signingSecret: credential.secret, notice: "Copy this signing secret now. Wazap will not show it again." });
   }
-  const count = await prisma.channelConnection.count({ where: { workspaceId: ctx.workspaceId, status: { not: "disabled" } } }); const limit = CHANNEL_LIMITS[ctx.plan] || 1;
+  const count = await prisma.channelConnection.count({ where: { workspaceId: ctx.workspaceId, status: { not: "disabled" }, planPausedAt: null } }); const limit = CHANNEL_LIMITS[ctx.plan] || 1;
   if (count >= limit) return NextResponse.json({ error: `Your ${ctx.plan} plan supports ${limit} channel connection${limit === 1 ? "" : "s"}.`, upgrade: true }, { status: 403 });
   const channel = CHANNEL_TYPES.includes(body.channel) ? body.channel : "whatsapp"; const displayName = cleanInboxText(body.displayName, 80); if (!displayName) return NextResponse.json({ error: "Connection name is required." }, { status: 400 });
   const credential = createChannelCredential();
@@ -60,6 +60,7 @@ export async function PATCH(req: Request) {
   if (!rateLimit(`channels:${ctx.workspaceId}`, 20, 60_000)) return NextResponse.json({ error: "Too many channel changes. Please wait." }, { status: 429 });
   const body = await req.json().catch(() => ({})); const existing = await prisma.channelConnection.findFirst({ where: { id: String(body.id || ""), workspaceId: ctx.workspaceId } }); if (!existing) return NextResponse.json({ error: "Connection not found." }, { status: 404 });
   const requested = String(body.status || ""); const status = requested === "paused" && existing.status === "active" ? "paused" : requested === "active" && existing.status === "paused" ? "active" : null; if (!status) return NextResponse.json({ error: "Only verified connections can be paused or resumed." }, { status: 409 });
+  if (status === "active" && existing.planPausedAt) return NextResponse.json({ error: "This connection was paused automatically because it is over your plan's limit. Upgrade to turn it back on.", upgrade: true }, { status: 409 });
   const connection = await prisma.$transaction(async (tx) => {
     const changed = await tx.channelConnection.update({ where: { id: existing.id }, data: { status } });
     await tx.workspaceAuditEvent.create({ data: { workspaceId: ctx.workspaceId, eventType: status === "paused" ? "channel_paused" : "channel_resumed", actorUserId: ctx.userId, metadata: { connectionId: changed.id, displayName: changed.displayName, channel: changed.channel, provider: changed.provider } } });

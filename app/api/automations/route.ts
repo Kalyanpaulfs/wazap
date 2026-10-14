@@ -84,7 +84,7 @@ export async function POST(req: Request) {
     );
   const body = await req.json().catch(() => ({}));
   const count = await prisma.automationRule.count({
-      where: { workspaceId: ctx.workspaceId, archivedAt: null },
+      where: { workspaceId: ctx.workspaceId, archivedAt: null, planPausedAt: null },
     }),
     limit = AUTOMATION_LIMITS[ctx.plan] || 1;
   if (body.packId) {
@@ -186,6 +186,11 @@ export async function PATCH(req: Request) {
   if (!rule)
     return NextResponse.json({ error: "Rule not found." }, { status: 404 });
   const activating = body.status === "active" || body.runMode === "live";
+  if (activating && rule.planPausedAt)
+    return NextResponse.json(
+      { error: "This rule was paused automatically because it is over your plan's limit. Upgrade to turn it back on.", upgrade: true },
+      { status: 409 },
+    );
   if (activating && !["owner", "admin"].includes(ctx.role))
     return NextResponse.json(
       {

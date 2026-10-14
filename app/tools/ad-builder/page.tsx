@@ -3,8 +3,9 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Plus, Trash2, Copy, Check, BarChart2 } from "lucide-react";
 import { COUNTRIES } from "@/lib/countries";
+import PlanPausedBadge from "@/app/components/PlanPausedBadge";
 
-interface AdLink { id: string; name: string; number: string; message?: string; utmSource?: string; utmMedium?: string; utmCampaign?: string; clicks: number; createdAt: string; }
+interface AdLink { id: string; name: string; number: string; message?: string; utmSource?: string; utmMedium?: string; utmCampaign?: string; clicks: number; createdAt: string; planPausedAt?: string | null; }
 
 const UTM_FIELDS = [
   ["utmSource", "UTM Source", "facebook"],
@@ -134,7 +135,7 @@ export default function AdBuilderPage() {
                   <div key={link.id} className="rounded-2xl border border-slate-800 bg-[#111811] p-5">
                     <div className="flex items-start justify-between gap-3 flex-wrap">
                       <div>
-                        <h3 className="font-semibold text-white">{link.name}</h3>
+                        <div className="flex items-center gap-2"><h3 className="font-semibold text-white">{link.name}</h3>{link.planPausedAt && <PlanPausedBadge />}</div>
                         <p className="text-xs text-slate-500 mt-0.5">+{link.number} {link.utmSource && `· ${link.utmSource}`} {link.utmCampaign && `· ${link.utmCampaign}`}</p>
                       </div>
                       <div className="flex items-center gap-3">

@@ -2,8 +2,9 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Copy, Check, Trash2, Link2, BarChart3, Loader2, Crown } from "lucide-react";
+import PlanPausedBadge from "@/app/components/PlanPausedBadge";
 
-interface SL { id: string; code: string; name: string; phone: string; message: string; clicks: number; }
+interface SL { id: string; code: string; name: string; phone: string; message: string; clicks: number; planPausedAt?: string | null; }
 const DIALS = ["971","966","974","965","973","968","1","44","91","20","961","962"];
 
 export default function ShortLinkPage() {
@@ -106,7 +107,7 @@ export default function ShortLinkPage() {
                   <div key={l.id} className="rounded-2xl border border-slate-800 bg-[#111811] p-4">
                     <div className="flex items-center justify-between gap-3 flex-wrap">
                       <div className="min-w-0">
-                        <div className="text-sm font-medium text-white truncate">{l.name}</div>
+                        <div className="flex items-center gap-2"><div className="text-sm font-medium text-white truncate">{l.name}</div>{l.planPausedAt && <PlanPausedBadge />}</div>
                         <a href={url} target="_blank" rel="noopener noreferrer" className="text-xs font-mono text-[#25D366] hover:underline truncate">{url.replace(/^https?:\/\//,"")}</a>
                       </div>
                       <div className="flex items-center gap-3">

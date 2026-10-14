@@ -84,3 +84,63 @@ export async function paypalRequest<T>(path: string, init: RequestInit = {}) {
   }
   return data as T;
 }
+
+export type PayPalSubscriptionResponse = {
+  id?: string;
+  status?: string;
+  links?: Array<{ href: string; rel: string; method?: string }>;
+  // Present on a GET of a live subscription; used to schedule a downgrade's
+  // effectiveAt and an auto-pay-on renewal's startTime (spec 12f).
+  billing_info?: { next_billing_time?: string };
+};
+
+export function getPayPalSubscription(id: string) {
+  return paypalRequest<PayPalSubscriptionResponse>(`/v1/billing/subscriptions/${encodeURIComponent(id)}`);
+}
+
+export function cancelPayPalSubscription(id: string, reason: string) {
+  return paypalRequest<void>(`/v1/billing/subscriptions/${encodeURIComponent(id)}/cancel`, {
+    method: "POST",
+    body: JSON.stringify({ reason: reason.slice(0, 128) }),
+  });
+}
+
+export async function createPayPalSubscription(opts: {
+  planId: string; userId: string; email: string; name?: string | null; locale: string;
+  returnUrl: string; cancelUrl: string; startTime?: Date;
+}) {
+  const subscription = await paypalRequest<PayPalSubscriptionResponse>("/v1/billing/subscriptions", {
+    method: "POST",
+    headers: { Prefer: "return=representation" },
+    body: JSON.stringify({
+      plan_id: opts.planId,
+      custom_id: opts.userId,
+      quantity: "1",
+      ...(opts.startTime ? { start_time: opts.startTime.toISOString() } : {}),
+      subscriber: {
+        email_address: opts.email,
+        name: opts.name ? { given_name: opts.name.slice(0, 140) } : undefined,
+      },
+      application_context: {
+        brand_name: "Wazap",
+        locale: opts.locale,
+        shipping_preference: "NO_SHIPPING",
+        user_action: "SUBSCRIBE_NOW",
+        return_url: opts.returnUrl,
+        cancel_url: opts.cancelUrl,
+      },
+    }),
+  });
+  const approvalUrl = subscription.links?.find(link => link.rel === "approve")?.href;
+  return { id: subscription.id, approvalUrl };
+}
+
+export function refundPayPalSale(saleId: string, opts: { amount?: number; currency?: string; note?: string }) {
+  const body: Record<string, unknown> = {};
+  if (opts.note) body.note_to_payer = opts.note.slice(0, 255);
+  if (opts.amount != null && opts.currency) body.amount = { total: opts.amount.toFixed(2), currency: opts.currency };
+  return paypalRequest<{ id?: string; state?: string }>(`/v1/payments/sale/${encodeURIComponent(saleId)}/refund`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}

@@ -26,11 +26,15 @@ export async function ensurePersonalWorkspace(userId: string) {
       where: { workspaceId_userId: { workspaceId: user.activeWorkspaceId, userId } },
       include: { workspace: true },
     });
-    if (active) return active;
+    // A plan-paused member loses access to that workspace without being
+    // removed (billing spec 12g); the owner is never plan-paused. Fall
+    // through to another (non-paused) membership instead of returning a
+    // workspace they can no longer use.
+    if (active && (active.role === "owner" || !active.planPausedAt)) return active;
   }
 
   const membership = await prisma.workspaceMember.findFirst({
-    where: { userId },
+    where: { userId, planPausedAt: null },
     orderBy: { createdAt: "asc" },
     include: { workspace: true },
   });
@@ -65,7 +69,9 @@ export async function requireWorkspaceAccess(userId: string, workspaceId: string
     where: { workspaceId_userId: { workspaceId, userId } },
     include: { workspace: { include: { owner: { select: { plan: true, trialPlan: true, trialEndsAt: true } } } } },
   });
-  if (!membership || (roles && !roles.includes(membership.role))) return null;
+  // A plan-paused member loses access without being removed (billing spec
+  // 12g); the owner is never plan-paused, so this never blocks the owner.
+  if (!membership || membership.planPausedAt || (roles && !roles.includes(membership.role))) return null;
   return membership;
 }
 

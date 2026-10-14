@@ -40,6 +40,9 @@ export async function GET(req: Request) {
   if (!catalog || !Number.isInteger(itemIndex)) {
     return NextResponse.redirect(new URL("/tools/catalog", url.origin), 307);
   }
+  if (catalog.planPausedAt) {
+    return NextResponse.redirect(new URL("/link-paused?type=catalog", url.origin), 307);
+  }
   const items = (Array.isArray(catalog.items) ? catalog.items : []) as Item[];
   const item = items[itemIndex];
   if (!item?.name) return NextResponse.redirect(new URL(`/c/${slug}`, url.origin), 307);
@@ -92,6 +95,7 @@ export async function POST(req: Request) {
     include: { user: { select: { plan: true, trialPlan: true, trialEndsAt: true } } },
   });
   if (!catalog) return NextResponse.json({ error: "Catalog not found." }, { status: 404 });
+  if (catalog.planPausedAt) return NextResponse.json({ error: "This catalog is paused and is not accepting orders." }, { status: 409 });
   const membership = await ensurePersonalWorkspace(catalog.userId);
   const owner = await prisma.user.findUnique({ where: { id: membership.workspace.ownerId }, select: { plan: true, trialPlan: true, trialEndsAt: true } });
   const items = (Array.isArray(catalog.items) ? catalog.items : []) as Item[];

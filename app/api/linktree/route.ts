@@ -30,7 +30,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Linktree pages require a paid plan. Upgrade to publish your first page.", upgrade: true }, { status: 403 });
   }
   if (limit !== -1) {
-    const count = await prisma.linktreePage.count({ where: { userId } });
+    const count = await prisma.linktreePage.count({ where: { userId, planPausedAt: null } });
     if (count >= limit) {
       return NextResponse.json({ error: `Plan limit reached. Your ${plan} plan allows ${limit} page${limit !== 1 ? "s" : ""}. Upgrade for more.`, upgrade: true }, { status: 403 });
     }

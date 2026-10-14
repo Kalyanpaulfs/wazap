@@ -6,6 +6,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ code: s
   const { code } = await params;
   const link = await prisma.shortLink.findUnique({ where: { code: code.toLowerCase() } });
   if (!link) redirect("/");
+  if (link.planPausedAt) redirect("/link-paused?type=shortlink");
 
   await prisma.shortLink.update({ where: { id: link!.id }, data: { clicks: { increment: 1 } } });
   await recordConversationStart({

@@ -5,6 +5,7 @@ import { authOptions } from "@/lib/auth";
 import PricingPlans from "./PricingPlans";
 import PricingViewTracker from "./PricingViewTracker";
 import { currentSubscriptionRecord } from "@/lib/subscription-record";
+import { getBillingSummary } from "@/lib/billing-summary";
 
 export const metadata: Metadata = {
   title: "Pricing — WhatsApp Lead Router Plans",
@@ -64,9 +65,13 @@ export default async function PricingPage({
   const isLoggedIn = !!session?.user;
   const sessionUserId = (session?.user as { id?: string } | undefined)?.id;
   const activeSubscription = sessionUserId ? await currentSubscriptionRecord(sessionUserId) : null;
+  const billingPlanChangesEnabled = process.env.BILLING_PLAN_CHANGES_ENABLED === "true";
+  const billingSummary = sessionUserId ? await getBillingSummary(sessionUserId) : null;
   const userEmail = session?.user?.email ?? null;
+  // Same rule as /api/payment/dodo/create: test_mode only outside production.
   const cardCheckoutEnabled =
-    process.env.DODO_ENVIRONMENT === "live_mode" &&
+    (process.env.DODO_ENVIRONMENT === "live_mode" ||
+      (process.env.DODO_ENVIRONMENT === "test_mode" && process.env.NODE_ENV !== "production")) &&
     process.env.DODO_CHECKOUT_ENABLED === "true";
 
   return (
@@ -102,7 +107,32 @@ export default async function PricingPage({
             </div>
           </div>
 
-          <PricingPlans isLoggedIn={isLoggedIn} userEmail={userEmail} cardCheckoutEnabled={cardCheckoutEnabled} selectedPlan={selectedPlan} activeSubscriptionPlan={activeSubscription?.plan || null} />
+          <PricingPlans
+            isLoggedIn={isLoggedIn}
+            userEmail={userEmail}
+            cardCheckoutEnabled={cardCheckoutEnabled}
+            selectedPlan={selectedPlan}
+            activeSubscriptionPlan={activeSubscription?.plan || null}
+            billingPlanChangesEnabled={billingPlanChangesEnabled}
+            billing={
+              billingSummary
+                ? {
+                    plan: billingSummary.plan,
+                    accessActive: billingSummary.accessActive,
+                    renewsOrExpiresAt: billingSummary.renewsOrExpiresAt ? billingSummary.renewsOrExpiresAt.toISOString() : null,
+                    autoRenew: billingSummary.autoRenew,
+                    hasSubscription: billingSummary.hasSubscription,
+                    pendingChange: billingSummary.pendingChange
+                      ? {
+                          kind: billingSummary.pendingChange.kind,
+                          toPlan: billingSummary.pendingChange.toPlan,
+                          effectiveAt: billingSummary.pendingChange.effectiveAt ? billingSummary.pendingChange.effectiveAt.toISOString() : null,
+                        }
+                      : null,
+                  }
+                : null
+            }
+          />
 
           <div className="mt-10 rounded-2xl border border-slate-800 bg-[#111811] p-6 text-center">
             <h2 className="text-xl font-semibold text-white">Paid plans keep your routing links active beyond the free allowance</h2>
