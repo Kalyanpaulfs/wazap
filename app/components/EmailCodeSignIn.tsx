@@ -11,6 +11,7 @@ export default function EmailCodeSignIn({ mode, redirect }: { mode: "login" | "s
   const [step, setStep] = useState<"email" | "code">("email");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [marketing, setMarketing] = useState(false);
   const [code, setCode] = useState("");
   const [otp, setOtp] = useState("");
   const [needsOtp, setNeedsOtp] = useState(false);
@@ -51,7 +52,7 @@ export default function EmailCodeSignIn({ mode, redirect }: { mode: "login" | "s
     setError("");
     try {
       const attribution = (() => { try { return sessionStorage.getItem("wazap:attribution") || ""; } catch { return ""; } })();
-      const res = await signIn("email-code", { email: email.trim(), code: code.trim(), otp: otp.trim(), name: name.trim(), attribution, redirect: false });
+      const res = await signIn("email-code", { email: email.trim(), code: code.trim(), otp: otp.trim(), name: name.trim(), attribution, marketing: mode === "signup" ? String(marketing) : "false", redirect: false });
       if (res?.error === "MFA_REQUIRED") { setNeedsOtp(true); setNotice("This account uses two-factor authentication. Enter your authenticator or recovery code."); return; }
       if (res?.error === "MFA_INVALID") { setNeedsOtp(true); setError("That authenticator code is not valid. Try the next code from your app."); return; }
       if (res?.error?.startsWith("CODE_WRONG:")) {
@@ -83,6 +84,12 @@ export default function EmailCodeSignIn({ mode, redirect }: { mode: "login" | "s
         <input id="auth-email" name="email" autoComplete="email" type="email" required maxLength={320} value={email} onChange={e => setEmail(e.target.value)} className={input} placeholder="you@example.com" />
       </div>
       <p className="text-xs leading-5 text-slate-500">No password needed. We&apos;ll email you a 6-digit code.</p>
+      {mode === "signup" && (
+        <label className="flex items-start gap-2.5 text-xs leading-5 text-slate-400">
+          <input type="checkbox" checked={marketing} onChange={e => setMarketing(e.target.checked)} className="mt-0.5 h-4 w-4 rounded border-slate-700 bg-slate-900 accent-[#25D366]" />
+          <span>Send me early access to new features and member-only offers. You can stop anytime.</span>
+        </label>
+      )}
       {error && <p role="alert" className="text-xs text-red-400">{error}</p>}
       <button type="submit" disabled={loading || !email.trim()} className={button}>{loading ? "Sending code..." : "Email me a code"}</button>
     </form>

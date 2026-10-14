@@ -3,7 +3,7 @@
 import { useCallback, useState } from "react";
 import Link from "next/link";
 import EmailCodeConfirm from "@/app/components/EmailCodeConfirm";
-import { Download, RotateCcw, ShieldAlert, Trash2 } from "lucide-react";
+import { Download, Mail, RotateCcw, ShieldAlert, Trash2 } from "lucide-react";
 
 export type Lifecycle = {
   requestedAt: string | null;
@@ -15,12 +15,37 @@ export type Lifecycle = {
   };
 };
 
-export default function AccountClient({ initial }: { initial: Lifecycle }) {
+export type MarketingPreference = { subscribed: boolean; locked: boolean };
+
+export default function AccountClient({ initial, marketing }: { initial: Lifecycle; marketing: MarketingPreference }) {
   const [data, setData] = useState<Lifecycle>(initial);
   const [emailCode, setEmailCode] = useState("");
   const [confirmation, setConfirmation] = useState("");
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
+  const [subscribed, setSubscribed] = useState(marketing.subscribed);
+  const [marketingBusy, setMarketingBusy] = useState(false);
+  const [marketingNotice, setMarketingNotice] = useState("");
+
+  async function toggleMarketing() {
+    const wanted = !subscribed;
+    setMarketingBusy(true);
+    setMarketingNotice("");
+    try {
+      const response = await fetch("/api/account/marketing-consent", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ wanted }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) { setMarketingNotice(result.error || "Could not update this preference."); return; }
+      setSubscribed(wanted);
+    } catch {
+      setMarketingNotice("We couldn't reach Wazap. Please try again.");
+    } finally {
+      setMarketingBusy(false);
+    }
+  }
   const load = useCallback(async () => {
     const response = await fetch("/api/account/lifecycle", { cache: "no-store" });
     if (response.status === 401) {
@@ -73,6 +98,27 @@ export default function AccountClient({ initial }: { initial: Lifecycle }) {
           >
             Download JSON export
           </a>
+        </section>
+
+        <section className="mt-6 rounded-3xl border border-slate-800 bg-[#111811] p-6">
+          <Mail className="h-6 w-6 text-[#25D366]" />
+          <h2 className="mt-3 text-xl font-bold text-white">Email preferences</h2>
+          <div className="mt-4 flex items-center justify-between gap-4">
+            <span className="text-sm font-medium text-white">Product news and offers by email</span>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={subscribed}
+              disabled={marketingBusy || marketing.locked}
+              onClick={toggleMarketing}
+              className={`relative h-6 w-11 shrink-0 rounded-full transition-colors disabled:opacity-40 ${subscribed ? "bg-[#25D366]" : "bg-slate-700"}`}
+            >
+              <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform ${subscribed ? "translate-x-5" : "translate-x-0.5"}`} />
+            </button>
+          </div>
+          <p className="mt-2 text-xs leading-5 text-slate-500">Login codes, receipts and billing emails are always sent.</p>
+          {marketing.locked && <p className="mt-2 text-xs text-amber-300">This address can&apos;t be re-subscribed automatically. Contact support.</p>}
+          {marketingNotice && <p role="status" className="mt-2 text-sm text-slate-300">{marketingNotice}</p>}
         </section>
 
         <section className="mt-6 rounded-3xl border border-red-500/20 bg-red-500/5 p-6">

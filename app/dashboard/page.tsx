@@ -34,7 +34,9 @@ import { notifySupportReplySeen } from "@/lib/support-notify";
 import ToolShortcuts from "./ToolShortcuts";
 import SetupGuide from "../product/SetupGuide";
 import UpgradeSuccessBanner from "./UpgradeSuccessBanner";
+import DashboardConsentBanner from "./DashboardConsentBanner";
 import BillingManager from "./BillingManager";
+import { shouldShowConsentBanner } from "@/lib/marketing-consent";
 import { currentSubscriptionRecord } from "@/lib/subscription-record";
 import { getBillingSummary } from "@/lib/billing-summary";
 import {
@@ -115,6 +117,7 @@ export default async function DashboardPage({
     savedLeadCount,
     followUpCount,
     billingSummary,
+    marketingLead,
   ] = await Promise.all([
     prisma.user.findUnique({ where: { id: userId } }),
     prisma.dailyUsage.findUnique({
@@ -150,7 +153,10 @@ export default async function DashboardPage({
     prisma.lead.count({where:{userId}}),
     prisma.lead.count({where:{userId,nextFollowUpAt:{not:null}}}),
     getBillingSummary(userId),
+    prisma.crmLead.findUnique({ where: { email: userEmail }, select: { marketingStatus: true, doNotContact: true, emailSuppressedAt: true } }),
   ]);
+
+  const showConsentBanner = shouldShowConsentBanner({ isAdmin: sessionUser.isAdmin, marketingOptOutAt: user?.marketingOptOutAt ?? null, lead: marketingLead });
 
   let plan = effectivePlan(user) || sessionPlan;
   if (user && isPlanExpired(plan, user.planExpiresAt)) {
@@ -353,6 +359,7 @@ export default async function DashboardPage({
       <main className="wp-overview px-4 py-7 sm:px-7 sm:py-9">
         <div className="mx-auto max-w-7xl space-y-6">
           {justUpgraded && <UpgradeSuccessBanner plan={user?.plan || "free"} expiresAt={user?.planExpiresAt?.toISOString() || null} expectedPlan={params.plan} change={params.change} />}
+          <DashboardConsentBanner initialShow={showConsentBanner} />
 
 
           <header className="wp-overview-heading"><div><p className="wp-eyebrow">YOUR BUSINESS WORKSPACE</p><h1>Overview</h1><p>Keep your conversations moving. Start with what needs your attention.</p></div><Link prefetch={false} href="/tools/follow-up" className="wp-primary">Open leads <ArrowRight size={16}/></Link></header>

@@ -13,6 +13,7 @@ import { requestIp } from "./request-ip";
 import { checkEmailCodeDetailed, consumeEmailCode, ipBlockedForCodes, normalizeEmail, recordWrongCode } from "./email-code";
 import { cleanAttribution, createVerifiedAccount } from "./account-create";
 import { readPartnerTouchCookie } from "./partner-attribution";
+import { CONSENT_WORDING } from "./marketing-consent";
 
 export const TRIAL_DAYS = 30;
 
@@ -82,6 +83,7 @@ export const authOptions: NextAuthOptions = {
         otp: { label: "Authenticator or recovery code", type: "text" },
         name: { label: "Name", type: "text" },
         attribution: { label: "Attribution", type: "text" },
+        marketing: { label: "Marketing opt-in", type: "text" },
       },
       async authorize(credentials, req) {
         const email = normalizeEmail(credentials?.email);
@@ -116,6 +118,9 @@ export const authOptions: NextAuthOptions = {
             name: String(credentials.name || "").trim().slice(0, 100) || null,
             attribution: cleanAttribution(credentials.attribution),
             partnerTouchToken: readPartnerTouchCookie(new Request("https://wazap.lt", { headers: requestHeaders })),
+            marketingConsent: credentials.marketing === "true"
+              ? { wording: CONSENT_WORDING.signup_checkbox, ip, userAgent: requestHeaders.get("user-agent") }
+              : undefined,
           });
         } else if (!user.emailVerifiedAt) {
           // First proof of ownership for a legacy account: remove any password

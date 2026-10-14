@@ -5,8 +5,14 @@ import { renderWelcomeEmail } from "./email";
 import { newProductTrial, PRODUCT_TRIAL_DAYS, PRODUCT_TRIAL_PLAN } from "./entitlements";
 import { enqueueWebhookEvent } from "./developer-platform";
 import { PARTNER_ATTRIBUTION_WINDOW_DAYS, PARTNER_TERMS_VERSION, partnerTokenHash } from "./partner-attribution";
+import { grantMarketingConsent } from "./marketing-consent";
 
 export type SignupAttribution = { source: string; medium: string; campaign: string; content: string; term: string; gclid: string; landingPage: string };
+
+// FEAT-CONSENT: only set when the signup form's (unticked by default) "send
+// me product news" checkbox was ticked. Recorded only once the account is
+// actually created below - an unticked box records nothing at all.
+export type SignupMarketingConsent = { wording: string; ip: string | null; userAgent: string | null };
 
 export function cleanAttribution(value: unknown): SignupAttribution | null {
   let input = value;
@@ -19,12 +25,24 @@ export function cleanAttribution(value: unknown): SignupAttribution | null {
 
 // Creates a verified account with its personal workspace and trial. Called only
 // after the email address was proven with a one-time code.
-export async function createVerifiedAccount(opts: { email: string; name: string | null; attribution: SignupAttribution | null; partnerTouchToken: string }) {
-  const { email, name, attribution, partnerTouchToken } = opts;
+export async function createVerifiedAccount(opts: { email: string; name: string | null; attribution: SignupAttribution | null; partnerTouchToken: string; marketingConsent?: SignupMarketingConsent }) {
+  const { email, name, attribution, partnerTouchToken, marketingConsent } = opts;
   const createdAccount = await prisma.$transaction(async (tx) => {
     const created = await tx.user.create({ data: { email, name, emailVerifiedAt: new Date(), ...newProductTrial() } });
     const crmLead = await captureCrmLead(tx, { name: created.name || created.email, email: created.email, source: "signup" });
     await tx.crmActivity.create({ data: { leadId: crmLead.id, kind: "signup", body: "Wazap account created.", sourceKey: `signup:${created.id}` } });
+    // Only once the account is verified/created, and only if the box was ticked.
+    if (marketingConsent) {
+      await grantMarketingConsent(tx, {
+        userId: created.id,
+        email: created.email,
+        name: created.name,
+        source: "signup_checkbox",
+        wording: marketingConsent.wording,
+        ip: marketingConsent.ip,
+        userAgent: marketingConsent.userAgent,
+      });
+    }
     const workspace = await tx.workspace.create({
       data: {
         name: `${String(name || email.split("@")[0]).trim().slice(0, 70)}'s workspace`,
