@@ -39,7 +39,7 @@ export const growthArticles: GrowthArticle[] = [
         "heading": "Run a small pilot before expanding",
         "paragraphs": [
           "Use your first 25 routed handoffs per account to validate the setup. The allowance spans all your rotators and does not reset daily. Public paid routing plans start at Solo $9/month; Growth is $19/month and Agency is $49/month.",
-          "The 14-day Growth workspace trial is a separate product entitlement. Connected inbox workflows can store conversation data; simple link routing does not read the WhatsApp messages. Decide which workflow your team actually needs before connecting a channel."
+          "The 3-day Solo trial is a separate product entitlement. Simple link routing records a handoff attempt only; it does not read the content of the resulting WhatsApp messages."
         ]
       }
     ],
@@ -81,8 +81,8 @@ export const growthArticles: GrowthArticle[] = [
       {
         "heading": "Choose a plan for the workflow you manage",
         "paragraphs": [
-          "The public plans are Solo $9/month, Growth $19/month and Agency $49/month. Agency includes unlimited rotators and a shared workspace for up to five members; confirm current details on the pricing page before proposing a package.",
-          "The free router allowance is 25 handoffs per account across all rotators, for the lifetime of the allowance. The separate 14-day workspace trial does not grant unlimited router handoffs. Never promise a client autonomous message sending or delivery confirmation from a simple routing link."
+          "The public plans are Solo $9/month, Growth $19/month and Agency $49/month. Agency includes up to 25 rotators and a shared workspace for up to five members; confirm current details on the pricing page before proposing a package.",
+          "The free router allowance is 25 handoffs per account across all rotators, for the lifetime of the allowance. The separate 3-day workspace trial does not grant unlimited router handoffs. Never promise a client autonomous message sending or delivery confirmation from a simple routing link."
         ]
       }
     ],
@@ -97,13 +97,13 @@ export const growthArticles: GrowthArticle[] = [
     "category": "guides",
     "slug": "one-whatsapp-link-multiple-numbers",
     "title": "How to Use One WhatsApp Link for Multiple Numbers",
-    "description": "Choose between a customer-selected team page and an automatically rotating WhatsApp link, then test the handoff before publishing.",
+    "description": "Set up an automatically rotating WhatsApp link across your team, then test the handoff before publishing.",
     "sections": [
       {
-        "heading": "Choose who decides the destination",
+        "heading": "Decide when rotation fits",
         "paragraphs": [
-          "A direct wa.me link has one destination number. To offer several numbers, you need an intermediate page or router. Wazap’s Linktree lets customers select a contact or department; its Link Rotator chooses a configured destination for the handoff.",
-          "Use customer selection when visitors know whether they need sales, support or billing. Use rotation when the same enquiry can be handled by any member of a destination team. A router cannot determine specialist suitability or real-time availability."
+          "A direct wa.me link has one destination number. To offer several numbers, you need a router that rotates between configured destinations. Wazap’s Link Rotator chooses a configured destination for each handoff.",
+          "Use rotation when the same enquiry can be handled by any member of a destination team — for example, a sales or support group where any available member can respond. A router cannot determine specialist suitability or real-time availability."
         ]
       },
       {
@@ -117,20 +117,19 @@ export const growthArticles: GrowthArticle[] = [
         "heading": "Publish it in the right places",
         "paragraphs": [
           "Use the verified public URL on the campaign landing page, business profile or printed QR code. Keep one person responsible for the destination list and test it after an agent leaves or a number changes.",
-          "For a departmental selection page, use the Linktree tool instead and label each contact clearly. Do not use an automatic sales rotator for emergencies or enquiries that require a specific named adviser."
+          "Do not use an automatic rotator for emergencies or enquiries that require a specific named adviser — route those through a direct link instead."
         ]
       },
       {
         "heading": "Know what the activity means",
         "paragraphs": [
           "A routed handoff is an attempt to open a destination in WhatsApp, not a confirmed sent message or customer response. Keep messaging and sales outcomes separate.",
-          "Wazap provides 25 routed handoffs free per account across all rotators. Paid routing starts at $9/month. Simple routing does not require connecting a WhatsApp Business API channel, but shared inbox delivery workflows are a separate integration choice."
+          "Wazap provides 25 routed handoffs free per account across all rotators. Paid routing starts at $9/month. Simple routing does not require connecting a WhatsApp Business API channel."
         ]
       }
     ],
     "related": [
       "/tools/rotator",
-      "/tools/linktree",
       "/solutions/real-estate",
       "/guides/whatsapp-round-robin-routing"
     ],
@@ -168,61 +167,18 @@ export const growthArticles: GrowthArticle[] = [
       {
         "heading": "Use rotation inside a wider sales process",
         "paragraphs": [
-          "Assign coverage hours, agree response expectations and record confirmed enquiries in a CRM. Use appointment and sales outcomes to judge the workflow. If you need assignment after messages arrive, conversation ownership or delivery receipts, evaluate a connected shared inbox.",
-          "The free allowance is 25 handoffs per account, not per link or per day. The 14-day Growth workspace trial is separate. Paid routing plans start at $9/month; see pricing for current limits."
+          "Assign coverage hours, agree response expectations and record confirmed enquiries in a CRM. Use appointment and sales outcomes to judge the workflow.",
+          "The free allowance is 25 handoffs per account, not per link or per day. The 3-day Solo trial is separate. Paid routing plans start at $9/month; see pricing for current limits."
         ]
       }
     ],
     "related": [
       "/tools/rotator",
       "/guides/one-whatsapp-link-multiple-numbers",
-      "/guides/router-vs-shared-inbox",
       "/guides/whatsapp-campaign-tracking"
     ],
     "sources": [],
     "reviewedAt": "2026-10-10"
-  },
-  {
-    "category": "guides",
-    "slug": "router-vs-shared-inbox",
-    "title": "WhatsApp Link Router vs Shared Inbox: Which Do You Need?",
-    "description": "Compare a lightweight click-to-chat router with a connected team inbox, including message access, attribution and delivery evidence.",
-    "sections": [
-      {
-        "heading": "Start with the moment you need to control",
-        "paragraphs": [
-          "A link router makes a decision before the conversation: which configured WhatsApp number should receive this handoff? It is useful for a shared campaign entry point and rotation across existing numbers.",
-          "A shared inbox manages conversation work after messages enter a connected channel. Depending on the supported integration, it can provide shared history, assignments, internal notes and delivery evidence. Connection requirements and permissions matter."
-        ]
-      },
-      {
-        "heading": "Compare the data each workflow needs",
-        "paragraphs": [
-          "Simple routing records destination and handoff activity. It does not read the content a customer sends inside WhatsApp. A connected inbox can store messages and conversation records so authorized team members can work together.",
-          "Before connecting a channel, read the privacy policy, check who can access messages and choose a retention and permission process appropriate for your business. Do not describe every Wazap feature as storing no conversations."
-        ]
-      },
-      {
-        "heading": "Do not confuse a recorded action with delivery",
-        "paragraphs": [
-          "Opening WhatsApp is a handoff. A manually recorded reply is a team record. A confirmed sent or delivered message requires evidence from a supported messaging provider. These are different events.",
-          "Wazap’s AI and inbox workflows require the corresponding provider and workspace controls for autonomous sending. A draft, approval or queued action is not proof that a customer received a message."
-        ]
-      },
-      {
-        "heading": "Choose the smaller workflow that solves the problem",
-        "paragraphs": [
-          "Choose a router if you need one campaign link distributing interest across existing numbers. Choose a connected inbox if the team needs to manage conversation history and ownership in one workspace. Start with a small operational pilot and measure confirmed outcomes.",
-          "The router offers 25 free lifetime handoffs per account. The 14-day Growth workspace trial is separate and does not make routing unlimited. Check current pricing and supported connections before committing to a rollout."
-        ]
-      }
-    ],
-    "related": [
-      "/guides/whatsapp-round-robin-routing",
-      "/whatsapp-team-inbox",
-      "/privacy"
-    ],
-    "sources": []
   },
   {
     "category": "guides",
@@ -291,7 +247,7 @@ export const growthArticles: GrowthArticle[] = [
       {
         "heading": "Compare total cost using the same assumptions",
         "paragraphs": [
-          "Wazap’s public monthly plans are Solo $9, Growth $19 and Agency $49. The free router allowance is 25 lifetime handoffs per account. The separate Growth workspace trial does not make routing unlimited.",
+          "Wazap’s public monthly plans are Solo $9, Growth $19 and Agency $49. The free router allowance is 25 lifetime handoffs per account. The separate 3-day Solo trial raises this to 100 routed leads while it lasts; it does not make routing unlimited.",
           "Calculate the cost for your actual number of links, destinations, traffic and collaborators. This page does not reproduce a changing Linkly price table; open the vendor’s current pricing before deciding."
         ]
       },
@@ -336,7 +292,7 @@ export const growthArticles: GrowthArticle[] = [
         "heading": "Compare paid plans and the operational workflow",
         "paragraphs": [
           "At review, WasepJe advertised Pro at $7.50 per month when billed annually at $90. Wazap’s public monthly plans are Solo $9, Growth $19 and Agency $49. Compare billing intervals and cancellation terms rather than treating these headline prices as identical offers.",
-          "For Wazap, evaluate the router alongside links, QR codes and optional workspace workflows. Agency includes unlimited rotators and a shared workspace for up to five members. Choose additional features only when you need them."
+          "For Wazap, evaluate the router alongside links, QR codes and optional workspace workflows. Agency includes up to 25 rotators and a shared workspace for up to five members. Choose additional features only when you need them."
         ]
       },
       {

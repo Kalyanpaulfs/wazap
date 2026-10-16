@@ -20,13 +20,19 @@ export default function ShortLinkPage() {
   const [upgrade, setUpgrade] = useState(false);
   const [copied, setCopied] = useState("");
   const [origin, setOrigin] = useState("https://wazap.lt");
+  const [limit, setLimit] = useState<number | null>(null);
+  const [planLabel, setPlanLabel] = useState("");
 
   useEffect(() => { setOrigin(window.location.origin); load(); }, []);
   async function load() {
     try {
       const res = await fetch("/api/shortlinks");
-      if (res.ok) setLinks(await res.json());
-      else if (res.status !== 401) throw new Error("Saved items could not be loaded. Try reloading the page.");
+      if (res.ok) {
+        const data = await res.json();
+        setLinks(data.links ?? []);
+        setLimit(typeof data.limit === "number" ? data.limit : null);
+        setPlanLabel(data.planLabel ?? "");
+      } else if (res.status !== 401) throw new Error("Saved items could not be loaded. Try reloading the page.");
     } catch (e) { setError(e instanceof Error ? e.message : "Saved items could not be loaded."); }
     finally { setLoading(false); }
   }
@@ -94,6 +100,12 @@ export default function ShortLinkPage() {
             </div>
             {error && <p role="alert" className="text-sm text-red-400">{error} {upgrade && <Link href="/pricing" className="underline text-[#25D366]">Upgrade →</Link>}</p>}
             <button onClick={create} disabled={creating} className="w-full inline-flex items-center justify-center gap-2 rounded-full bg-[#25D366] hover:bg-[#1fba58] disabled:opacity-50 py-3 text-sm font-bold text-black transition-colors">{creating ? <Loader2 className="h-4 w-4 animate-spin" /> : null} Create short link</button>
+            {limit !== null && (
+              <p className="text-xs text-slate-500">
+                {links.length} of {limit === 0 ? "0 (not in your plan)" : limit} short links on your {planLabel} plan
+                {links.length >= limit && <> · <Link href="/pricing" className="text-[#25D366] underline">Upgrade for more</Link></>}
+              </p>
+            )}
           </div>
 
           {/* List */}

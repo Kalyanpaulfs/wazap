@@ -3,15 +3,14 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { TOOL_LIMITS } from "@/lib/tool-access";
 import { recordFunnelEvent } from "@/lib/funnel";
 import { cacheRoute, removeCachedRoute } from "@/lib/routing-cache";
-import { routerPlan, routerQuota } from "@/lib/router-entitlements";
+import { routerQuota, linkPlan } from "@/lib/router-entitlements";
+import { rotatorLimit, numbersPerRotatorLimit, numbersPatchAllowed, PLAN_DISPLAY_NAME, normalizePlanKey } from "@/lib/plan-limits";
+import { normalizeNumberNames } from "@/lib/salesperson-names";
 
 function getLimit(plan: string) {
-  const limits = TOOL_LIMITS.rotator;
-  if (plan === "business") plan = "ultimate";
-  return (limits[plan as keyof typeof limits] ?? limits.free).uses;
+  return rotatorLimit(plan);
 }
 
 function genCode() { return randomBytes(5).toString("hex").toUpperCase(); }
@@ -45,6 +44,10 @@ export async function GET() {
     if (start.destination) entry.destinations[start.destination] = (entry.destinations[start.destination] ?? 0) + 1;
     analytics.set(start.assetId, entry);
   }
+  // Lead quota (routerQuota/routerPlan) stays paid-only, no trial boost -
+  // how many rotators/numbers-per-rotator a user may HAVE is a separate,
+  // trial-boosted question (lib/router-entitlements.ts linkPlan).
+  const plan = linkPlan(user);
   return NextResponse.json({
     rotators: rotators.map((rotator) => ({
       ...rotator,
@@ -52,6 +55,7 @@ export async function GET() {
       destinationClicks: analytics.get(rotator.id)?.destinations ?? {},
     })),
     quota: routerQuota(user, lifetimeStarts),
+    limits: { plan, planLabel: PLAN_DISPLAY_NAME[normalizePlanKey(plan)], rotators: getLimit(plan), numbersPerRotator: numbersPerRotatorLimit(plan) },
   });
 }
 
@@ -64,29 +68,32 @@ export async function POST(req: Request) {
     where: { id: userId },
     select: { plan: true, planExpiresAt: true, trialPlan: true, trialEndsAt: true, createdAt: true },
   });
-  const plan = routerPlan(entitlementUser);
+  const plan = linkPlan(entitlementUser);
   const limit = getLimit(plan);
 
   if (limit === 0) {
     return NextResponse.json({ error: "Rotators require a paid plan. Upgrade to create your first rotator.", upgrade: true }, { status: 403 });
   }
-  if (limit !== -1) {
-    const count = await prisma.rotatorLink.count({ where: { userId, planPausedAt: null } });
-    if (count >= limit) {
-      return NextResponse.json({ error: `Plan limit reached. Your ${plan} plan allows ${limit} rotator${limit !== 1 ? "s" : ""}. Upgrade for more.`, upgrade: true }, { status: 403 });
-    }
+  const count = await prisma.rotatorLink.count({ where: { userId, planPausedAt: null } });
+  if (count >= limit) {
+    return NextResponse.json({ error: `Plan limit reached. Your ${PLAN_DISPLAY_NAME[normalizePlanKey(plan)]} plan allows ${limit} rotator${limit !== 1 ? "s" : ""}. Upgrade for more.`, upgrade: true }, { status: 403 });
   }
 
   const body = await req.json().catch(() => null);
   if (!body || typeof body !== "object" || typeof body.name !== "string" || !body.name.trim() || !Array.isArray(body.numbers) || !body.numbers.length || body.numbers.some((number: unknown) => typeof number !== "string")) {
     return NextResponse.json({ error: "Add a router name and a list of WhatsApp numbers." }, { status: 400 });
   }
-  const { name, numbers, fallbackNumber, message } = body;
+  const { name, numbers, fallbackNumber, message, numberNames } = body;
   const cleanNumbers = (numbers as unknown[]).map(number => String(number).replace(/\D/g, "")).filter(number => number.length >= 8).slice(0, 100);
   const cleanFallback = String(fallbackNumber ?? "").replace(/\D/g, "");
   if (!cleanNumbers.length) return NextResponse.json({ error: "Add at least one valid WhatsApp number." }, { status: 400 });
+  const numberLimit = numbersPerRotatorLimit(plan);
+  if (cleanNumbers.length > numberLimit) {
+    return NextResponse.json({ error: `Your ${PLAN_DISPLAY_NAME[normalizePlanKey(plan)]} plan allows ${numberLimit} numbers per rotator. Upgrade to add more.`, upgrade: true }, { status: 403 });
+  }
+  const cleanNumberNames = normalizeNumberNames(numberNames, cleanNumbers);
   const code = await uniqueCode();
-  const rotator = await prisma.rotatorLink.create({ data: { userId, name: String(name).slice(0, 100), numbers: cleanNumbers, fallbackNumber: cleanFallback.length >= 8 ? cleanFallback : cleanNumbers[0], message: typeof message === "string" ? message.slice(0, 2000) : null, code } });
+  const rotator = await prisma.rotatorLink.create({ data: { userId, name: String(name).slice(0, 100), numbers: cleanNumbers, numberNames: cleanNumberNames, fallbackNumber: cleanFallback.length >= 8 ? cleanFallback : cleanNumbers[0], message: typeof message === "string" ? message.slice(0, 2000) : null, code } });
   await cacheRoute({ code: rotator.code, numbers: rotator.numbers, fallbackNumber: rotator.fallbackNumber, currentIdx: rotator.currentIdx, message: rotator.message });
   await recordFunnelEvent("first_tool_success", { userId, source: "rotator" });
   return NextResponse.json(rotator);
@@ -113,7 +120,7 @@ export async function PATCH(req: Request) {
   if (!body || typeof body.id !== "string") return NextResponse.json({ error: "Choose a rotator." }, { status: 400 });
   const existing = await prisma.rotatorLink.findFirst({ where: { id: body.id, userId } });
   if (!existing) return NextResponse.json({ error: "Rotator not found." }, { status: 404 });
-  const data: { name?: string; numbers?: string[]; fallbackNumber?: string; message?: string } = {};
+  const data: { name?: string; numbers?: string[]; numberNames?: Record<string, string>; fallbackNumber?: string; message?: string } = {};
   if (body.name !== undefined) {
     if (typeof body.name !== "string" || !body.name.trim() || body.name.length > 100) return NextResponse.json({ error: "Enter a name of up to 100 characters." }, { status: 400 });
     data.name = body.name.trim();
@@ -121,11 +128,33 @@ export async function PATCH(req: Request) {
   if (body.numbers !== undefined) {
     if (!Array.isArray(body.numbers) || !body.numbers.length || body.numbers.length > 100 || body.numbers.some((n: unknown) => typeof n !== "string" || !/^\+?[1-9][0-9]{7,14}$/.test(n))) return NextResponse.json({ error: "Use international numbers with 8–15 digits, one per line." }, { status: 400 });
     data.numbers = [...new Set<string>(body.numbers.map((n: string) => n.replace(/^\+/, "")))];
+    // Grandfathering: a PATCH that keeps or reduces the number count is
+    // always allowed, even for a legacy rotator already over the new
+    // per-plan limit. Only an increase that crosses the limit is blocked.
+    const entitlementUser = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { plan: true, planExpiresAt: true, trialPlan: true, trialEndsAt: true, createdAt: true },
+    });
+    const plan = linkPlan(entitlementUser);
+    const numberLimit = numbersPerRotatorLimit(plan);
+    if (!numbersPatchAllowed(existing.numbers.length, data.numbers.length, numberLimit)) {
+      return NextResponse.json({ error: `Your ${PLAN_DISPLAY_NAME[normalizePlanKey(plan)]} plan allows ${numberLimit} numbers per rotator. Upgrade to add more.`, upgrade: true }, { status: 403 });
+    }
   }
   if (body.fallbackNumber !== undefined) {
     if (typeof body.fallbackNumber !== "string" || (body.fallbackNumber && !/^\+?[1-9][0-9]{7,14}$/.test(body.fallbackNumber))) return NextResponse.json({ error: "Enter a valid international fallback number." }, { status: 400 });
     data.fallbackNumber = body.fallbackNumber.replace(/^\+/, "") || (data.numbers || existing.numbers)[0];
   } else if (data.numbers && !data.numbers.includes(existing.fallbackNumber || "")) data.fallbackNumber = data.numbers[0];
+  if (body.numberNames !== undefined) {
+    if (body.numberNames === null || typeof body.numberNames !== "object" || Array.isArray(body.numberNames)) {
+      return NextResponse.json({ error: "Salesperson names must be an object mapping number to name." }, { status: 400 });
+    }
+    data.numberNames = normalizeNumberNames(body.numberNames, data.numbers || existing.numbers);
+  } else if (data.numbers) {
+    // Numbers changed but no explicit numberNames supplied: prune any names
+    // that belonged to numbers no longer on this rotator.
+    data.numberNames = normalizeNumberNames(existing.numberNames, data.numbers);
+  }
   if (body.message !== undefined) {
     if (typeof body.message !== "string" || body.message.length > 2000) return NextResponse.json({ error: "Messages may contain up to 2,000 characters." }, { status: 400 });
     data.message = body.message;

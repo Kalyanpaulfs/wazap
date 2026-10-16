@@ -12,12 +12,12 @@ const securityHeaders = [
     key: "Content-Security-Policy",
     value: [
       "default-src 'self'",
-      `script-src 'self' 'unsafe-inline'${process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : ""} https://www.googletagmanager.com https://connect.facebook.net https://embed.tawk.to https://*.tawk.to`,
-      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://embed.tawk.to",
-      "font-src 'self' https://fonts.gstatic.com https://embed.tawk.to",
+      `script-src 'self' 'unsafe-inline'${process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : ""} https://www.googletagmanager.com https://connect.facebook.net`,
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+      "font-src 'self' https://fonts.gstatic.com",
       "img-src 'self' data: blob: https:",
-      "connect-src 'self' https://www.google-analytics.com https://region1.google-analytics.com https://www.facebook.com https://graph.facebook.com https://*.tawk.to wss://*.tawk.to",
-      "frame-src https://www.facebook.com https://web.facebook.com https://*.tawk.to",
+      "connect-src 'self' https://www.google-analytics.com https://region1.google-analytics.com https://www.facebook.com https://graph.facebook.com",
+      "frame-src https://www.facebook.com https://web.facebook.com",
       "frame-ancestors 'none'",
       "object-src 'none'",
       "base-uri 'self'",
@@ -30,6 +30,8 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   deploymentId: process.env.DEPLOYMENT_VERSION,
   poweredByHeader: false,
+  // Dev only: lets a phone test through a temporary tunnel (e.g. DEV_TUNNEL_HOST=abc.trycloudflare.com).
+  allowedDevOrigins: process.env.DEV_TUNNEL_HOST ? [process.env.DEV_TUNNEL_HOST] : undefined,
   compress: true,
   serverExternalPackages: ["@whiskeysockets/baileys", "qrcode"],
   images: {
@@ -43,6 +45,166 @@ const nextConfig: NextConfig = {
         has: [{ type: "host", value: "www.wazap.lt" }],
         destination: "https://wazap.lt/:path*",
         permanent: true,
+      },
+      {
+        source: "/faq",
+        destination: "/#faq",
+        permanent: true,
+      },
+      {
+        source: "/whatsapp-team-inbox",
+        destination: "/",
+        permanent: true,
+      },
+      {
+        source: "/whatsapp-ai-agent",
+        destination: "/whatsapp-website-widget",
+        permanent: true,
+      },
+      {
+        source: "/ai-agents",
+        destination: "/whatsapp-website-widget",
+        permanent: true,
+      },
+      {
+        source: "/whatsapp-crm",
+        destination: "/whatsapp-lead-routing",
+        permanent: true,
+      },
+      {
+        source: "/marketplace/:path*",
+        destination: "/whatsapp-ad-tracking",
+        permanent: true,
+      },
+      {
+        source: "/integrations",
+        destination: "/whatsapp-ad-tracking",
+        permanent: true,
+      },
+      {
+        source: "/whatsapp-business-platform",
+        destination: "/whatsapp-lead-routing",
+        permanent: true,
+      },
+      {
+        source: "/shopify",
+        destination: "/whatsapp-ad-tracking",
+        permanent: true,
+      },
+      {
+        source: "/flow",
+        destination: "/whatsapp-lead-routing",
+        permanent: true,
+      },
+      {
+        source: "/whatsapp",
+        destination: "/whatsapp-lead-routing",
+        permanent: true,
+      },
+      {
+        source: "/guides/router-vs-shared-inbox",
+        destination: "/",
+        permanent: true,
+      },
+      {
+        source: "/tools/follow-up",
+        destination: "/tools/rotator",
+        permanent: true,
+      },
+      {
+        source: "/tools/reply-generator",
+        destination: "/tools",
+        permanent: true,
+      },
+      {
+        source: "/tools/message-scheduler",
+        destination: "/tools",
+        permanent: true,
+      },
+      {
+        source: "/tools/formatter",
+        destination: "/tools",
+        permanent: true,
+      },
+      {
+        source: "/tools/bulk",
+        destination: "/tools",
+        permanent: true,
+      },
+      {
+        source: "/tools/checker",
+        destination: "/tools",
+        permanent: true,
+      },
+      {
+        source: "/tools/vcard",
+        destination: "/tools",
+        permanent: true,
+      },
+      {
+        source: "/tools/transcript",
+        destination: "/tools",
+        permanent: true,
+      },
+      {
+        source: "/tools/templates",
+        destination: "/tools",
+        permanent: true,
+      },
+      {
+        source: "/tools/catalog",
+        destination: "/tools",
+        permanent: true,
+      },
+      {
+        source: "/tools/chat-insights",
+        destination: "/tools",
+        permanent: true,
+      },
+      {
+        source: "/tools/linktree",
+        destination: "/tools",
+        permanent: true,
+      },
+      {
+        source: "/c/:slug*",
+        destination: "/",
+        permanent: false,
+      },
+      {
+        source: "/l/:slug*",
+        destination: "/",
+        permanent: false,
+      },
+      {
+        source: "/p/:path*",
+        destination: "/",
+        permanent: false,
+      },
+      {
+        source: "/inbox/:path*",
+        destination: "/dashboard",
+        permanent: false,
+      },
+      {
+        source: "/channels/:path*",
+        destination: "/dashboard",
+        permanent: false,
+      },
+      {
+        source: "/automations/:path*",
+        destination: "/dashboard",
+        permanent: false,
+      },
+      {
+        source: "/workspace",
+        destination: "/dashboard",
+        permanent: false,
+      },
+      {
+        source: "/workspace/:path*",
+        destination: "/dashboard",
+        permanent: false,
       },
     ];
   },

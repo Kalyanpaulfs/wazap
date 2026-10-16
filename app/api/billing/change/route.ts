@@ -43,6 +43,11 @@ export async function POST(req: Request) {
 
   const body = (await req.json().catch(() => ({}))) as { plan?: string; locale?: string };
   const plan = String(body.plan || "").toLowerCase();
+  // "business" ($149) is no longer sold - block it as an upgrade/downgrade
+  // target even though it still ranks in PLAN_RANK for existing holders.
+  if (plan === "business") {
+    return NextResponse.json({ error: "This Wazap plan is no longer available." }, { status: 400 });
+  }
 
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) return NextResponse.json({ error: "Account not found. Please sign in again." }, { status: 401 });

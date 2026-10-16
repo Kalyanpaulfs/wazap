@@ -1,5 +1,8 @@
-import { describe, expect, it } from "vitest";
-import { selectPauseResume, type RankCandidate } from "@/lib/plan-limit-sync";
+import { describe, expect, it, vi } from "vitest";
+import { selectPauseResume, isLinkDowngrade, linkLimitValue, isNewStyleTrial, previousLinkPlanFor, type RankCandidate } from "@/lib/plan-limit-sync";
+import { ROTATOR_LIMITS, SHORT_LINK_LIMITS, AD_LINK_LIMITS } from "@/lib/plan-limits";
+
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 function item(id: string, score: number, createdAt: string, planPausedAt: string | null = null): RankCandidate {
   return { id, score, createdAt: new Date(createdAt), planPausedAt: planPausedAt ? new Date(planPausedAt) : null };
@@ -103,5 +106,141 @@ describe("selectPauseResume", () => {
     const items = [item("a", 10, "2026-01-01"), item("b", 5, "2026-01-02")];
     const { pauseIds } = selectPauseResume(items, 0);
     expect(pauseIds.sort()).toEqual(["a", "b"]);
+  });
+});
+
+describe("linkLimitValue (lib/plan-limits.ts numbers, not the stale TOOL_LIMITS ones)", () => {
+  it("reads the new 2026 rotator/short-link/ad-link caps per plan", () => {
+    expect(linkLimitValue(ROTATOR_LIMITS, "free")).toBe(1);
+    expect(linkLimitValue(ROTATOR_LIMITS, "basic")).toBe(3);
+    expect(linkLimitValue(ROTATOR_LIMITS, "pro")).toBe(10);
+    expect(linkLimitValue(ROTATOR_LIMITS, "ultimate")).toBe(25);
+    expect(linkLimitValue(SHORT_LINK_LIMITS, "free")).toBe(0);
+    expect(linkLimitValue(SHORT_LINK_LIMITS, "pro")).toBe(5);
+    expect(linkLimitValue(AD_LINK_LIMITS, "basic")).toBe(0);
+    expect(linkLimitValue(AD_LINK_LIMITS, "ultimate")).toBe(15);
+  });
+
+  it("maps a legacy 'business' plan onto ultimate's numbers", () => {
+    expect(linkLimitValue(ROTATOR_LIMITS, "business")).toBe(linkLimitValue(ROTATOR_LIMITS, "ultimate"));
+  });
+});
+
+// Owner decision (FEAT-AUDIT-HARDENING): pausing rotators/short links/ad
+// links must only happen on a real downgrade. These cover the decision
+// function in isolation; tests/integration/pause-engine.test.ts exercises
+// the same decision end-to-end through the real trigger points (a renewal
+// charge, an admin re-activation, a downgrade, an expiry).
+describe("isLinkDowngrade", () => {
+  it("is not a downgrade when the plan renews unchanged (free)", () => {
+    expect(isLinkDowngrade("pro", "pro", "u1")).toBe(false);
+    expect(isLinkDowngrade("free", "free", "u1")).toBe(false);
+  });
+
+  it("is not a downgrade on an upgrade", () => {
+    expect(isLinkDowngrade("basic", "pro", "u1")).toBe(false);
+    expect(isLinkDowngrade("free", "ultimate", "u1")).toBe(false);
+  });
+
+  it("is a downgrade when the plan rank strictly decreases (Growth -> Solo)", () => {
+    expect(isLinkDowngrade("pro", "basic", "u1")).toBe(true);
+  });
+
+  it("is a downgrade on paid -> free (expiry/cancel/refund/admin deactivate)", () => {
+    expect(isLinkDowngrade("pro", "free", "u1")).toBe(true);
+    expect(isLinkDowngrade("ultimate", "free", "u1")).toBe(true);
+  });
+
+  it("treats a legacy 'business' previous plan as ultimate rank, not lower than ultimate", () => {
+    expect(isLinkDowngrade("business", "ultimate", "u1")).toBe(false);
+    expect(isLinkDowngrade("business", "pro", "u1")).toBe(true);
+  });
+
+  it("is never a downgrade when the previous plan is unknown (null/undefined), and warns", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    expect(isLinkDowngrade(null, "basic", "u1")).toBe(false);
+    expect(isLinkDowngrade(undefined, "free", "u1")).toBe(false);
+    expect(isLinkDowngrade("", "free", "u1")).toBe(false);
+    expect(warn).toHaveBeenCalledTimes(3);
+    warn.mockRestore();
+  });
+
+  it("never produces a false-positive downgrade for an unrecognized previous-plan string (falls back to free, rank 0)", () => {
+    expect(isLinkDowngrade("not-a-real-plan", "free", "u1")).toBe(false);
+    expect(isLinkDowngrade("not-a-real-plan", "basic", "u1")).toBe(false);
+  });
+});
+
+// Owner decision (FEAT-AUDIT-HARDENING trial links): the 3-day Growth trial
+// grants Growth-level rotator/short-link/ad-link limits, so the previous-plan
+// comparison isLinkDowngrade runs must be boosted to see that - but ONLY for
+// a genuinely new-style (<=4 day) trial, never the old 14-day one.
+describe("isNewStyleTrial", () => {
+  it("is true for the current 3-day Growth trial", () => {
+    const start = new Date("2026-10-10T00:00:00.000Z");
+    expect(isNewStyleTrial({ trialStartedAt: start, trialEndsAt: new Date(start.getTime() + 3 * DAY_MS) })).toBe(true);
+  });
+
+  it("is true at the 4-day boundary, false just past it", () => {
+    const start = new Date("2026-10-10T00:00:00.000Z");
+    expect(isNewStyleTrial({ trialStartedAt: start, trialEndsAt: new Date(start.getTime() + 4 * DAY_MS) })).toBe(true);
+    expect(isNewStyleTrial({ trialStartedAt: start, trialEndsAt: new Date(start.getTime() + 4 * DAY_MS + 1) })).toBe(false);
+  });
+
+  it("is false for an old 14-day trial (grandfathered - never had Growth link limits)", () => {
+    const start = new Date("2026-01-01T00:00:00.000Z");
+    expect(isNewStyleTrial({ trialStartedAt: start, trialEndsAt: new Date(start.getTime() + 14 * DAY_MS) })).toBe(false);
+  });
+
+  it("is false when trialStartedAt was never recorded (legacy users) - fails safe toward no boost", () => {
+    expect(isNewStyleTrial({ trialStartedAt: null, trialEndsAt: new Date() })).toBe(false);
+  });
+
+  it("is false when trialEndsAt is missing, or end is not after start", () => {
+    expect(isNewStyleTrial({ trialStartedAt: new Date(), trialEndsAt: null })).toBe(false);
+    const d = new Date();
+    expect(isNewStyleTrial({ trialStartedAt: d, trialEndsAt: d })).toBe(false);
+  });
+});
+
+describe("previousLinkPlanFor", () => {
+  const newTrialActive = { trialPlan: "pro", trialStartedAt: new Date(Date.now() - 1 * DAY_MS), trialEndsAt: new Date(Date.now() + 2 * DAY_MS) };
+  const newTrialEndedYesterday = { trialPlan: "pro", trialStartedAt: new Date(Date.now() - 4 * DAY_MS), trialEndsAt: new Date(Date.now() - 1 * DAY_MS) };
+  const newTrialEndedLongAgo = { trialPlan: "pro", trialStartedAt: new Date(Date.now() - 10 * DAY_MS), trialEndsAt: new Date(Date.now() - 5 * DAY_MS) };
+  const oldStyleTrial = { trialPlan: "pro", trialStartedAt: new Date(Date.now() - 1 * DAY_MS), trialEndsAt: new Date(Date.now() + 13 * DAY_MS) };
+
+  it("leaves an unknown previousPlan untouched (fail-safe stays intact)", () => {
+    expect(previousLinkPlanFor(null, newTrialActive)).toBe(null);
+    expect(previousLinkPlanFor(undefined, newTrialActive)).toBe(undefined);
+    expect(previousLinkPlanFor("", newTrialActive)).toBe("");
+  });
+
+  it("boosts free up to the trial plan while a new-style trial is still active (purchase made during the trial)", () => {
+    expect(previousLinkPlanFor("free", newTrialActive)).toBe("pro");
+  });
+
+  it("boosts free up to the trial plan when the new-style trial ended within the last 2 days (cron lookback)", () => {
+    expect(previousLinkPlanFor("free", newTrialEndedYesterday)).toBe("pro");
+  });
+
+  it("does not boost once the new-style trial ended more than 2 days ago", () => {
+    expect(previousLinkPlanFor("free", newTrialEndedLongAgo)).toBe("free");
+  });
+
+  it("never boosts for an old-style (14-day) trial, even while it looks active (grandfathered)", () => {
+    expect(previousLinkPlanFor("free", oldStyleTrial)).toBe("free");
+  });
+
+  it("boosts a low paid previousPlan (basic) up to the higher trial plan", () => {
+    expect(previousLinkPlanFor("basic", newTrialActive)).toBe("pro");
+  });
+
+  it("leaves previousPlan untouched once it already reaches pro or above", () => {
+    expect(previousLinkPlanFor("pro", newTrialActive)).toBe("pro");
+    expect(previousLinkPlanFor("ultimate", newTrialActive)).toBe("ultimate");
+  });
+
+  it("leaves previousPlan untouched when there is no trial at all", () => {
+    expect(previousLinkPlanFor("free", { trialPlan: null, trialStartedAt: null, trialEndsAt: null })).toBe("free");
   });
 });

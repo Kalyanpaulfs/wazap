@@ -154,10 +154,10 @@ export default function DeveloperClient() {
             </p>
           </div>
           <Link
-            href="/inbox"
+            href="/dashboard"
             className="rounded-full border border-slate-700 px-4 py-2 text-sm text-white"
           >
-            Open inbox
+            Open dashboard
           </Link>
         </header>
         {revealed && (

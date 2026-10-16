@@ -7,9 +7,9 @@ import { auditBilling } from "@/lib/billing-actions";
 import { syncPlanLimits } from "@/lib/plan-limit-sync";
 import { sameSiteRequest } from "@/lib/crm";
 
-async function syncPlanLimitsSafely(userId: string) {
+async function syncPlanLimitsSafely(userId: string, previousPlan?: string | null) {
   try {
-    await syncPlanLimits(userId);
+    await syncPlanLimits(userId, previousPlan);
   } catch (err) {
     console.error("[plan-limit-sync] failed after admin activate", userId, err instanceof Error ? err.message : String(err));
   }
@@ -57,7 +57,10 @@ export async function POST(req: Request) {
       },
     });
   });
-  await syncPlanLimitsSafely(userId);
+  // before.plan is read before this update: a same-plan re-activation (or an
+  // upgrade) never pauses rotators/short links/ad links; only a genuine
+  // downgrade to a lower-ranked plan does.
+  await syncPlanLimitsSafely(userId, before.plan);
   const warning = await livePlanWarning(userId);
   return NextResponse.json({ success: true, planExpiresAt: expiry?.toISOString() ?? null, ...(warning ? { warning } : {}) });
 }
@@ -86,7 +89,10 @@ export async function DELETE(req: Request) {
       },
     });
   });
-  await syncPlanLimitsSafely(userId);
+  // before.plan is read before this update: admin deactivate always moves
+  // the user down to free, a genuine downgrade whenever they weren't
+  // already on free.
+  await syncPlanLimitsSafely(userId, before.plan);
   const warning = await livePlanWarning(userId);
   return NextResponse.json({ success: true, ...(warning ? { warning } : {}) });
 }

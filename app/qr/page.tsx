@@ -3,8 +3,7 @@ import { Download, Link2, MessageSquareText, QrCode, ScanLine } from "lucide-rea
 import Link from "next/link";
 import type { Metadata } from "next";
 import { getServerSession } from "next-auth";
-import { authOptions, getQrLimit, isTrialActive, TRIAL_DAYS } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { authOptions } from "@/lib/auth";
 
 const jsonLd = {
   "@context": "https://schema.org",
@@ -36,41 +35,9 @@ export const metadata: Metadata = {
   },
 };
 
-function today() { return new Date().toISOString().slice(0, 10); }
-
 export default async function QRPage() {
   const session = await getServerSession(authOptions);
   const isLoggedIn = !!session?.user;
-  const userId = (session?.user as any)?.id ?? null;
-  const plan = (session?.user as any)?.plan ?? "free";
-
-  let qrLimit = 0;
-  let qrUsed = 0;
-  let trialActive = false;
-  let trialDaysLeft = 0;
-
-  if (isLoggedIn && userId) {
-    const [user, usage] = await Promise.all([
-      prisma.user.findUnique({ where: { id: userId }, select: { createdAt: true } }),
-      prisma.dailyUsage.findUnique({ where: { userId_date: { userId, date: today() } } }),
-    ]);
-    if (user) {
-      qrLimit = getQrLimit(plan, user.createdAt);
-      trialActive = plan === "free" ? isTrialActive(user.createdAt) : true;
-      const trialEnd = new Date(user.createdAt);
-      trialEnd.setDate(trialEnd.getDate() + TRIAL_DAYS);
-      trialDaysLeft = Math.max(0, Math.ceil((trialEnd.getTime() - Date.now()) / 86400000));
-    }
-    qrUsed = usage?.qrDownloads ?? 0;
-  }
-
-  const status: "guest" | "trial_active" | "trial_expired" | "paid" = !isLoggedIn
-    ? "guest"
-    : plan !== "free"
-    ? "paid"
-    : trialActive
-    ? "trial_active"
-    : "trial_expired";
 
   return (
     <>
@@ -86,14 +53,12 @@ export default async function QRPage() {
           <p className="text-slate-400 text-lg">
             Create a QR code for your WhatsApp number. Put it on your website, business card, or shop — anyone scans it and opens a chat with you instantly.
           </p>
-          {status === "trial_active" && (
-            <p className="text-sm text-amber-400 mt-3">{trialDaysLeft} days left on your free trial · <Link href="/pricing" className="underline hover:text-amber-300">Upgrade for more</Link></p>
-          )}
+          <p className="text-sm text-[#25D366] mt-3">Free for everyone — no account or daily limit.</p>
         </div>
       </section>
 
       <section className="px-4 pb-20">
-        <QRGenerator status={status} qrLimit={qrLimit === Infinity ? null : qrLimit} qrUsed={qrUsed} />
+        <QRGenerator isLoggedIn={isLoggedIn} />
       </section>
 
       <section className="border-t border-slate-800/60 px-4 py-16">
@@ -176,8 +141,8 @@ export default async function QRPage() {
           <div className="grid sm:grid-cols-3 gap-4">
             {[
               { href: "/tools/link", title: "Click-to-chat link", text: "Create and share the WhatsApp link behind your QR code." },
-              { href: "/tools/vcard", title: "Digital business card", text: "Package your contact details and WhatsApp access in one vCard." },
               { href: "/tools/widget", title: "Website chat widget", text: "Add a WhatsApp contact button to your website." },
+              { href: "/tools/rotator", title: "Link rotator", text: "Rotate click-to-chat handoffs across your team's numbers." },
             ].map((tool) => (
               <Link key={tool.href} href={tool.href} className="rounded-2xl border border-slate-800 bg-[#111811] p-5 transition-colors hover:border-green-500/40">
                 <h3 className="font-semibold text-white mb-2">{tool.title}</h3>

@@ -26,7 +26,7 @@ const PLANS = [
     name: "Solo",
     price: PLAN_PRICES.basic,
     description: "Route leads for one small sales team",
-    features: ["3 WhatsApp rotator links", "Unlimited routed leads", "Round-robin distribution", "Up to 100 destinations per rotator", "Click totals for every rotator", "Reliable fallback destination"],
+    features: ["3 WhatsApp rotator links", "Up to 3 numbers per rotator", "Unlimited routed leads", "Round-robin distribution", "2 branded short links", "Website widget", "Basic reports (last 30 days)", "Basic support"],
     highlighted: false,
     salesOnly: false,
   },
@@ -35,7 +35,7 @@ const PLANS = [
     name: "Growth",
     price: PLAN_PRICES.pro,
     description: "Run multiple campaigns and sales teams",
-    features: ["10 WhatsApp rotator links", "Everything in Solo", "Conversation-start analytics", "Campaign and source reporting", "Tracked campaign links"],
+    features: ["10 WhatsApp rotator links", "Up to 10 numbers per rotator", "Everything in Solo", "5 branded short links · 5 tracked ad links", "Full reports — sources, campaigns & date range", "Standard support · location & device tracking (coming soon)"],
     highlighted: true,
     salesOnly: false,
   },
@@ -43,8 +43,8 @@ const PLANS = [
     id: "ultimate",
     name: "Agency",
     price: PLAN_PRICES.ultimate,
-    description: "Unlimited routing for agencies and larger teams",
-    features: ["Unlimited WhatsApp rotators", "Everything in Growth", "Workspace for up to 5 members", "Shared reporting and exports", "Priority support"],
+    description: "High-volume routing for agencies and larger teams",
+    features: ["25 WhatsApp rotator links", "Up to 20 numbers per rotator", "Everything in Growth", "15 branded short links · 15 tracked ad links", "Full reports with shared exports", "Priority support"],
     highlighted: false,
     salesOnly: false,
   },
@@ -58,6 +58,9 @@ export default function PricingPlans({
   activeSubscriptionPlan,
   billingPlanChangesEnabled = false,
   billing = null,
+  currentPlanKey = null,
+  trialInfo = null,
+  freePlan = null,
 }: {
   isLoggedIn: boolean;
   userEmail: string | null;
@@ -66,6 +69,12 @@ export default function PricingPlans({
   activeSubscriptionPlan?: string | null;
   billingPlanChangesEnabled?: boolean;
   billing?: BillingInfo | null;
+  // /plans only (left null on /pricing, which keeps today's exact look):
+  // marks the user's actual current plan, and a trial pill when relevant.
+  currentPlanKey?: string | null;
+  trialInfo?: { plan: string; daysLeft: number } | null;
+  // Free plan card (server-rendered FreePlanStrip), shown first in the grid.
+  freePlan?: React.ReactNode;
 }) {
   const localization = useLocalization();
   const text = usePricingText(localization.language);
@@ -123,7 +132,7 @@ export default function PricingPlans({
         </div>
       )}
 
-      {activeSubscriptionPlan && !managedByPlanChanges && <div className="mb-6 rounded-2xl border border-[#25D366]/40 bg-[#25D366]/10 p-4 text-center text-sm text-green-200">You already have a subscription. <Link href="/dashboard#billing" className="font-semibold underline">Manage your existing plan</Link> before starting another.</div>}
+      {activeSubscriptionPlan && !managedByPlanChanges && <div className="mb-6 rounded-2xl border border-[#25D366]/40 bg-[#25D366]/10 p-4 text-center text-sm text-green-200">You already have a subscription. <Link href="/billing" className="font-semibold underline">Manage your existing plan</Link> before starting another.</div>}
 
       {selectedPlan && !activeSubscriptionPlan && !managedByPlanChanges && (
         <div className="mb-6 rounded-2xl border border-[#25D366]/40 bg-[#25D366]/10 p-4 text-center text-sm text-green-200">
@@ -131,7 +140,8 @@ export default function PricingPlans({
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+      <div className={`grid grid-cols-1 gap-5 ${freePlan ? "md:grid-cols-2 xl:grid-cols-4" : "md:grid-cols-3"}`}>
+        {freePlan}
         {PLANS.map((plan) => {
           const localPrice = formatLocalPrice(plan.price, localization);
           return (
@@ -147,7 +157,19 @@ export default function PricingPlans({
             )}
 
             <div>
-              <h2 className="text-xl font-bold text-white">{plan.name}</h2>
+              <div className="flex items-center gap-2">
+                <h2 className="text-xl font-bold text-white">{plan.name}</h2>
+                {currentPlanKey === plan.id && (
+                  <span className="rounded-full border border-[#25D366]/40 bg-[#25D366]/10 px-2.5 py-0.5 text-xs font-semibold text-[#25D366]">
+                    Current plan
+                  </span>
+                )}
+                {trialInfo && trialInfo.plan === plan.id && (
+                  <span className="rounded-full border border-yellow-400/30 bg-yellow-400/10 px-2.5 py-0.5 text-xs font-semibold text-yellow-300">
+                    Free trial of {plan.name} · {trialInfo.daysLeft} day{trialInfo.daysLeft !== 1 ? "s" : ""} left
+                  </span>
+                )}
+              </div>
               <p className="text-slate-500 text-sm mt-1">{plan.description}</p>
               <div className="mt-5 mb-6 flex flex-wrap items-baseline gap-x-2">
                 <span className="text-4xl font-bold tracking-tight text-white">{localPrice}</span>
@@ -216,7 +238,7 @@ export default function PricingPlans({
                 />
               )
             ) : activeSubscriptionPlan ? (
-              <Link href="/dashboard#billing" className="block rounded-full border border-[#25D366] py-3 text-center text-sm font-semibold text-[#25D366]">Manage existing subscription →</Link>
+              <Link href="/billing" className="block rounded-full border border-[#25D366] py-3 text-center text-sm font-semibold text-[#25D366]">Manage existing subscription →</Link>
             ) : isLoggedIn ? (
               <WazapCardPayment
                 planName={plan.id}

@@ -19,7 +19,7 @@ export async function GET(req: Request) {
   for (const user of ending) {
     const days = Math.max(1, Math.ceil((user.trialEndsAt!.getTime() - now.getTime()) / 86_400_000));
     await prisma.$transaction([
-      prisma.outboundEmail.create({ data: { userId: user.id, recipient: user.email, type: "trial_ending", subject: `Your Wazap Growth trial has ${days} day${days !== 1 ? "s" : ""} left`, html: renderTrialReminderEmail(user.name, days, base) } }),
+      prisma.outboundEmail.create({ data: { userId: user.id, recipient: user.email, type: "trial_ending", subject: `Your Wazap Solo trial has ${days} day${days !== 1 ? "s" : ""} left`, html: renderTrialReminderEmail(user.name, days, base) } }),
       prisma.user.update({ where: { id: user.id }, data: { trialReminderSentAt: now } }),
     ]);
   }

@@ -1250,6 +1250,10 @@ model RotatorLink {
   code           String    @unique
   name           String
   numbers        String[]
+  // Optional display name per destination number, keyed by the digits-only
+  // number as it appears in `numbers` (e.g. {"919800000001": "Ravi"}). See
+  // lib/salesperson-names.ts for normalization/lookup helpers.
+  numberNames    Json      @default("{}")
   fallbackNumber String?
   message        String?
   currentIdx     Int       @default(0)

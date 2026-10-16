@@ -1,7 +1,8 @@
 import { queueBillingNotice } from "@/lib/billing-email";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { syncPlanLimits } from "@/lib/plan-limit-sync";
+import { syncPlanLimits, isNewStyleTrial } from "@/lib/plan-limit-sync";
+import { PRODUCT_TRIAL_PLAN } from "@/lib/entitlements";
 import { recordBillingAttention } from "@/lib/billing-attention";
 
 export const dynamic = "force-dynamic";
@@ -23,7 +24,9 @@ export async function GET(req: Request) {
       return result.count;
     });
     if(changed){
-      try{await syncPlanLimits(user.id);}
+      // user.plan is the plan read BEFORE this downgrade (candidates were
+      // queried before the updateMany) - a genuine paid-to-free downgrade.
+      try{await syncPlanLimits(user.id,user.plan);}
       catch(err){console.error("[plan-limit-sync] failed after expiry downgrade",user.id,err instanceof Error?err.message:String(err));}
     }
     expired+=changed;
@@ -38,12 +41,23 @@ export async function GET(req: Request) {
   const trialLookback = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000);
   const trialCandidates = await prisma.user.findMany({
     where: { plan: "free", trialEndsAt: { not: null, lte: new Date(), gte: trialLookback } },
-    select: { id: true },
+    select: { id: true, trialPlan: true, trialStartedAt: true, trialEndsAt: true },
     take: 500,
   });
   let trialSynced = 0;
   for (const user of trialCandidates) {
-    try { await syncPlanLimits(user.id); trialSynced++; }
+    // These users' `plan` column was "free" before and stays "free" now, so
+    // there is no real plan-column change to read a previousPlan from - the
+    // whole point of this sweep. Only a NEW-style trial (<=4 days) ever had
+    // Growth-level rotator/short-link/ad-link limits to begin with
+    // (isNewStyleTrial grandfathers old 14-day trials out): for those, pass
+    // the trial plan itself as previousPlan so syncPlanLimits's downgrade
+    // check (via previousLinkPlanFor) can see the drop back to free and pause
+    // the extras. Anyone else gets no previousPlan - isLinkDowngrade's normal
+    // fail-safe (no pause) applies, exactly as before this feature.
+    // Automations/AI/channels/etc. are unaffected by this gate either way.
+    const previousPlan = isNewStyleTrial(user) ? (user.trialPlan || PRODUCT_TRIAL_PLAN) : undefined;
+    try { await syncPlanLimits(user.id, previousPlan); trialSynced++; }
     catch (err) { console.error("[plan-limit-sync] failed after trial end", user.id, err instanceof Error ? err.message : String(err)); }
   }
 

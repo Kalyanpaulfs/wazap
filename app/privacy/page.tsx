@@ -21,7 +21,7 @@ export default function PrivacyPage() {
       </nav>
       <div className="max-w-2xl mx-auto px-4 py-16">
         <h1 className="text-3xl font-bold text-white mb-2">Privacy Policy</h1>
-        <p className="text-slate-500 text-sm mb-10">Last updated: 7 October 2026</p>
+        <p className="text-slate-500 text-sm mb-10">Last updated: 16 October 2026</p>
 
         <div className="space-y-8 text-slate-400 text-sm leading-relaxed">
           <section>
@@ -34,7 +34,6 @@ export default function PrivacyPage() {
               <li>Usage data (tool used, plan type) for billing and limits</li>
               <li>Lead and inquiry details that a business account saves in Wazap Flow, or that a customer knowingly submits through a Wazap-powered catalog form, such as name, contact number, email, source, requested item, and follow-up status</li>
               <li>Privacy-safe conversation-start events from Wazap links and pages, including the business asset, source, campaign, and time; these events do not contain WhatsApp message content or visitor IP addresses</li>
-              <li>Workspace membership, role, and invitation records, including the invited email address, delivery status, expiry, and acceptance status</li>
               <li>Shared inbox records intentionally entered by a business or submitted through a Wazap workflow, including conversation timelines, contact details, assignments, internal notes, tasks, statuses, and channel delivery state</li>
               <li>AI configuration and governance records, including agent instructions, approved knowledge, draft reviews, run status, token and cost metadata when available, errors, and human handoffs</li>
               <li>Developer-platform records, including hashed API-key identifiers, scopes, expiry and use times, request method/path/status/latency, webhook configuration, encrypted signing secrets, event payloads, and delivery results. Bearer tokens are not stored in request logs.</li>
@@ -75,17 +74,12 @@ export default function PrivacyPage() {
           </section>
 
           <section>
-            <h2 className="text-lg font-semibold text-white mb-2">6. Shared workspaces</h2>
-            <p>When you join a shared workspace, its members can access the business records stored in that workspace, including leads, inquiry details, conversation timelines, internal notes, tasks, attribution, follow-up activity, and outcomes. Workspace owners and administrators control membership and roles. Personal account credentials and billing details are not shared with other workspace members.</p>
+            <h2 className="text-lg font-semibold text-white mb-2">6. Data retention</h2>
+            <p>Account, saved workflow, lead, inquiry, marketplace installation, and attribution data is retained while the relevant business account is active. Signed-in customers can download a portable JSON export covering account, billing, tools, workspace conversations, CRM, tasks, AI governance, automations, channel events, API and webhook evidence, Store activity, partner attribution, and support records. Passwords, reset tokens, authentication hashes, encrypted credentials, and secret URL parameters are excluded. Customers can also schedule account deletion from Account settings. Closure includes a seven-day recovery period and is blocked while an active subscription exists. After the recovery period, workspace, conversation, CRM, automation, and credential records are deleted. Limited pseudonymized transaction records and records held by payment providers may be retained where required for financial, fraud-prevention, or legal obligations. Customers who submitted an inquiry may contact the business they submitted it to or Wazap to request access or deletion.</p>
           </section>
 
           <section>
-            <h2 className="text-lg font-semibold text-white mb-2">7. Data retention</h2>
-            <p>Account, saved workflow, lead, inquiry, marketplace installation, and attribution data is retained while the relevant business account is active. Signed-in customers can download a portable JSON export covering account, billing, tools, owned-workspace conversations, CRM, tasks, AI governance, automations, channel events, API and webhook evidence, Store activity, partner attribution, and support records. Passwords, reset tokens, authentication hashes, encrypted credentials, and secret URL parameters are excluded. Customers can also schedule account deletion from Account settings. Closure includes a seven-day recovery period and is blocked while an active subscription exists or while deleting an owner would erase a shared workspace. After the recovery period, sole-owner workspace, conversation, CRM, automation, and credential records are deleted. Limited pseudonymized transaction records and records held by payment providers may be retained where required for financial, fraud-prevention, or legal obligations. Customers who submitted an inquiry may contact the business they submitted it to or Wazap to request access or deletion.</p>
-          </section>
-
-          <section>
-            <h2 className="text-lg font-semibold text-white mb-2">8. Contact</h2>
+            <h2 className="text-lg font-semibold text-white mb-2">7. Contact</h2>
             <p>For any privacy questions: <a href="mailto:hello@wazap.lt" className="text-[#25D366] hover:underline">hello@wazap.lt</a></p>
           </section>
         </div>

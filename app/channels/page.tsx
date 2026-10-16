@@ -1,2 +1,0 @@
-import { getServerSession } from "next-auth"; import { authOptions } from "@/lib/auth"; import { redirect } from "next/navigation"; import ChannelsClient from "./ChannelsClient";
-export const metadata={title:"Conversation channels — Wazap",description:"Configure verified inbound channel connections for the Wazap shared inbox.",robots:{index:false,follow:false}}; export default async function Page(){if(!(await getServerSession(authOptions))?.user)redirect("/login?redirect=/channels");return <ChannelsClient/>}

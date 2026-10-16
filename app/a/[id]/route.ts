@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { recordConversationStart } from "@/lib/conversations";
 import { rateLimit } from "@/lib/rate-limit";
+import { requestIp } from "@/lib/request-ip";
 
 const PUBLIC_BASE = "https://wazap.lt";
 
@@ -21,7 +22,7 @@ function safeFallback(req: Request) {
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const fallback = safeFallback(req);
-  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  const ip = requestIp(req.headers);
   try {
     const link = await Promise.race([
       prisma.adLink.findUnique({ where: { id } }),
@@ -30,7 +31,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     if (!link) return NextResponse.redirect(fallback || `${PUBLIC_BASE}/tools/ad-builder`, 307);
     if (link.planPausedAt) return NextResponse.redirect(`${PUBLIC_BASE}/link-paused?type=ad`, 307);
     const target = `https://wa.me/${link.number}${link.message ? `?text=${encodeURIComponent(link.message)}` : ""}`;
-    if (rateLimit(`ad-click:${ip}:${id}`, 30, 60_000)) {
+    // Bot protection (FEAT-PLAN-LIMITS): ~10 hits/minute per IP+link; a real
+    // visitor is always redirected either way (see the return below).
+    if (rateLimit(`ad-click:${ip}:${id}`, 10, 60_000)) {
       await Promise.allSettled([
         prisma.$transaction([
           prisma.adLinkClick.create({ data: { adLinkId: link.id } }),

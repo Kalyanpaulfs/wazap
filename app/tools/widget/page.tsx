@@ -14,14 +14,13 @@ export default function WidgetGeneratorPage() {
   const [label, setLabel] = useState("Chat with us");
   const [showLabel, setShowLabel] = useState(true);
   const [copied, setCopied] = useState(false);
-  const [remaining, setRemaining] = useState<number | null>(null);
-  const [plan, setPlan] = useState("free");
+  const [available, setAvailable] = useState<boolean | null>(null);
   const [limitError, setLimitError] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/tools/use?tool=widget")
       .then(r => r.ok ? r.json() : null)
-      .then(d => { if (d) { setRemaining(d.remaining === -1 ? null : d.remaining); setPlan(d.plan); } })
+      .then(d => setAvailable(Boolean(d?.available)))
       .catch(() => {});
   }, []);
 
@@ -55,7 +54,7 @@ export default function WidgetGeneratorPage() {
 </div>
 <!-- End Wazap Widget -->`;
 
-  const atLimit = remaining !== null && remaining <= 0;
+  const locked = available === false;
 
   async function copy() {
     setLimitError(null);
@@ -67,12 +66,8 @@ export default function WidgetGeneratorPage() {
       body: JSON.stringify({ tool: "widget", count: 1 }),
     });
     const data = await res.json();
-    if (res.status === 429) {
-      setLimitError("Daily limit reached. Resets at midnight.");
-      return;
-    }
+    if (res.status === 403) { setAvailable(false); return; }
     if (!res.ok) throw new Error(data.error || "Widget copy could not be completed. Please try again.");
-    setRemaining(data.remaining === -1 ? null : data.remaining);
     await navigator.clipboard.writeText(embedCode);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);    } catch (error) {
@@ -180,18 +175,22 @@ export default function WidgetGeneratorPage() {
                     <Code className="h-4 w-4 text-[#25D366]" />
                     <h2 className="font-semibold text-white">Embed Code</h2>
                   </div>
-                  <button onClick={copy} disabled={atLimit || !validNumber}
+                  <button onClick={copy} disabled={locked || !validNumber}
                     className="flex items-center gap-1.5 rounded-full border border-slate-700 hover:border-[#25D366] px-3 py-1.5 text-xs text-slate-300 hover:text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
                     {copied ? <Check className="h-3.5 w-3.5 text-[#25D366]" /> : <Copy className="h-3.5 w-3.5" />}
-                    {copied ? "Copied!" : atLimit ? "Limit reached" : "Copy"}
+                    {copied ? "Copied!" : locked ? "Paid plans" : "Copy"}
                   </button>
                 </div>
-                <pre className="text-xs text-slate-400 bg-slate-900 rounded-xl p-4 overflow-x-auto whitespace-pre-wrap font-mono">{embedCode}</pre>
-                {limitError && (
-                  <p className="text-xs text-red-400 mt-2">{limitError} {plan === "free" && <Link href="/pricing" className="underline">Upgrade</Link>}</p>
+                {locked ? (
+                  <div className="rounded-xl bg-slate-900 p-4 text-sm text-slate-300">
+                    The website widget is included in Solo, Growth and Agency.{" "}
+                    <Link href="/pricing?source=widget" className="font-semibold text-[#25D366] underline">See plans</Link>
+                  </div>
+                ) : (
+                  <pre className="text-xs text-slate-400 bg-slate-900 rounded-xl p-4 overflow-x-auto whitespace-pre-wrap font-mono">{embedCode}</pre>
                 )}
-                {atLimit && !limitError && (
-                  <p className="text-xs text-amber-400 mt-2">Free plan: 1 copy/day. <Link href="/pricing" className="underline">Upgrade for unlimited</Link></p>
+                {limitError && (
+                  <p className="text-xs text-red-400 mt-2">{limitError}</p>
                 )}
                 <p className="text-xs text-slate-500 mt-3">Paste this anywhere before <code className="text-slate-400">&lt;/body&gt;</code> on your website.</p>
               </div>

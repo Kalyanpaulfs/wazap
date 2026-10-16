@@ -5,7 +5,7 @@ const roles: Record<EmailChannel, string> = { hello: "Welcome & onboarding", bil
 export function emailChannel(type = ""): EmailChannel {
   if (type.startsWith("marketing_") || type.startsWith("crm_")) return "marketing";
   if (/^(billing_|payment_|subscription_|trial_ending|expiry_)/.test(type)) return "billing";
-  if (/^(welcome|workspace_invite|workspace_ownership)/.test(type)) return "hello";
+  if (/^welcome/.test(type)) return "hello";
   return "support";
 }
 export function emailIdentity(channel: EmailChannel) {

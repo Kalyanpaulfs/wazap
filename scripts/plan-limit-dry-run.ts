@@ -28,7 +28,7 @@ function printSection(section: Section) {
   console.log(`    ${label}: ${bits.join(" | ")}`);
 }
 
-async function labelsFor(table: "rotatorLink" | "shortLink" | "adLink" | "linktreePage" | "catalogPage", ids: string[], field: "name" | "title") {
+async function labelsFor(table: "rotatorLink" | "shortLink" | "adLink", ids: string[], field: "name" | "title") {
   if (!ids.length) return new Map<string, string>();
   const delegate = (prisma as unknown as Record<string, { findMany: (args: unknown) => Promise<Array<{ id: string; [key: string]: unknown }>> }>)[table];
   const rows = await delegate.findMany({ where: { id: { in: ids } }, select: { id: true, [field]: true } });
@@ -60,9 +60,6 @@ async function run() {
       { label: "Rotators", result: report.rotators },
       { label: "Short links", result: report.shortLinks },
       { label: "Ad links", result: report.adLinks },
-      { label: "Linktree pages", result: report.linktreePages },
-      { label: "Catalog pages", result: report.catalogPages },
-      ...report.workspaceMembers.map((result, i) => ({ label: `Workspace members [workspace ${i + 1}]`, result })),
       ...report.automations.map((result, i) => ({ label: `Automations [workspace ${i + 1}]`, result })),
       ...report.aiAgents.map((result, i) => ({ label: `AI agents [workspace ${i + 1}]`, result })),
       ...report.aiKnowledge.map((result, i) => ({ label: `AI knowledge [workspace ${i + 1}]`, result })),
@@ -90,8 +87,6 @@ async function run() {
       ["rotatorLink", "name", report.rotators, "Rotators"],
       ["shortLink", "name", report.shortLinks, "Short links"],
       ["adLink", "name", report.adLinks, "Ad links"],
-      ["linktreePage", "title", report.linktreePages, "Linktree pages"],
-      ["catalogPage", "title", report.catalogPages, "Catalog pages"],
     ] as const) {
       const ids = [...result.pauseIds, ...result.resumeIds];
       if (!ids.length) continue;

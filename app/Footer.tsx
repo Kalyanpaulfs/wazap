@@ -2,11 +2,18 @@ import BrandLogo from "./components/BrandLogo";
 import Link from "next/link";
 
 const groups = [
-  { title: "Product", links: [["/tools/rotator", "Lead router"], ["/pricing", "Pricing"], ["/tools", "Free tools"]] },
-  { title: "Help & company", links: [["/resources", "Guides & comparisons"], ["/faq", "FAQ"], ["/contact", "Contact"], ["/about", "About Wazap"], ["/languages", "Languages"]] },
+  { title: "Tools", links: [["/tools/rotator", "Lead router"], ["/pricing", "Pricing"], ["/tools", "Free tools"]] },
+  {
+    title: "Products",
+    links: [
+      ["/whatsapp-lead-routing", "Lead routing"],
+      ["/whatsapp-ad-tracking", "Ad tracking"],
+      ["/whatsapp-short-links", "Short links"],
+      ["/whatsapp-website-widget", "Website widget"],
+    ],
+  },
+  { title: "Help & company", links: [["/resources", "Guides & comparisons"], ["/#faq", "FAQ"], ["/contact", "Contact"], ["/about", "About Wazap"], ["/languages", "Languages"]] },
 ];
-
-const extraProducts = [["/flow", "Wazap Flow (Beta)"], ["/integrations", "Integrations"], ["/whatsapp-business-platform", "WhatsApp Business Platform"], ["/whatsapp-crm", "WhatsApp CRM"], ["/whatsapp-ai-agent", "WhatsApp AI Agent"]];
 
 const policies = [["/refund", "Refunds"], ["/cookie", "Cookies"], ["/acceptable-use", "Acceptable use"], ["/api-policy", "API policy"], ["/partner-terms", "Partner terms"]];
 
@@ -14,7 +21,7 @@ export default function Footer() {
   return (
     <footer className="mt-auto border-t border-white/10 px-6 pt-12 pb-7 sm:px-8">
       <div className="mx-auto max-w-6xl">
-        <div className="grid grid-cols-2 gap-x-8 gap-y-10 pb-10 md:grid-cols-[minmax(0,1.5fr)_1fr_1fr] md:gap-16">
+        <div className="grid grid-cols-2 gap-x-8 gap-y-10 pb-10 md:grid-cols-[minmax(0,1.1fr)_1fr_1fr_1fr] md:gap-12">
           <div className="col-span-2 md:col-span-1">
             <Link href="/" aria-label="Wazap home" className="inline-flex"><BrandLogo /></Link>
             <p className="mt-4 max-w-xs text-sm leading-6 text-slate-400">One link. The right conversation.</p>
@@ -26,7 +33,6 @@ export default function Footer() {
                 {group.links.map(([href, label]) => (
                   <li key={href}><Link href={href} className="inline-block py-1 text-sm text-slate-400 transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-emerald-400">{label}</Link></li>
                 ))}
-                {group.title === "Product" && <li><details><summary className="cursor-pointer py-1 text-sm text-slate-400 hover:text-white">More products</summary><ul className="mt-3 space-y-3 pb-2">{extraProducts.map(([href, label]) => <li key={href}><Link href={href} className="inline-block py-1 text-sm text-slate-400 transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-emerald-400">{label}</Link></li>)}</ul></details></li>}
               </ul>
             </nav>
           ))}

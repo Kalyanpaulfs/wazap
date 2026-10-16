@@ -2,19 +2,21 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { TOOL_LIMITS } from "@/lib/tool-access";
+import { effectivePlan } from "@/lib/entitlements";
+import { widgetAvailable } from "@/lib/plan-limits";
 
 export const dynamic = "force-dynamic";
 
-type MeterableTool = "checker" | "vcard" | "widget" | "transcript" | "bulk";
+// The website widget is included in Solo, Growth and Agency (and the product
+// trial); it is not part of Free. Paid access is unlimited - usage is only
+// counted for analytics.
+type MeterableTool = "widget";
 
-const FIELD_MAP: Record<MeterableTool, "checkerUses" | "vcardDownloads" | "widgetCopies" | "transcriptExports" | "bulkSends"> = {
-  checker:    "checkerUses",
-  vcard:      "vcardDownloads",
-  widget:     "widgetCopies",
-  transcript: "transcriptExports",
-  bulk:       "bulkSends",
+const FIELD_MAP: Record<MeterableTool, "widgetCopies"> = {
+  widget: "widgetCopies",
 };
+
+const UPGRADE_MESSAGE = "The website widget is included in Solo, Growth and Agency. Upgrade to use it.";
 
 function today() { return new Date().toISOString().slice(0, 10); }
 
@@ -24,73 +26,45 @@ function cleanCount(value: unknown) {
   return Math.min(100, Math.max(1, Math.floor(count)));
 }
 
-// GET /api/tools/use?tool=checker — returns current usage + limit
+async function planFor(userId: string) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { plan: true, trialPlan: true, trialStartedAt: true, trialEndsAt: true },
+  });
+  return effectivePlan(user);
+}
+
+// GET /api/tools/use?tool=widget - is the widget available on this plan?
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
   const tool = req.nextUrl.searchParams.get("tool") as MeterableTool | null;
   if (!tool || !FIELD_MAP[tool]) return NextResponse.json({ error: "Invalid tool" }, { status: 400 });
 
-  if (!session?.user) {
-    const limit = TOOL_LIMITS[tool].free.uses;
-    return NextResponse.json({ usedToday: 0, limit, remaining: limit, plan: "free", anonymous: true });
-  }
+  if (!session?.user) return NextResponse.json({ available: false, plan: "free", anonymous: true });
 
-  const userId = (session.user as any).id as string;
-  const rawPlan = ((session.user as any).plan ?? "free") as string;
-  const plan = (rawPlan === "business" ? "ultimate" : rawPlan) as keyof typeof TOOL_LIMITS.checker;
-  const limit = (TOOL_LIMITS[tool as keyof typeof TOOL_LIMITS] as any)[plan]?.uses ?? 0;
-
-  const usage = await prisma.dailyUsage.findUnique({
-    where: { userId_date: { userId, date: today() } },
-  });
-
-  const field = FIELD_MAP[tool];
-  const usedToday = (usage as any)?.[field] ?? 0;
-  const remaining = limit === -1 ? -1 : Math.max(0, limit - usedToday);
-
-  return NextResponse.json({ usedToday, limit, remaining, plan: rawPlan });
+  const userId = (session.user as { id: string }).id;
+  const plan = await planFor(userId);
+  return NextResponse.json({ available: widgetAvailable(plan), plan });
 }
 
-// POST /api/tools/use — { tool, count? } — increments usage, returns 429 if limit hit
+// POST /api/tools/use - { tool, count? } - records usage; 403 when not in the plan
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   const { tool, count = 1 } = await req.json() as { tool: MeterableTool; count?: number };
   if (!tool || !FIELD_MAP[tool]) return NextResponse.json({ error: "Invalid tool" }, { status: 400 });
 
-  if (!session?.user) {
-    const limit = TOOL_LIMITS[tool].free.uses;
-    return NextResponse.json({ ok: true, usedToday: 0, limit, remaining: limit, plan: "free", anonymous: true });
-  }
+  if (!session?.user) return NextResponse.json({ error: UPGRADE_MESSAGE, available: false }, { status: 403 });
 
-  const userId = (session.user as any).id as string;
-  const rawPlan = ((session.user as any).plan ?? "free") as string;
-  const plan = rawPlan === "business" ? "ultimate" : rawPlan;
-  const limit = (TOOL_LIMITS[tool as keyof typeof TOOL_LIMITS] as any)[plan]?.uses ?? 0;
+  const userId = (session.user as { id: string }).id;
+  const plan = await planFor(userId);
+  if (!widgetAvailable(plan)) return NextResponse.json({ error: UPGRADE_MESSAGE, available: false, plan }, { status: 403 });
 
   const field = FIELD_MAP[tool];
-
-  const usage = await prisma.dailyUsage.upsert({
+  await prisma.dailyUsage.upsert({
     where: { userId_date: { userId, date: today() } },
-    create: { userId, date: today() },
-    update: {},
+    create: { userId, date: today(), [field]: cleanCount(count) },
+    update: { [field]: { increment: cleanCount(count) } },
   });
 
-  const usedToday = (usage as any)[field] ?? 0;
-
-  if (limit !== -1 && usedToday >= limit) {
-    return NextResponse.json({ error: "limit", usedToday, limit, remaining: 0 }, { status: 429 });
-  }
-
-  const safeCount = cleanCount(count);
-  const toAdd = limit === -1 ? safeCount : Math.min(safeCount, limit - usedToday);
-
-  const updated = await prisma.dailyUsage.update({
-    where: { userId_date: { userId, date: today() } },
-    data: { [field]: { increment: toAdd } },
-  });
-
-  const newUsed = (updated as any)[field] ?? 0;
-  const remaining = limit === -1 ? -1 : Math.max(0, limit - newUsed);
-
-  return NextResponse.json({ ok: true, usedToday: newUsed, limit, remaining });
+  return NextResponse.json({ ok: true, available: true, plan });
 }

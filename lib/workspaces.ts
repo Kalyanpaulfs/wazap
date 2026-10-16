@@ -1,14 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { effectivePlan } from "@/lib/entitlements";
 
-export const WORKSPACE_MEMBER_LIMITS: Record<string, number> = {
-  free: 1,
-  basic: 1,
-  pro: 1,
-  ultimate: 5,
-  business: 25,
-};
-
 function workspaceName(name: string | null, email: string) {
   const base = name?.trim() || email.split("@")[0] || "My";
   return `${base.slice(0, 70)}'s workspace`;
@@ -62,21 +54,6 @@ export async function ensurePersonalWorkspace(userId: string) {
 
 export async function getActiveWorkspace(userId: string) {
   return ensurePersonalWorkspace(userId);
-}
-
-export async function requireWorkspaceAccess(userId: string, workspaceId: string, roles?: string[]) {
-  const membership = await prisma.workspaceMember.findUnique({
-    where: { workspaceId_userId: { workspaceId, userId } },
-    include: { workspace: { include: { owner: { select: { plan: true, trialPlan: true, trialEndsAt: true } } } } },
-  });
-  // A plan-paused member loses access without being removed (billing spec
-  // 12g); the owner is never plan-paused, so this never blocks the owner.
-  if (!membership || membership.planPausedAt || (roles && !roles.includes(membership.role))) return null;
-  return membership;
-}
-
-export function workspaceMemberLimit(ownerPlan: string) {
-  return WORKSPACE_MEMBER_LIMITS[ownerPlan] ?? WORKSPACE_MEMBER_LIMITS.free;
 }
 
 export function workspaceOwnerPlan(owner: { plan: string; trialPlan?: string | null; trialEndsAt?: Date | null }) {

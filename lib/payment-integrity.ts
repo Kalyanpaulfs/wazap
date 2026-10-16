@@ -11,9 +11,9 @@ import { syncPlanLimits } from "./plan-limit-sync";
 // Never called from inside a transaction - it opens its own. Errors are
 // caught and logged so a plan-limit-sync failure never breaks a payment
 // webhook or lifecycle event that already committed successfully.
-async function syncPlanLimitsSafely(userId: string) {
+async function syncPlanLimitsSafely(userId: string, previousPlan?: string | null) {
   try {
-    await syncPlanLimits(userId);
+    await syncPlanLimits(userId, previousPlan);
   } catch (err) {
     console.error("[plan-limit-sync] failed after billing change", userId, err instanceof Error ? err.message : String(err));
   }
@@ -122,7 +122,9 @@ export async function recordVerifiedCharge(opts: {
     if (opts.checkoutId || opts.provider === "paypal") await tx.payment.updateMany({ where: { userId: user.id, method: opts.provider, txId: opts.checkoutId || opts.subscriptionId, status: "pending" }, data: { status: "subscription_active", activatedAt: new Date() } });
     // No "paid" receipt for a charge that is about to be refunded automatically.
     if (!duplicateSubscription) await queuePaidReceipt({ key: `${opts.provider}:${opts.chargeId}`, userId: user.id, email: user.email, name: user.name, plan: opts.plan, amount: opts.amount, currency: opts.currency, txId: opts.chargeId }, tx);
-    return { duplicate: false, cancelOld, duplicateSubscription, classification };
+    // user.plan is read above, before any update this call makes - the real
+    // previous plan for the downgrade check in plan-limit-sync.
+    return { duplicate: false, cancelOld, duplicateSubscription, classification, previousPlan: user.plan };
   }, { timeout: 15_000 });
 
   const classification = "classification" in result ? result.classification : undefined;
@@ -133,7 +135,7 @@ export async function recordVerifiedCharge(opts: {
       reason: "Second live subscription detected", chargeId: opts.chargeId, userId: opts.userId, amount: opts.amount, currency: opts.currency,
     });
   }
-  if (!result.duplicate) await syncPlanLimitsSafely(opts.userId);
+  if (!result.duplicate) await syncPlanLimitsSafely(opts.userId, "previousPlan" in result ? result.previousPlan : undefined);
   return result;
 }
 
@@ -219,9 +221,11 @@ export async function applyVerifiedLifecycle(opts: {
       }
     }
     await tx.$executeRaw`INSERT INTO "SecuritySubscriptionState" ("provider", "subscriptionId", "userId", "occurredAt") VALUES (${opts.provider}, ${opts.subscriptionId}, ${user.id}, ${opts.occurredAt}) ON CONFLICT ("provider", "subscriptionId") DO UPDATE SET "occurredAt" = EXCLUDED."occurredAt"`;
-    return { duplicate: false, stale: false, scheduledActivated, duplicateSubscription };
+    // user.plan is read above, before any update this call makes - the real
+    // previous plan for the downgrade check in plan-limit-sync.
+    return { duplicate: false, stale: false, scheduledActivated, duplicateSubscription, previousPlan: user.plan };
   }, { timeout: 15_000 });
-  if (!result.duplicate && !result.stale) await syncPlanLimitsSafely(opts.userId);
+  if (!result.duplicate && !result.stale) await syncPlanLimitsSafely(opts.userId, "previousPlan" in result ? result.previousPlan : undefined);
   return result;
 }
 
@@ -250,6 +254,7 @@ export async function applyVerifiedReversal(opts: {
     const status = opts.kind === "dispute_opened" ? "disputed" : partial ? "partially_refunded" : opts.kind === "refund" ? "refunded" : "charged_back";
     await tx.payment.update({ where: { id: payment.id }, data: { status } });
     let accessEnded = false;
+    let previousPlan: string | null = null;
     if (!alreadyRefunded && (status === "refunded" || status === "charged_back")) {
       const refundedSubscriptionId = await subscriptionIdForPayment(tx, userId, payment.id);
       const pointer = await tx.securityUserBilling.findUnique({ where: { userId } });
@@ -265,12 +270,13 @@ export async function applyVerifiedReversal(opts: {
         // Refunded: no trial again.
         await tx.user.update({ where: { id: userId }, data: { plan: "free", planExpiresAt: null, ...(user.trialEndsAt && user.trialEndsAt.getTime() > Date.now() ? { trialEndsAt: new Date() } : {}) } });
         accessEnded = true;
+        previousPlan = user.plan;
       }
     }
     // Our own admin/duplicate refund already applied it: the provider event is just the echo.
     const ourRefund = alreadyRefunded && Boolean(await tx.billingRefund.findFirst({ where: { paymentId: payment.id, status: "succeeded" } }));
-    return { matched: true as const, duplicate: false, userId, paymentId: payment.id, status, accessEnded, ourRefund };
+    return { matched: true as const, duplicate: false, userId, paymentId: payment.id, status, accessEnded, ourRefund, previousPlan };
   }, { timeout: 15_000 });
-  if (result.accessEnded) await syncPlanLimitsSafely(userId);
+  if (result.accessEnded) await syncPlanLimitsSafely(userId, "previousPlan" in result ? result.previousPlan : undefined);
   return result;
 }

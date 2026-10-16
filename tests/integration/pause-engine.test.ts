@@ -8,6 +8,7 @@ vi.mock("@/lib/dodo", () => buildDodoMock());
 
 import { chargeOnce as recordVerifiedCharge, lifecycleOnce as applyVerifiedLifecycle } from "./typed-calls";
 import { syncPlanLimits } from "@/lib/plan-limit-sync";
+import { downgradeIfExpired } from "@/lib/billing-expiry";
 import { prisma } from "@/lib/prisma";
 import {
   assertLifecycleApplied, assertNotDuplicate, cleanupUser, createTestUser, daysFromNow, getUser, getWorkspaceId, uid, withEnv,
@@ -23,6 +24,30 @@ async function makeRotators(userId: string, scores: number[]) {
     }));
   }
   return rows;
+}
+
+async function makeShortLinks(userId: string, scores: number[]) {
+  const rows = [];
+  for (const clicks of scores) {
+    rows.push(await prisma.shortLink.create({
+      data: { userId, code: uid("sl"), name: "s", phone: "+10000000000", clicks },
+    }));
+  }
+  return rows;
+}
+
+async function makeAdLinks(userId: string, scores: number[]) {
+  const rows = [];
+  for (const clicks of scores) {
+    rows.push(await prisma.adLink.create({
+      data: { userId, name: "a", number: "+10000000000", clicks },
+    }));
+  }
+  return rows;
+}
+
+function pausedIds<T extends { id: string; planPausedAt: Date | null }>(rows: T[]) {
+  return rows.filter((r) => r.planPausedAt !== null).map((r) => r.id).sort();
 }
 
 async function makeAutomations(workspaceId: string, specs: Array<{ status: string; lastRunAt: Date | null }>) {
@@ -137,5 +162,278 @@ describe("Case 16: plan-limit pausing engine", () => {
 
     const rotatorRows = await prisma.rotatorLink.findMany({ where: { id: { in: rotators.map((r) => r.id) } } });
     expect(rotatorRows.every((r) => r.planPausedAt === null)).toBe(true);
+  });
+
+  // FEAT-AUDIT-HARDENING: pausing rotators/short links/ad links must only
+  // happen on a real downgrade (previous plan rank strictly higher than the
+  // new one). The cases below exercise that through the real trigger paths.
+
+  it("a renewal charge for the SAME plan never pauses short links/ad links, even over the new (tighter) limits", async () => {
+    const user0 = await createTestUser({ plan: "free" });
+    userId = user0.id; email = user0.email;
+    const { subscriptionId: S0 } = await bootstrapLiveSubscription({ provider: "paypal", userId, plan: "pro", amount: 19 });
+
+    // New pro limit is 5 for both short links and ad links (lib/plan-limits.ts) - 7 of each is over.
+    const shortLinks = await makeShortLinks(userId, [70, 60, 50, 40, 30, 20, 10]);
+    const adLinks = await makeAdLinks(userId, [70, 60, 50, 40, 30, 20, 10]);
+
+    await withEnv({ PLAN_LIMIT_PAUSING_ENABLED: "true" }, async () => {
+      const chargeResult = await recordVerifiedCharge({
+        provider: "paypal", chargeId: uid("sale"), userId, plan: "pro", amount: 19, currency: "USD",
+        subscriptionId: S0, occurredAt: new Date(), periodEnd: daysFromNow(30),
+      });
+      assertNotDuplicate(chargeResult);
+      expect(chargeResult.classification).toBe("same");
+      await runPostTransactionActions({ cancelOld: chargeResult.cancelOld, duplicateSubscription: chargeResult.duplicateSubscription, userId });
+    });
+
+    const freshUser = await getUser(userId);
+    expect(freshUser.plan).toBe("pro");
+
+    const shortLinkRows = await prisma.shortLink.findMany({ where: { id: { in: shortLinks.map((r) => r.id) } } });
+    const adLinkRows = await prisma.adLink.findMany({ where: { id: { in: adLinks.map((r) => r.id) } } });
+    expect(pausedIds(shortLinkRows)).toEqual([]);
+    expect(pausedIds(adLinkRows)).toEqual([]);
+  });
+
+  it("Growth -> Solo downgrade pauses short links/ad links per the NEW (tighter) limits, keeping the highest-score items", async () => {
+    const user0 = await createTestUser({ plan: "free" });
+    userId = user0.id; email = user0.email;
+    const { subscriptionId: S0 } = await bootstrapLiveSubscription({ provider: "paypal", userId, plan: "pro", amount: 19 });
+
+    // New basic (Solo) limits: short links 2, ad links 0 (lib/plan-limits.ts).
+    const shortLinks = await makeShortLinks(userId, [50, 40, 30]);
+    const adLinks = await makeAdLinks(userId, [50, 40]);
+
+    await withEnv({ PLAN_LIMIT_PAUSING_ENABLED: "true", BILLING_PLAN_CHANGES_ENABLED: "true" }, async () => {
+      const S1 = uid("sub");
+      const effectiveAt = daysFromNow(27);
+      await createPendingChange({ userId, kind: "downgrade", fromPlan: "pro", toPlan: "basic", provider: "paypal", oldSubscriptionId: S0, newSubscriptionId: S1, effectiveAt });
+
+      const activated = await applyVerifiedLifecycle({
+        provider: "paypal", eventId: uid("evt"), subscriptionId: S1, occurredAt: new Date(), userId, plan: "basic", endAccess: false,
+      });
+      assertLifecycleApplied(activated);
+      await runPostTransactionActions({ cancelOld: cancelOldForScheduledActivation(activated.scheduledActivated), duplicateSubscription: activated.duplicateSubscription, userId });
+
+      const chargeResult = await recordVerifiedCharge({
+        provider: "paypal", chargeId: uid("sale"), userId, plan: "basic", amount: 9, currency: "USD",
+        subscriptionId: S1, occurredAt: new Date(effectiveAt.getTime() + 1000), periodEnd: daysFromNow(30),
+      });
+      assertNotDuplicate(chargeResult);
+      expect(chargeResult.classification).toBe("expected_change");
+      await runPostTransactionActions({ cancelOld: chargeResult.cancelOld, duplicateSubscription: chargeResult.duplicateSubscription, userId });
+    });
+
+    const freshUser = await getUser(userId);
+    expect(freshUser.plan).toBe("basic");
+
+    const shortLinkRows = await prisma.shortLink.findMany({ where: { id: { in: shortLinks.map((r) => r.id) } }, orderBy: { clicks: "desc" } });
+    expect(shortLinkRows.map((r) => r.planPausedAt !== null)).toEqual([false, false, true]); // top 2 (new basic limit) kept
+
+    const adLinkRows = await prisma.adLink.findMany({ where: { id: { in: adLinks.map((r) => r.id) } } });
+    expect(pausedIds(adLinkRows).sort()).toEqual(adLinks.map((r) => r.id).sort()); // basic ad-link limit is 0 - all paused
+  });
+
+  it("paid plan expiring to free pauses rotators/short links/ad links per the free limits", async () => {
+    const expiresAt = new Date(Date.now() - 60_000); // already expired
+    const user0 = await createTestUser({ plan: "pro", planExpiresAt: expiresAt });
+    userId = user0.id; email = user0.email;
+
+    // Free limits: rotators 1, short links 0, ad links 0 (lib/plan-limits.ts).
+    const rotators = await makeRotators(userId, [30, 20, 10]);
+    const shortLinks = await makeShortLinks(userId, [30, 20]);
+    const adLinks = await makeAdLinks(userId, [30]);
+
+    await withEnv({ PLAN_LIMIT_PAUSING_ENABLED: "true" }, async () => {
+      const changed = await downgradeIfExpired({ id: userId, plan: "pro", planExpiresAt: expiresAt });
+      expect(changed).toBe(true);
+    });
+
+    const freshUser = await getUser(userId);
+    expect(freshUser.plan).toBe("free");
+
+    const rotatorRows = await prisma.rotatorLink.findMany({ where: { id: { in: rotators.map((r) => r.id) } }, orderBy: { totalClicks: "desc" } });
+    expect(rotatorRows.map((r) => r.planPausedAt !== null)).toEqual([false, true, true]); // free limit 1: top kept
+
+    const shortLinkRows = await prisma.shortLink.findMany({ where: { id: { in: shortLinks.map((r) => r.id) } } });
+    expect(pausedIds(shortLinkRows).sort()).toEqual(shortLinks.map((r) => r.id).sort()); // free limit 0: all paused
+
+    const adLinkRows = await prisma.adLink.findMany({ where: { id: { in: adLinks.map((r) => r.id) } } });
+    expect(pausedIds(adLinkRows).sort()).toEqual(adLinks.map((r) => r.id).sort()); // free limit 0: all paused
+  });
+
+  it("an upgrade never pauses, and resumes previously plan-paused short links", async () => {
+    const user0 = await createTestUser({ plan: "basic" });
+    userId = user0.id; email = user0.email;
+
+    const shortLinks = await makeShortLinks(userId, [30, 20]);
+    // Simulates a short link plan-paused by an earlier real downgrade.
+    await prisma.shortLink.update({ where: { id: shortLinks[1].id }, data: { planPausedAt: new Date() } });
+
+    await withEnv({ PLAN_LIMIT_PAUSING_ENABLED: "true" }, async () => {
+      await prisma.user.update({ where: { id: userId }, data: { plan: "pro" } });
+      // previousPlan explicitly passed, as a real caller (recordVerifiedCharge
+      // etc.) would after reading it before the update above.
+      const result = await syncPlanLimits(userId, "basic");
+      expect(result.shortLinks.paused).toBe(0);
+      expect(result.shortLinks.resumed).toBe(1);
+    });
+
+    const shortLinkRows = await prisma.shortLink.findMany({ where: { id: { in: shortLinks.map((r) => r.id) } } });
+    expect(shortLinkRows.every((r) => r.planPausedAt === null)).toBe(true);
+  });
+
+  it("an unresolvable previous plan never pauses, even when the plan just went down and is now over the new limit", async () => {
+    const user0 = await createTestUser({ plan: "pro" });
+    userId = user0.id; email = user0.email;
+    // New basic short-link limit is 2 - 3 is over it.
+    const shortLinks = await makeShortLinks(userId, [30, 20, 10]);
+
+    await withEnv({ PLAN_LIMIT_PAUSING_ENABLED: "true" }, async () => {
+      await prisma.user.update({ where: { id: userId }, data: { plan: "basic" } });
+      // No previousPlan argument: the caller could not determine it, so the
+      // fail-safe (no pause) applies even though this really is a downgrade.
+      const result = await syncPlanLimits(userId);
+      expect(result.shortLinks.paused).toBe(0);
+      expect(result.shortLinks.resumed).toBe(0);
+    });
+
+    const shortLinkRows = await prisma.shortLink.findMany({ where: { id: { in: shortLinks.map((r) => r.id) } } });
+    expect(shortLinkRows.every((r) => r.planPausedAt === null)).toBe(true);
+  });
+
+  // FEAT-AUDIT-HARDENING trial links: the 3-day Growth trial grants
+  // Growth-level rotator/short-link/ad-link limits for its duration. These
+  // cases match the owner's examples (a)-(d) exactly.
+
+  it("(a) a new-style trial ending with no purchase pauses extras down to FREE limits", async () => {
+    const trialEndsAt = daysFromNow(-1); // ended yesterday - within the cron's 2-day lookback
+    const trialStartedAt = new Date(trialEndsAt.getTime() - 3 * 86_400_000); // 3-day (new-style) trial
+    const user0 = await createTestUser({ plan: "free", trialStartedAt, trialEndsAt, trialPlan: "pro" });
+    userId = user0.id; email = user0.email;
+
+    // Free limits: rotators 1, short links 0, ad links 0.
+    const rotators = await makeRotators(userId, [30, 20, 10]);
+    const shortLinks = await makeShortLinks(userId, [30, 20]);
+    const adLinks = await makeAdLinks(userId, [30]);
+
+    await withEnv({ PLAN_LIMIT_PAUSING_ENABLED: "true" }, async () => {
+      // Mirrors app/api/cron/expire-plans/route.ts's trial-lapse sweep: a
+      // new-style trial passes its own trialPlan as previousPlan.
+      const result = await syncPlanLimits(userId, "pro");
+      expect(result.rotators.paused).toBe(2);
+      expect(result.shortLinks.paused).toBe(2);
+      expect(result.adLinks.paused).toBe(1);
+    });
+
+    const rotatorRows = await prisma.rotatorLink.findMany({ where: { id: { in: rotators.map((r) => r.id) } }, orderBy: { totalClicks: "desc" } });
+    expect(rotatorRows.map((r) => r.planPausedAt !== null)).toEqual([false, true, true]); // free limit 1: top kept
+
+    const shortLinkRows = await prisma.shortLink.findMany({ where: { id: { in: shortLinks.map((r) => r.id) } } });
+    expect(pausedIds(shortLinkRows).sort()).toEqual(shortLinks.map((r) => r.id).sort()); // free limit 0: all paused
+
+    const adLinkRows = await prisma.adLink.findMany({ where: { id: { in: adLinks.map((r) => r.id) } } });
+    expect(pausedIds(adLinkRows).sort()).toEqual(adLinks.map((r) => r.id).sort()); // free limit 0: all paused
+  });
+
+  it("(b) buying Solo during an active new-style trial pauses extras down to SOLO limits", async () => {
+    const trialStartedAt = daysFromNow(-1);
+    const trialEndsAt = daysFromNow(2); // still active at the moment of purchase
+    const user0 = await createTestUser({ plan: "free", trialStartedAt, trialEndsAt, trialPlan: "pro" });
+    userId = user0.id; email = user0.email;
+
+    // Solo (basic) limits: rotators 3, short links 2, ad links 0.
+    const rotators = await makeRotators(userId, [50, 40, 30, 20, 10]);
+    const shortLinks = await makeShortLinks(userId, [40, 30, 20]);
+    const adLinks = await makeAdLinks(userId, [40, 30]);
+
+    await withEnv({ PLAN_LIMIT_PAUSING_ENABLED: "true" }, async () => {
+      const S0 = uid("sub");
+      const t0 = new Date();
+      const activated = await applyVerifiedLifecycle({
+        provider: "paypal", eventId: uid("evt"), subscriptionId: S0, occurredAt: t0, userId, plan: "basic", endAccess: false,
+      });
+      assertLifecycleApplied(activated);
+      const chargeResult = await recordVerifiedCharge({
+        provider: "paypal", chargeId: uid("sale"), userId, plan: "basic", amount: 9, currency: "USD",
+        subscriptionId: S0, occurredAt: new Date(t0.getTime() + 1000), periodEnd: daysFromNow(30),
+      });
+      assertNotDuplicate(chargeResult);
+      await runPostTransactionActions({ cancelOld: chargeResult.cancelOld, duplicateSubscription: chargeResult.duplicateSubscription, userId });
+    });
+
+    const freshUser = await getUser(userId);
+    expect(freshUser.plan).toBe("basic");
+
+    const rotatorRows = await prisma.rotatorLink.findMany({ where: { id: { in: rotators.map((r) => r.id) } }, orderBy: { totalClicks: "desc" } });
+    expect(rotatorRows.map((r) => r.planPausedAt !== null)).toEqual([false, false, false, true, true]); // top 3 (Solo limit) kept
+
+    const shortLinkRows = await prisma.shortLink.findMany({ where: { id: { in: shortLinks.map((r) => r.id) } }, orderBy: { clicks: "desc" } });
+    expect(shortLinkRows.map((r) => r.planPausedAt !== null)).toEqual([false, false, true]); // top 2 (Solo limit) kept
+
+    const adLinkRows = await prisma.adLink.findMany({ where: { id: { in: adLinks.map((r) => r.id) } } });
+    expect(pausedIds(adLinkRows).sort()).toEqual(adLinks.map((r) => r.id).sort()); // Solo ad-link limit is 0 - all paused
+  });
+
+  it("(c) buying Growth during an active new-style trial pauses nothing", async () => {
+    const trialStartedAt = daysFromNow(-1);
+    const trialEndsAt = daysFromNow(2);
+    const user0 = await createTestUser({ plan: "free", trialStartedAt, trialEndsAt, trialPlan: "pro" });
+    userId = user0.id; email = user0.email;
+
+    // Growth (pro) limits: rotators 10, short links 5, ad links 5 - well within.
+    const rotators = await makeRotators(userId, [10, 9, 8]);
+    const shortLinks = await makeShortLinks(userId, [10, 9]);
+    const adLinks = await makeAdLinks(userId, [10]);
+
+    await withEnv({ PLAN_LIMIT_PAUSING_ENABLED: "true" }, async () => {
+      const S0 = uid("sub");
+      const t0 = new Date();
+      const activated = await applyVerifiedLifecycle({
+        provider: "paypal", eventId: uid("evt"), subscriptionId: S0, occurredAt: t0, userId, plan: "pro", endAccess: false,
+      });
+      assertLifecycleApplied(activated);
+      const chargeResult = await recordVerifiedCharge({
+        provider: "paypal", chargeId: uid("sale"), userId, plan: "pro", amount: 19, currency: "USD",
+        subscriptionId: S0, occurredAt: new Date(t0.getTime() + 1000), periodEnd: daysFromNow(30),
+      });
+      assertNotDuplicate(chargeResult);
+      await runPostTransactionActions({ cancelOld: chargeResult.cancelOld, duplicateSubscription: chargeResult.duplicateSubscription, userId });
+    });
+
+    const freshUser = await getUser(userId);
+    expect(freshUser.plan).toBe("pro");
+
+    const rotatorRows = await prisma.rotatorLink.findMany({ where: { id: { in: rotators.map((r) => r.id) } } });
+    expect(rotatorRows.every((r) => r.planPausedAt === null)).toBe(true);
+    const shortLinkRows = await prisma.shortLink.findMany({ where: { id: { in: shortLinks.map((r) => r.id) } } });
+    expect(shortLinkRows.every((r) => r.planPausedAt === null)).toBe(true);
+    const adLinkRows = await prisma.adLink.findMany({ where: { id: { in: adLinks.map((r) => r.id) } } });
+    expect(adLinkRows.every((r) => r.planPausedAt === null)).toBe(true);
+  });
+
+  it("(d) an old-style (14-day) trial ending never pauses anything (grandfathered)", async () => {
+    const trialEndsAt = daysFromNow(-1);
+    const trialStartedAt = new Date(trialEndsAt.getTime() - 14 * 86_400_000); // 14-day (old-style) trial
+    const user0 = await createTestUser({ plan: "free", trialStartedAt, trialEndsAt, trialPlan: "pro" });
+    userId = user0.id; email = user0.email;
+
+    const rotators = await makeRotators(userId, [30, 20, 10]);
+    const shortLinks = await makeShortLinks(userId, [30, 20]);
+
+    await withEnv({ PLAN_LIMIT_PAUSING_ENABLED: "true" }, async () => {
+      // Mirrors the cron: isNewStyleTrial is false for a 14-day trial, so it
+      // passes no previousPlan at all - these users never had Growth link
+      // limits to lose.
+      const result = await syncPlanLimits(userId);
+      expect(result.rotators.paused).toBe(0);
+      expect(result.shortLinks.paused).toBe(0);
+    });
+
+    const rotatorRows = await prisma.rotatorLink.findMany({ where: { id: { in: rotators.map((r) => r.id) } } });
+    expect(rotatorRows.every((r) => r.planPausedAt === null)).toBe(true);
+    const shortLinkRows = await prisma.shortLink.findMany({ where: { id: { in: shortLinks.map((r) => r.id) } } });
+    expect(shortLinkRows.every((r) => r.planPausedAt === null)).toBe(true);
   });
 });

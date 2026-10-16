@@ -30,8 +30,9 @@ for (const required of [
   "inboxTasks", "inboxEvents", "aiRuns", "aiEvaluations", "apiRequestLogs",
   "apiIdempotencyRecords", "deliveryAttempts", "marketplacePublisher",
   "marketplaceInstalls", "partnerAttributions", "marketplaceAbuseReports",
-  "funnelEvents", "siteVisits", "contactMessages", "supportConversations", "operationalIncidents", "referralTouches",
+  "funnelEvents", "siteVisits", "operationalIncidents", "referralTouches",
+  "chatsStarted", "olderFeatures", "omitEmptyExportKeys",
 ]) assert(source.includes(required), `Account export coverage is missing ${required}`);
-assert(source.includes('exportVersion: "2026-08-03"'), "Export contract version was not advanced");
+assert(source.includes('ACCOUNT_EXPORT_FORMAT_VERSION = "2026-10-16"'), "Export contract version was not advanced");
 
-console.log(JSON.stringify({ ok: true, secretLeak: false, coverageGroups: 18, exportVersion: "2026-08-03" }));
+console.log(JSON.stringify({ ok: true, secretLeak: false, coverageGroups: 18, exportVersion: "2026-10-16" }));

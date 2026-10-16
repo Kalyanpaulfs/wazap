@@ -11,7 +11,6 @@ export type Lifecycle = {
   graceDays: number;
   blockers: {
     billing: { method: string; plan: string } | null;
-    sharedOwnedWorkspaces: { id: string; name: string; members: number }[];
   };
 };
 
@@ -73,7 +72,7 @@ export default function AccountClient({ initial, marketing }: { initial: Lifecyc
     }
   }
 
-  const blocked = Boolean(data.blockers.billing || data.blockers.sharedOwnedWorkspaces.length);
+  const blocked = Boolean(data.blockers.billing);
 
   return (
     <main className="hero-bg min-h-screen px-4 py-12">
@@ -90,7 +89,7 @@ export default function AccountClient({ initial, marketing }: { initial: Lifecyc
           <Download className="h-6 w-6 text-[#25D366]" />
           <h2 className="mt-3 text-xl font-bold text-white">Download your data</h2>
           <p className="mt-2 text-sm leading-6 text-slate-400">
-            The JSON export contains your account, billing and tool history, conversations, CRM, tasks, AI governance, automations, channel events, API and webhook evidence, Store activity, partner attribution, and support records from workspaces you own. Passwords, reset tokens, authentication keys, secret URL parameters, and encrypted provider credentials are excluded.
+            The JSON export contains your account, rotators, tracked links, ad links, chats started, usage, payments, and performance/site activity history. Data from features Wazap has since retired is included too, grouped together. Passwords, reset tokens, authentication keys, secret URL parameters, and encrypted provider credentials are excluded.
           </p>
           <a
             href="/api/account/export"
@@ -127,7 +126,7 @@ export default function AccountClient({ initial, marketing }: { initial: Lifecyc
               <RotateCcw className="h-6 w-6 text-amber-300" />
               <h2 className="mt-3 text-xl font-bold text-white">Account closure scheduled</h2>
               <p className="mt-2 text-sm leading-6 text-slate-300">
-                Permanent deletion is scheduled for <strong>{new Date(data.scheduledFor).toLocaleString()}</strong>. Restore the account before then to keep every workspace and record.
+                Permanent deletion is scheduled for <strong>{new Date(data.scheduledFor).toLocaleString()}</strong>. Restore the account before then to keep your rotators, links, chats, reports and account.
               </p>
               <button
                 type="button"
@@ -143,7 +142,7 @@ export default function AccountClient({ initial, marketing }: { initial: Lifecyc
               <Trash2 className="h-6 w-6 text-red-300" />
               <h2 className="mt-3 text-xl font-bold text-white">Close this account</h2>
               <p className="mt-2 text-sm leading-6 text-slate-400">
-                Closure has a {data.graceDays}-day recovery period. When it expires, Wazap permanently removes the account and sole-owner workspaces, disconnects channels, and deletes conversation and CRM data. Provider transaction records may remain with payment providers where legally required.
+                Closure has a {data.graceDays}-day recovery period. When it expires, Wazap permanently removes the account along with your rotators, tracked links, ad links and chat history. Payment records are kept, with the email anonymised, for tax and legal reasons.
               </p>
               {blocked && (
                 <div className="mt-4 rounded-xl border border-amber-400/20 bg-amber-400/5 p-4 text-sm text-amber-100">
@@ -151,12 +150,9 @@ export default function AccountClient({ initial, marketing }: { initial: Lifecyc
                   {data.blockers.billing && (
                     <p className="mt-2">Cancel the active {data.blockers.billing.method} {data.blockers.billing.plan} subscription from the dashboard billing controls.</p>
                   )}
-                  {data.blockers.sharedOwnedWorkspaces.map((workspace) => (
-                    <p key={workspace.id} className="mt-2">Transfer ownership or remove the other members from {workspace.name} ({workspace.members} members).</p>
-                  ))}
                   <div className="mt-3 flex gap-4">
-                    <Link href="/dashboard" className="font-semibold text-[#25D366]">Billing controls →</Link>
-                    <Link href="/workspace" className="font-semibold text-[#25D366]">Workspace controls →</Link>
+                    <Link href="/billing" className="font-semibold text-[#25D366]">Billing controls →</Link>
+                    <Link href="/support" className="font-semibold text-[#25D366]">Contact support →</Link>
                   </div>
                 </div>
               )}

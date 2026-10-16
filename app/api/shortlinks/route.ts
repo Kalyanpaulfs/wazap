@@ -2,15 +2,14 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { TOOL_LIMITS } from "@/lib/tool-access";
 import { recordFunnelEvent } from "@/lib/funnel";
+import { shortLinkLimit, PLAN_DISPLAY_NAME, normalizePlanKey } from "@/lib/plan-limits";
+import { linkPlan } from "@/lib/router-entitlements";
 
 export const dynamic = "force-dynamic";
 
 function getLimit(plan: string) {
-  const l = TOOL_LIMITS.shortlink;
-  if (plan === "business") plan = "ultimate";
-  return (l[plan as keyof typeof l] ?? l.free).uses;
+  return shortLinkLimit(plan);
 }
 function genCode() { return Math.random().toString(36).slice(2, 8).toLowerCase(); }
 async function uniqueCode(): Promise<string> {
@@ -22,27 +21,28 @@ const slugOk = (s: string) => /^[a-z0-9-]{3,30}$/.test(s);
 
 export async function GET() {
   const session = await getServerSession(authOptions);
-  if (!session?.user) return NextResponse.json([]);
+  if (!session?.user) return NextResponse.json({ links: [], limit: 0, plan: "free", planLabel: PLAN_DISPLAY_NAME.free });
   const userId = (session.user as any).id;
+  const entitlementUser = await prisma.user.findUnique({ where: { id: userId }, select: { plan: true, planExpiresAt: true, trialPlan: true, trialEndsAt: true } });
+  const plan = linkPlan(entitlementUser);
   const links = await prisma.shortLink.findMany({ where: { userId }, orderBy: { createdAt: "desc" } });
-  return NextResponse.json(links);
+  return NextResponse.json({ links, limit: getLimit(plan), plan, planLabel: PLAN_DISPLAY_NAME[normalizePlanKey(plan)] });
 }
 
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const userId = (session.user as any).id;
-  const plan = (session.user as any).plan ?? "free";
+  const entitlementUser = await prisma.user.findUnique({ where: { id: userId }, select: { plan: true, planExpiresAt: true, trialPlan: true, trialEndsAt: true } });
+  const plan = linkPlan(entitlementUser);
   const limit = getLimit(plan);
 
   if (limit === 0) {
     return NextResponse.json({ error: "Branded short links are a paid feature. Upgrade to create trackable links.", upgrade: true }, { status: 403 });
   }
-  if (limit !== -1) {
-    const count = await prisma.shortLink.count({ where: { userId, planPausedAt: null } });
-    if (count >= limit) {
-      return NextResponse.json({ error: `Plan limit reached — your ${plan} plan allows ${limit} short link${limit !== 1 ? "s" : ""}. Upgrade for more.`, upgrade: true }, { status: 403 });
-    }
+  const count = await prisma.shortLink.count({ where: { userId, planPausedAt: null } });
+  if (count >= limit) {
+    return NextResponse.json({ error: `Plan limit reached — your ${PLAN_DISPLAY_NAME[normalizePlanKey(plan)]} plan allows ${limit} short link${limit !== 1 ? "s" : ""}. Upgrade for more.`, upgrade: true }, { status: 403 });
   }
 
   const { name, phone, message, slug } = await req.json();

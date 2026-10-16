@@ -7,12 +7,20 @@
 // Safety: completely gated behind PLAN_LIMIT_PAUSING_ENABLED. When the flag
 // is not exactly "true" this is a no-op that returns all-zero counts, so it
 // is safe to deploy ahead of turning the flag on (see scripts/plan-limit-dry-run.ts).
+//
+// Pausing rotators/short links/ad links additionally requires proof of a
+// real downgrade: callers pass `previousPlan` (the plan read BEFORE the
+// change being reported), and pausing those three is skipped whenever the
+// new plan's rank isn't strictly lower (renewal of the same plan, an
+// upgrade, a same-plan admin re-activation, or an unresolvable previous
+// plan all skip it) - see isLinkDowngrade. Resuming is never gated by this:
+// it always runs. Automations/AI/channels/API keys/webhooks/marketplace
+// installs are unaffected by this gate and keep their existing behaviour.
 import type { Prisma } from "@prisma/client";
 import { prisma } from "./prisma";
-import { effectivePlan } from "./entitlements";
-import { routerPlan } from "./router-entitlements";
-import { TOOL_LIMITS } from "./tool-access";
-import { workspaceMemberLimit } from "./workspaces";
+import { effectivePlan, PRODUCT_TRIAL_PLAN } from "./entitlements";
+import { linkPlan } from "./router-entitlements";
+import { normalizePlanKey, ROTATOR_LIMITS, SHORT_LINK_LIMITS, AD_LINK_LIMITS, type PlanKey } from "./plan-limits";
 import { CHANNEL_LIMITS } from "./channels";
 import { AUTOMATION_LIMITS } from "./automations";
 import { AI_AGENT_LIMITS, AI_KNOWLEDGE_LIMITS } from "./ai-agents";
@@ -26,9 +34,6 @@ export type SyncPlanLimitsResult = {
   rotators: SyncCounts;
   shortLinks: SyncCounts;
   adLinks: SyncCounts;
-  linktreePages: SyncCounts;
-  catalogPages: SyncCounts;
-  workspaceMembers: SyncCounts;
   automations: SyncCounts;
   aiAgents: SyncCounts;
   aiKnowledge: SyncCounts;
@@ -43,8 +48,8 @@ const ZERO: SyncCounts = { paused: 0, resumed: 0 };
 
 function emptyResult(): SyncPlanLimitsResult {
   return {
-    rotators: { ...ZERO }, shortLinks: { ...ZERO }, adLinks: { ...ZERO }, linktreePages: { ...ZERO }, catalogPages: { ...ZERO },
-    workspaceMembers: { ...ZERO }, automations: { ...ZERO }, aiAgents: { ...ZERO }, aiKnowledge: { ...ZERO },
+    rotators: { ...ZERO }, shortLinks: { ...ZERO }, adLinks: { ...ZERO },
+    automations: { ...ZERO }, aiAgents: { ...ZERO }, aiKnowledge: { ...ZERO },
     channels: { ...ZERO }, apiKeys: { ...ZERO }, webhooks: { ...ZERO }, marketplaceInstalls: { ...ZERO },
   };
 }
@@ -90,14 +95,88 @@ function scoreOf(date: Date | null | undefined): number {
   return date ? date.getTime() : Number.NEGATIVE_INFINITY;
 }
 
-function normalizePlanKey(plan: string) {
-  return plan === "business" ? "ultimate" : plan;
+// Rank order for the downgrade check below: free < basic < pro < ultimate
+// (business is folded into ultimate by normalizePlanKey). Only PAUSING for
+// rotators/short links/ad links is gated on this; resume is unconditional.
+const PLAN_RANK: Record<PlanKey, number> = { free: 0, basic: 1, pro: 2, ultimate: 3 };
+
+export function linkLimitValue(limits: Record<PlanKey, number>, plan: string): number {
+  const n = limits[normalizePlanKey(plan)];
+  return n === -1 ? Number.POSITIVE_INFINITY : n;
 }
 
-function toolLimitValue(limits: Record<string, { uses: number }>, plan: string): number {
-  const key = normalizePlanKey(plan) as keyof typeof limits;
-  const uses = (limits[key] ?? limits.free).uses;
-  return uses === -1 ? Number.POSITIVE_INFINITY : uses;
+// Owner decision (FEAT-AUDIT-HARDENING): pausing rotators/short links/ad
+// links must only happen when the customer actually moved to a LOWER plan.
+// `previousPlan` is whatever the caller read for that user BEFORE the plan
+// change it is reporting committed - see each call site in billing-actions.ts/
+// payment-integrity.ts/billing-expiry.ts/the admin + cron routes for exactly
+// where that read happens. `null`/`undefined` means the caller could not
+// determine it: fail safe to "not a downgrade" (no pause), and warn, rather
+// than risk pausing something on an upgrade/renewal because of a bug
+// upstream. An unrecognized non-empty string (never expected) normalizes to
+// "free" (rank 0), which can never look lower than any new plan - so it can
+// never produce a false-positive pause either.
+export function isLinkDowngrade(previousPlan: string | null | undefined, newRawPlan: string, userId: string): boolean {
+  if (previousPlan == null || previousPlan === "") {
+    console.warn("[plan-limit-sync] previous plan unknown for user - skipping rotator/short-link/ad-link pausing (resume-only)", userId);
+    return false;
+  }
+  return PLAN_RANK[normalizePlanKey(newRawPlan)] < PLAN_RANK[normalizePlanKey(previousPlan)];
+}
+
+// Owner decision (FEAT-AUDIT-HARDENING trial links): a NEW-style trial
+// (trialStartedAt and trialEndsAt both set, and no more than 4 days apart -
+// the current 3-day Growth trial) grants Growth-level rotator/short-link/
+// ad-link limits for its duration (see lib/router-entitlements.ts linkPlan).
+// Old 14-day trials predate that and must NEVER be treated as having had
+// Growth link limits - missing trialStartedAt (never recorded for those
+// users) or too long a span both fail safe to "not new-style", which is the
+// side that skips the boost below (grandfathering).
+export const NEW_STYLE_TRIAL_MAX_DAYS = 4;
+
+export type TrialFieldsUser = {
+  trialPlan?: string | null;
+  trialStartedAt?: Date | string | null;
+  trialEndsAt?: Date | string | null;
+};
+
+export function isNewStyleTrial(user: TrialFieldsUser): boolean {
+  if (!user.trialStartedAt || !user.trialEndsAt) return false;
+  const start = new Date(user.trialStartedAt).getTime();
+  const end = new Date(user.trialEndsAt).getTime();
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return false;
+  return end - start <= NEW_STYLE_TRIAL_MAX_DAYS * 86_400_000;
+}
+
+// Covers both the "still active now" case (a purchase made during the
+// trial) and the "ended recently" case (the cron's trial-lapse sweep, which
+// looks back up to 2 days) with one check: a trial whose end is still in the
+// future trivially satisfies this too.
+const TRIAL_RELEVANCE_WINDOW_MS = 2 * 24 * 60 * 60 * 1000;
+
+function trialStillRelevant(user: TrialFieldsUser, now: Date): boolean {
+  if (!isNewStyleTrial(user)) return false;
+  return new Date(user.trialEndsAt!).getTime() >= now.getTime() - TRIAL_RELEVANCE_WINDOW_MS;
+}
+
+// Owner decision (FEAT-AUDIT-HARDENING trial links): the previous-plan rank
+// isLinkDowngrade compares against must reflect the Growth-level link limits
+// a user actually had during an active new-style trial - a plain
+// `previousPlan` never shows this, since the `plan` column stays "free" the
+// whole time a trial runs. When `previousPlan` doesn't already reach "pro"
+// on its own, and the user has a new-style trial that was still active (a
+// purchase made during the trial) or ended within the last 2 days (the
+// cron's lookback window), this bumps the comparison up to the higher of
+// (previousPlan, trialPlan). An unknown previousPlan (null/undefined/"") is
+// left untouched - isLinkDowngrade's existing fail-safe (no pause) still
+// applies, exactly as before this feature.
+export function previousLinkPlanFor(previousPlan: string | null | undefined, user: TrialFieldsUser, now = new Date()): string | null | undefined {
+  if (previousPlan == null || previousPlan === "") return previousPlan;
+  const prevKey = normalizePlanKey(previousPlan);
+  if (PLAN_RANK[prevKey] >= PLAN_RANK.pro) return previousPlan;
+  if (!trialStillRelevant(user, now)) return previousPlan;
+  const trialKey = normalizePlanKey(user.trialPlan || PRODUCT_TRIAL_PLAN);
+  return PLAN_RANK[trialKey] > PLAN_RANK[prevKey] ? trialKey : previousPlan;
 }
 
 type UpdateMany = (where: Record<string, unknown>, data: Record<string, unknown>) => Promise<{ count: number }>;
@@ -111,8 +190,12 @@ export type SyncOutcome = SyncCounts & { pauseIds: string[]; resumeIds: string[]
 
 // Models with no `status` field at all (the 5 link/page tools + members):
 // planPausedAt is the only on/off switch, so pause/resume is a plain write.
-async function syncNoStatusModel(updateMany: UpdateMany, rows: RankCandidate[], limit: number, apply: boolean): Promise<SyncOutcome> {
-  const { pauseIds, resumeIds } = selectPauseResume(rows, limit);
+async function syncNoStatusModel(updateMany: UpdateMany, rows: RankCandidate[], limit: number, apply: boolean, allowPause = true): Promise<SyncOutcome> {
+  const selected = selectPauseResume(rows, limit);
+  // Resume always runs; pausing is skipped entirely when the caller has
+  // determined this isn't a real downgrade (see isLinkDowngrade above).
+  const pauseIds = allowPause ? selected.pauseIds : [];
+  const { resumeIds } = selected;
   let paused = pauseIds.length, resumed = resumeIds.length;
   if (apply) {
     paused = pauseIds.length ? (await updateMany({ id: { in: pauseIds } }, { planPausedAt: new Date() })).count : 0;
@@ -175,30 +258,18 @@ async function syncActiveStatusModel(updateMany: UpdateMany, activeRows: ActiveR
   return pauseAndResume(updateMany, pauseIds, groupByFromStatus(pausedRows, resumeIds), pauseStatus, apply);
 }
 
-// --- Per-user link/page tools: rotator, short link, ad link, linktree, catalog ---
+// --- Per-user link/page tools: rotator, short link, ad link ---
 type LinkToolDelegate = {
   findMany: (args: { where: { userId: string }; select: Record<string, boolean> }) => Promise<Array<Record<string, unknown> & { id: string; createdAt: Date; planPausedAt: Date | null }>>;
   updateMany: (args: { where: Record<string, unknown>; data: Record<string, unknown> }) => Promise<{ count: number }>;
 };
 
-async function syncLinkTool(tx: Tx, model: "rotatorLink" | "shortLink" | "adLink" | "linktreePage" | "catalogPage", userId: string, limit: number, scoreField: "totalClicks" | "clicks" | "views" | null, apply: boolean): Promise<SyncOutcome> {
+async function syncLinkTool(tx: Tx, model: "rotatorLink" | "shortLink" | "adLink", userId: string, limit: number, scoreField: "totalClicks" | "clicks" | null, apply: boolean, allowPause = true): Promise<SyncOutcome> {
   const delegate = tx[model] as unknown as LinkToolDelegate;
   const rows = await delegate.findMany({ where: { userId }, select: { id: true, createdAt: true, planPausedAt: true, ...(scoreField ? { [scoreField]: true } : {}) } });
   const candidates: RankCandidate[] = rows.map((r) => ({ id: r.id, score: scoreField ? Number(r[scoreField] ?? 0) : 0, createdAt: r.createdAt, planPausedAt: r.planPausedAt }));
   const updateMany: UpdateMany = (where, data) => delegate.updateMany({ where: { ...where, userId }, data });
-  return syncNoStatusModel(updateMany, candidates, limit, apply);
-}
-
-// --- Workspace members: owner never touched, newest extra paused first ---
-async function syncWorkspaceMembers(tx: Tx, workspaceId: string, ownerPlan: string, apply: boolean): Promise<SyncOutcome> {
-  const limit = workspaceMemberLimit(ownerPlan);
-  const members = await tx.workspaceMember.findMany({ where: { workspaceId }, select: { id: true, role: true, createdAt: true, planPausedAt: true } });
-  const nonOwner: RankCandidate[] = members.filter((m) => m.role !== "owner").map((m) => ({ id: m.id, score: 0, createdAt: m.createdAt, planPausedAt: m.planPausedAt }));
-  // One seat is always reserved for the owner - it is never a candidate and
-  // never counted against the pool we rank into.
-  const effectiveLimit = Math.max(0, limit - 1);
-  const updateMany: UpdateMany = (where, data) => tx.workspaceMember.updateMany({ where: { ...where, workspaceId }, data });
-  return syncNoStatusModel(updateMany, nonOwner, effectiveLimit, apply);
+  return syncNoStatusModel(updateMany, candidates, limit, apply, allowPause);
 }
 
 async function syncAutomations(tx: Tx, workspaceId: string, plan: string, apply: boolean): Promise<SyncOutcome> {
@@ -302,25 +373,28 @@ async function syncMarketplaceInstalls(tx: Tx, workspaceId: string, plan: string
   );
 }
 
-export async function syncPlanLimits(userId: string): Promise<SyncPlanLimitsResult> {
+export async function syncPlanLimits(userId: string, previousPlan?: string | null): Promise<SyncPlanLimitsResult> {
   if (process.env.PLAN_LIMIT_PAUSING_ENABLED !== "true") return emptyResult();
   try {
     return await prisma.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${"planlimits:" + userId}))`;
-      const user = await tx.user.findUnique({ where: { id: userId }, select: { id: true, plan: true, planExpiresAt: true, trialPlan: true, trialEndsAt: true, createdAt: true } });
+      const user = await tx.user.findUnique({ where: { id: userId }, select: { id: true, plan: true, planExpiresAt: true, trialPlan: true, trialStartedAt: true, trialEndsAt: true, createdAt: true } });
       if (!user) return emptyResult();
       const result = emptyResult();
 
-      // Per-user link/page tools: each uses the SAME plan resolution its own
-      // create route uses (not uniformly effectivePlan - see lib/tool-access.ts
-      // create routes, which deliberately differ: rotator is expiry-aware via
-      // routerPlan, the other four read the raw stored plan with no trial boost).
-      const rawPlan = (user.plan ?? "free").toLowerCase();
-      result.rotators = await syncLinkTool(tx, "rotatorLink", userId, toolLimitValue(TOOL_LIMITS.rotator, routerPlan(user)), "totalClicks", true);
-      result.shortLinks = await syncLinkTool(tx, "shortLink", userId, toolLimitValue(TOOL_LIMITS.shortlink, rawPlan), "clicks", true);
-      result.adLinks = await syncLinkTool(tx, "adLink", userId, toolLimitValue(TOOL_LIMITS.adBuilder, rawPlan), "clicks", true);
-      result.linktreePages = await syncLinkTool(tx, "linktreePage", userId, toolLimitValue(TOOL_LIMITS.linktree, rawPlan), "views", true);
-      result.catalogPages = await syncLinkTool(tx, "catalogPage", userId, toolLimitValue(TOOL_LIMITS.catalog, rawPlan), "views", true);
+      // Per-user link tools: all three now use the SAME plan resolution -
+      // lib/router-entitlements.ts linkPlan (expiry-aware paid plan, else the
+      // trial plan during an active product trial, else free). Limits
+      // themselves come from lib/plan-limits.ts (the 2026 numbers); whether
+      // pausing is even allowed is gated separately below, with the previous
+      // plan boosted for an active/just-ended new-style trial (previousLinkPlanFor)
+      // so a trial ending, or a purchase made during one, is recognised as the
+      // real downgrade it is - see previousLinkPlanFor's own comment.
+      const currentLinkPlan = linkPlan(user);
+      const allowLinkPause = isLinkDowngrade(previousLinkPlanFor(previousPlan, user), currentLinkPlan, userId);
+      result.rotators = await syncLinkTool(tx, "rotatorLink", userId, linkLimitValue(ROTATOR_LIMITS, currentLinkPlan), "totalClicks", true, allowLinkPause);
+      result.shortLinks = await syncLinkTool(tx, "shortLink", userId, linkLimitValue(SHORT_LINK_LIMITS, currentLinkPlan), "clicks", true, allowLinkPause);
+      result.adLinks = await syncLinkTool(tx, "adLink", userId, linkLimitValue(AD_LINK_LIMITS, currentLinkPlan), "clicks", true, allowLinkPause);
 
       // Workspace-scoped types: limit is the OWNER's effectivePlan (trial-aware),
       // matching currentAiContext/marketplaceContext/workspaceOwnerPlan. A user
@@ -328,7 +402,6 @@ export async function syncPlanLimits(userId: string): Promise<SyncPlanLimitsResu
       const ownedWorkspaces = await tx.workspace.findMany({ where: { ownerId: userId }, select: { id: true } });
       const ownerPlan = effectivePlan(user);
       for (const workspace of ownedWorkspaces) {
-        addCounts(result.workspaceMembers, await syncWorkspaceMembers(tx, workspace.id, ownerPlan, true));
         addCounts(result.automations, await syncAutomations(tx, workspace.id, ownerPlan, true));
         addCounts(result.aiAgents, await syncAiAgents(tx, workspace.id, ownerPlan, true));
         addCounts(result.aiKnowledge, await syncAiKnowledge(tx, workspace.id, ownerPlan, true));
@@ -351,7 +424,12 @@ export async function syncPlanLimits(userId: string): Promise<SyncPlanLimitsResu
 // happen before that flag is turned on), does not open a transaction or take
 // the advisory lock (no write ever happens), and reuses the exact same
 // per-type query + selectPauseResume logic as the real sync via apply=false,
-// so the report can never drift from what syncPlanLimits would actually do.
+// so the report can never drift from what syncPlanLimits would actually do -
+// with one deliberate exception: there is no "previous plan" at rest to
+// inspect, so this always previews rotators/short links/ad links as if the
+// current plan were reached by a downgrade (allowPause defaults to true).
+// syncPlanLimits itself only actually pauses those three when the caller can
+// show the user's plan rank really did go down - see isLinkDowngrade.
 // ---------------------------------------------------------------------------
 export type InspectTypeResult = SyncOutcome & { limit: number };
 export type InspectResult = {
@@ -360,9 +438,6 @@ export type InspectResult = {
   rotators: InspectTypeResult;
   shortLinks: InspectTypeResult;
   adLinks: InspectTypeResult;
-  linktreePages: InspectTypeResult;
-  catalogPages: InspectTypeResult;
-  workspaceMembers: InspectTypeResult[];
   automations: InspectTypeResult[];
   aiAgents: InspectTypeResult[];
   aiKnowledge: InspectTypeResult[];
@@ -374,28 +449,23 @@ export type InspectResult = {
 
 export async function inspectPlanLimitsForUser(userId: string): Promise<InspectResult | null> {
   const tx = prisma as unknown as Tx;
-  const user = await tx.user.findUnique({ where: { id: userId }, select: { id: true, plan: true, planExpiresAt: true, trialPlan: true, trialEndsAt: true, createdAt: true } });
+  const user = await tx.user.findUnique({ where: { id: userId }, select: { id: true, plan: true, planExpiresAt: true, trialPlan: true, trialStartedAt: true, trialEndsAt: true, createdAt: true } });
   if (!user) return null;
-  const rawPlan = (user.plan ?? "free").toLowerCase();
-  const rotatorLimit = toolLimitValue(TOOL_LIMITS.rotator, routerPlan(user));
-  const shortLinkLimit = toolLimitValue(TOOL_LIMITS.shortlink, rawPlan);
-  const adLinkLimit = toolLimitValue(TOOL_LIMITS.adBuilder, rawPlan);
-  const linktreeLimit = toolLimitValue(TOOL_LIMITS.linktree, rawPlan);
-  const catalogLimit = toolLimitValue(TOOL_LIMITS.catalog, rawPlan);
+  const currentLinkPlan = linkPlan(user);
+  const rotatorLimit = linkLimitValue(ROTATOR_LIMITS, currentLinkPlan);
+  const shortLinkLimit = linkLimitValue(SHORT_LINK_LIMITS, currentLinkPlan);
+  const adLinkLimit = linkLimitValue(AD_LINK_LIMITS, currentLinkPlan);
   const ownerPlan = effectivePlan(user);
 
   const ownedWorkspaces = await tx.workspace.findMany({ where: { ownerId: userId }, select: { id: true } });
   const withLimit = (limit: number) => async (outcome: SyncOutcome): Promise<InspectTypeResult> => ({ ...outcome, limit });
 
-  const [rotators, shortLinks, adLinks, linktreePages, catalogPages] = await Promise.all([
+  const [rotators, shortLinks, adLinks] = await Promise.all([
     syncLinkTool(tx, "rotatorLink", userId, rotatorLimit, "totalClicks", false).then(withLimit(rotatorLimit)),
     syncLinkTool(tx, "shortLink", userId, shortLinkLimit, "clicks", false).then(withLimit(shortLinkLimit)),
     syncLinkTool(tx, "adLink", userId, adLinkLimit, "clicks", false).then(withLimit(adLinkLimit)),
-    syncLinkTool(tx, "linktreePage", userId, linktreeLimit, "views", false).then(withLimit(linktreeLimit)),
-    syncLinkTool(tx, "catalogPage", userId, catalogLimit, "views", false).then(withLimit(catalogLimit)),
   ]);
 
-  const workspaceMembers: InspectTypeResult[] = [];
   const automations: InspectTypeResult[] = [];
   const aiAgents: InspectTypeResult[] = [];
   const aiKnowledge: InspectTypeResult[] = [];
@@ -405,7 +475,6 @@ export async function inspectPlanLimitsForUser(userId: string): Promise<InspectR
   const marketplaceInstalls: InspectTypeResult[] = [];
 
   for (const workspace of ownedWorkspaces) {
-    workspaceMembers.push({ ...(await syncWorkspaceMembers(tx, workspace.id, ownerPlan, false)), limit: workspaceMemberLimit(ownerPlan) });
     automations.push({ ...(await syncAutomations(tx, workspace.id, ownerPlan, false)), limit: AUTOMATION_LIMITS[ownerPlan] ?? AUTOMATION_LIMITS.free });
     aiAgents.push({ ...(await syncAiAgents(tx, workspace.id, ownerPlan, false)), limit: AI_AGENT_LIMITS[ownerPlan] ?? AI_AGENT_LIMITS.free });
     aiKnowledge.push({ ...(await syncAiKnowledge(tx, workspace.id, ownerPlan, false)), limit: AI_KNOWLEDGE_LIMITS[ownerPlan] ?? AI_KNOWLEDGE_LIMITS.free });
@@ -415,5 +484,5 @@ export async function inspectPlanLimitsForUser(userId: string): Promise<InspectR
     marketplaceInstalls.push({ ...(await syncMarketplaceInstalls(tx, workspace.id, ownerPlan, false)), limit: MARKETPLACE_INSTALL_LIMITS[ownerPlan] ?? MARKETPLACE_INSTALL_LIMITS.free });
   }
 
-  return { userId, plan: ownerPlan, rotators, shortLinks, adLinks, linktreePages, catalogPages, workspaceMembers, automations, aiAgents, aiKnowledge, channels, apiKeys, webhooks, marketplaceInstalls };
+  return { userId, plan: ownerPlan, rotators, shortLinks, adLinks, automations, aiAgents, aiKnowledge, channels, apiKeys, webhooks, marketplaceInstalls };
 }

@@ -13,7 +13,9 @@ export async function downgradeIfExpired(user: { id: string; plan: string; planE
   });
   if (changed.count === 1) {
     try {
-      await syncPlanLimits(user.id);
+      // user.plan is the plan read BEFORE this downgrade - a genuine
+      // paid-to-free downgrade, so this is the real previous plan.
+      await syncPlanLimits(user.id, user.plan);
     } catch (err) {
       console.error("[plan-limit-sync] failed after expiry downgrade", user.id, err instanceof Error ? err.message : String(err));
     }

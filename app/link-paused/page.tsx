@@ -4,7 +4,7 @@ import { AlertTriangle, ArrowRight } from "lucide-react";
 export const metadata = { title: "Link paused | Wazap", robots: { index: false, follow: false } };
 
 // Shared paused page for every public link/page type (rotator, short link,
-// ad link, linktree, catalog) when planPausedAt is set - matches the visual
+// ad link) when planPausedAt is set - matches the visual
 // style of app/router-limit/page.tsx, reused here so pausing doesn't invent
 // a second look-and-feel for "this link is off."
 export default function LinkPausedPage() {

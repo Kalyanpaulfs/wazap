@@ -1,4 +1,5 @@
 import { publicOffers } from "@/lib/marketing-offer";
+import { landingFaqs } from "@/lib/landing-faq";
 import GrowthResources from "./components/GrowthResources";
 import HomeExperience from "./design/HomeExperience";
 import type { Metadata } from "next";
@@ -19,5 +20,15 @@ const jsonLd = {
   applicationCategory: "BusinessApplication", operatingSystem: "Web", offers: publicOffers,
 };
 
+// The site's only FAQ: lives in the #faq section of this landing page (see HomeExperience).
+const faqJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: landingFaqs.map((f) => ({
+    "@type": "Question",
+    name: f.q,
+    acceptedAnswer: { "@type": "Answer", text: f.a },
+  })),
+};
 
-export default function HomePage(){return <><script type="application/ld+json" dangerouslySetInnerHTML={{__html:JSON.stringify(jsonLd).replace(/</g,"\\u003c")}}/><HomeExperience/><GrowthResources/></>;}
+export default function HomePage(){return <><script type="application/ld+json" dangerouslySetInnerHTML={{__html:JSON.stringify(jsonLd).replace(/</g,"\\u003c")}}/><script type="application/ld+json" dangerouslySetInnerHTML={{__html:JSON.stringify(faqJsonLd).replace(/</g,"\\u003c")}}/><HomeExperience/><GrowthResources/></>;}

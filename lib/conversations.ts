@@ -3,7 +3,7 @@ import { ensurePersonalWorkspace } from "@/lib/workspaces";
 
 type ConversationStartInput = {
   userId: string;
-  assetType: "short_link" | "rotator" | "ad_link" | "link_page" | "catalog" | "widget" | "qr" | "direct";
+  assetType: "short_link" | "rotator" | "ad_link" | "widget" | "qr" | "direct";
   assetId?: string | null;
   assetName?: string | null;
   source?: string | null;

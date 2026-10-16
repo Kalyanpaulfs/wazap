@@ -10,7 +10,7 @@ import { SITE_LOCALE_VERSION } from '@/lib/site-locale-version';
 type Locale = { language: SiteLanguage; country: string | null; choose: (language: SiteLanguage | 'auto') => void; automatic: boolean; t: (text:string)=>string };
 const Context = createContext<Locale>({language:'en',country:null,choose:()=>{},automatic:true,t:text=>text});
 export const useSiteLocale = () => useContext(Context);
-const publicRoutes = new Set(['/', '/pricing', '/contact', '/support', '/about', '/faq', '/login', '/signup', '/register']);
+const publicRoutes = new Set(['/', '/pricing', '/contact', '/support', '/about', '/login', '/signup', '/register', '/whatsapp-lead-routing', '/whatsapp-ad-tracking', '/whatsapp-short-links', '/whatsapp-website-widget']);
 const accountRoute = /^\/(dashboard|account|admin|workspace|inbox|channels|automations|reports|analytics|operations|partners)(\/|$)/;
 const skip = 'script,style,pre,code,textarea,input,select,[contenteditable],[translate="no"],[data-no-localize],[aria-live],.wp-profile';
 const decodeEntities = (text:string) => text.replace(/&(apos|amp|quot|nbsp|lsquo|rsquo|ldquo|rdquo|ndash|mdash);/g, match=>({'&apos;':"'",'&amp;':'&','&quot;':'"','&nbsp;':' ','&lsquo;':'‘','&rsquo;':'’','&ldquo;':'“','&rdquo;':'”','&ndash;':'–','&mdash;':'—'}[match]||match));

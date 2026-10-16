@@ -11,8 +11,18 @@ export const PLAN_PRICES: Record<string, number> = {
   basic: 9,
   pro: 19,
   ultimate: 49,
+  // "business" ($149) is no longer sold (owner-approved plan restructure,
+  // 2026). It stays here only so the lifecycle helpers below keep working
+  // for any existing business-plan user — new checkouts must use
+  // PURCHASABLE_PLANS instead, which excludes it.
   business: 149,
 };
+
+// The plans a NEW checkout, upgrade or downgrade may target. "business" is
+// deliberately excluded: stop-selling the $149 plan, while any existing
+// business user keeps their access (their plan stays "business" in the DB
+// and is mapped onto "ultimate" everywhere access/limits are computed).
+export const PURCHASABLE_PLANS = ["basic", "pro", "ultimate"] as const;
 
 export function planExpiry(plan: string) {
   if (!["basic", "pro", "ultimate", "business"].includes(plan)) return null;

@@ -10,20 +10,19 @@ import {
   Route,
   ShieldCheck,
   Sparkles,
-  Users,
   Workflow,
 } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "About Wazap — WhatsApp Business Workflow Software",
   description:
-    "Learn how Wazap helps businesses create WhatsApp links, QR codes, lead-routing workflows, follow-ups and team tools from one secure workspace.",
+    "Learn how Wazap helps businesses create WhatsApp links, QR codes, lead-routing workflows and follow-ups.",
   alternates: { canonical: "https://wazap.lt/about" },
   robots: { index: true, follow: true },
   openGraph: {
     title: "About Wazap — WhatsApp Business Workflow Software",
     description:
-      "Practical WhatsApp workflow software for links, QR codes, lead routing, follow-ups and accountable teams.",
+      "Practical WhatsApp workflow software for links, QR codes, lead routing and follow-ups.",
     url: "https://wazap.lt/about",
     type: "website",
   },
@@ -37,7 +36,7 @@ const aboutJsonLd = {
   logo: "https://wazap.lt/icon-512.png",
   email: "hello@wazap.lt",
   description:
-    "Wazap builds WhatsApp productivity software for links, QR codes, lead routing, follow-ups and team workflows.",
+    "Wazap builds WhatsApp productivity software for links, QR codes, lead routing and follow-ups.",
   sameAs: [],
 };
 
@@ -45,13 +44,12 @@ const capabilities = [
   { icon: MessageCircle, title: "Start conversations", body: "Create click-to-chat links, QR codes and website widgets that make it easier for customers to reach the right WhatsApp number." },
   { icon: Route, title: "Route leads", body: "Distribute click-to-chat handoffs across configured WhatsApp numbers with link rotators and campaign links. Routing activity is separate from message delivery or agent availability." },
   { icon: Workflow, title: "Work the pipeline", body: "Track lead source, value, follow-up dates and outcomes instead of losing warm conversations in a busy inbox." },
-  { icon: Users, title: "Coordinate teams", body: "Use shared workspaces, assignments, governed AI profiles and clear permissions for accountable sales and support operations." },
   { icon: BarChart3, title: "Measure results", body: "Understand campaign activity, routing outcomes and buyer intent with reporting designed around business decisions." },
-  { icon: Sparkles, title: "Create faster", body: "Build catalogs, vCards, message templates, formatted text and reusable WhatsApp assets without installing extra software." },
+  { icon: Sparkles, title: "Create faster", body: "Build click-to-chat links, QR codes and reusable WhatsApp assets without installing extra software." },
 ];
 
 const principles = [
-  { icon: LockKeyhole, title: "Privacy by design", body: "Link routing does not read WhatsApp message content. Connected inbox workflows can store messages and conversation records. Account, usage and billing records are handled as described in our privacy policy." },
+  { icon: LockKeyhole, title: "Privacy by design", body: "Link routing does not read WhatsApp message content. Account, usage and billing records are handled as described in our privacy policy." },
   { icon: ShieldCheck, title: "Reliable by default", body: "Routing uses configured destinations and cached configuration to help keep public links useful. A handoff does not confirm that an agent is online or that the customer sends a message." },
   { icon: CheckCircle2, title: "Clear software value", body: "Paid plans purchase Wazap software access, higher limits and business controls. We do not offer commissions, referral payouts or earning schemes." },
 ];
@@ -72,7 +70,7 @@ export default function AboutPage() {
               Turn WhatsApp interest into an <span className="gradient-text">accountable workflow</span>
             </h1>
             <p className="mx-auto mt-6 max-w-3xl text-base leading-8 text-slate-400 sm:text-lg">
-              Wazap is business productivity software for teams that sell and support through WhatsApp. It brings links, QR codes, lead routing, follow-ups, shared work and reporting into one focused platform.
+              Wazap is business productivity software for teams that sell and support through WhatsApp. It brings links, QR codes, lead routing, follow-ups and reporting into one focused platform.
             </p>
             <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
               <Link href="/signup" className="inline-flex items-center justify-center gap-2 rounded-full bg-[#25D366] px-6 py-3 text-sm font-bold text-black transition-colors hover:bg-[#1fba58]">
@@ -93,7 +91,7 @@ export default function AboutPage() {
             </div>
             <div className="space-y-5 text-base leading-8 text-slate-400">
               <p>Businesses often rely on separate QR generators, spreadsheets, short-link services, inbox notes and manual lead assignment. That makes simple work harder to measure and easy to lose.</p>
-              <p>Wazap replaces that patchwork with one workspace. A solo operator can start with practical free tools, while growing teams can add campaign capacity, shared workflows, managed routing and stronger operational controls.</p>
+              <p>Wazap replaces that patchwork with one workspace. You can start with practical free tools and add campaign capacity, managed routing and stronger operational controls as you grow.</p>
               <p>Our aim is straightforward: the intelligent layer can evolve, but the customer&apos;s path to a valid WhatsApp conversation should stay simple and dependable.</p>
             </div>
           </div>
@@ -139,7 +137,7 @@ export default function AboutPage() {
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#25D366]">Built to grow with you</p>
                 <h2 className="mt-3 text-3xl font-bold text-white">Start with free tools. Add structure when the volume arrives.</h2>
-                <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-400">Start with 25 routed handoffs free per account. Public paid plans are Solo ($9/month), Growth ($19/month) and Agency ($49/month). The separate 14-day Growth workspace trial does not make link routing unlimited.</p>
+                <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-400">Start with 25 routed handoffs free per account. Public paid plans are Solo ($9/month), Growth ($19/month) and Agency ($49/month). New accounts also get a 3-day free trial of Solo, which unlocks the Solo rotator, short-link and widget limits — it does not raise the 25 routed-lead allowance.</p>
               </div>
               <div className="flex flex-col gap-3 sm:flex-row lg:flex-col">
                 <Link href="/pricing" className="inline-flex items-center justify-center gap-2 rounded-full bg-[#25D366] px-6 py-3 text-sm font-bold text-black hover:bg-[#1fba58]">

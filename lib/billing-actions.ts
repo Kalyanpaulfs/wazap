@@ -10,9 +10,9 @@ import { cancelDodoSubscriptionNow, refundDodoPayment } from "./dodo";
 import { recordBillingAttention } from "./billing-attention";
 import { syncPlanLimits } from "./plan-limit-sync";
 
-async function syncPlanLimitsSafely(userId: string) {
+async function syncPlanLimitsSafely(userId: string, previousPlan?: string | null) {
   try {
-    await syncPlanLimits(userId);
+    await syncPlanLimits(userId, previousPlan);
   } catch (err) {
     console.error("[plan-limit-sync] failed after refund", userId, err instanceof Error ? err.message : String(err));
   }
@@ -87,14 +87,14 @@ export async function applyLocalRefund(
   paymentId: string,
   opts?: { subscriptionId?: string | null },
 ): Promise<{ accessEnded: boolean }> {
-  const result = await prisma.$transaction(async (tx): Promise<{ accessEnded: boolean; userId: string | null }> => {
+  const result = await prisma.$transaction(async (tx): Promise<{ accessEnded: boolean; userId: string | null; previousPlan: string | null }> => {
     const payment = await tx.payment.findUnique({ where: { id: paymentId } });
-    if (!payment?.userId) return { accessEnded: false, userId: null };
+    if (!payment?.userId) return { accessEnded: false, userId: null, previousPlan: null };
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${"billing:" + payment.userId}, 0))`;
     // Re-read under the lock: another caller may have refunded this payment
     // (or changed the user's plan) between our first read and the lock.
     const current = await tx.payment.findUniqueOrThrow({ where: { id: paymentId } });
-    if (current.status === "refunded") return { accessEnded: false, userId: null };
+    if (current.status === "refunded") return { accessEnded: false, userId: null, previousPlan: null };
     await tx.payment.update({ where: { id: paymentId }, data: { status: "refunded" } });
 
     const refundedSubscriptionId = opts?.subscriptionId ?? (await subscriptionIdForPayment(tx, payment.userId, paymentId));
@@ -115,15 +115,17 @@ export async function applyLocalRefund(
       newerChargeExists,
       planMatches: user.plan === payment.plan,
     });
-    if (!shouldEnd) return { accessEnded: false, userId: null };
+    if (!shouldEnd) return { accessEnded: false, userId: null, previousPlan: null };
 
     const data: Prisma.UserUpdateInput = { plan: "free", planExpiresAt: null };
     // Refund within 48h of a new purchase: back to free at once, no trial again.
     if (user.trialEndsAt && user.trialEndsAt.getTime() > Date.now()) data.trialEndsAt = new Date();
     await tx.user.update({ where: { id: payment.userId }, data });
-    return { accessEnded: true, userId: payment.userId };
+    // user.plan (read above, before this update) is the real previous plan -
+    // a refund that ends access is always a genuine downgrade to free.
+    return { accessEnded: true, userId: payment.userId, previousPlan: user.plan };
   }, { timeout: 15_000 });
-  if (result.accessEnded && result.userId) await syncPlanLimitsSafely(result.userId);
+  if (result.accessEnded && result.userId) await syncPlanLimitsSafely(result.userId, result.previousPlan);
   return { accessEnded: result.accessEnded };
 }
 

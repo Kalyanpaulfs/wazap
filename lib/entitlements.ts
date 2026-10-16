@@ -1,7 +1,7 @@
 import { isPlanExpired } from "./billing";
 
-export const PRODUCT_TRIAL_DAYS = 14;
-export const PRODUCT_TRIAL_PLAN = "pro";
+export const PRODUCT_TRIAL_DAYS = 3;
+export const PRODUCT_TRIAL_PLAN = "basic";
 
 export type PlanEntitlementUser = {
   plan?: string | null;

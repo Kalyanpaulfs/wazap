@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions, PLAN_LIMITS } from "@/lib/auth";
+import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
+// Daily usage is recorded for plain analytics only (dashboard/ops visibility).
+// It is never used to gate or block a tool any more — see FEAT-PLAN-LIMITS:
+// the old 30-day QR trial and opens/qr daily caps were removed.
 function today() { return new Date().toISOString().slice(0, 10); }
 
 export async function GET() {
@@ -10,16 +13,8 @@ export async function GET() {
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const userId = (session.user as any).id;
-  const plan = (session.user as any).plan ?? "free";
-  const limits = PLAN_LIMITS[plan as keyof typeof PLAN_LIMITS] ?? PLAN_LIMITS.free;
-
   const usage = await prisma.dailyUsage.findUnique({ where: { userId_date: { userId, date: today() } } });
-  return NextResponse.json({
-    opens: usage?.opens ?? 0,
-    qrDownloads: usage?.qrDownloads ?? 0,
-    limits: { opens: limits.opens === Infinity ? null : limits.opens, qr: limits.qr === Infinity ? null : limits.qr },
-    plan,
-  });
+  return NextResponse.json({ opens: usage?.opens ?? 0, qrDownloads: usage?.qrDownloads ?? 0 });
 }
 
 export async function POST(req: Request) {
@@ -27,37 +22,14 @@ export async function POST(req: Request) {
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const userId = (session.user as any).id;
-  const plan = (session.user as any).plan ?? "free";
-  const limits = PLAN_LIMITS[plan as keyof typeof PLAN_LIMITS] ?? PLAN_LIMITS.free;
-  const { type } = await req.json();
+  const { type } = await req.json().catch(() => ({ type: null }));
+  if (type !== "open" && type !== "qr") return NextResponse.json({ error: "Invalid type" }, { status: 400 });
 
-  const usage = await prisma.dailyUsage.upsert({
+  const field = type === "open" ? "opens" : "qrDownloads";
+  const updated = await prisma.dailyUsage.upsert({
     where: { userId_date: { userId, date: today() } },
-    create: { userId, date: today() },
-    update: {},
+    create: { userId, date: today(), [field]: 1 },
+    update: { [field]: { increment: 1 } },
   });
-
-  if (type === "open") {
-    if (limits.opens !== Infinity && usage.opens >= limits.opens) {
-      return NextResponse.json({ error: "limit", remaining: 0 }, { status: 429 });
-    }
-    const updated = await prisma.dailyUsage.update({
-      where: { userId_date: { userId, date: today() } },
-      data: { opens: { increment: 1 } },
-    });
-    return NextResponse.json({ remaining: limits.opens === Infinity ? null : limits.opens - updated.opens });
-  }
-
-  if (type === "qr") {
-    if (limits.qr !== Infinity && usage.qrDownloads >= limits.qr) {
-      return NextResponse.json({ error: "limit", remaining: 0 }, { status: 429 });
-    }
-    const updated = await prisma.dailyUsage.update({
-      where: { userId_date: { userId, date: today() } },
-      data: { qrDownloads: { increment: 1 } },
-    });
-    return NextResponse.json({ remaining: limits.qr === Infinity ? null : limits.qr - updated.qrDownloads });
-  }
-
-  return NextResponse.json({ error: "Invalid type" }, { status: 400 });
+  return NextResponse.json({ [field]: (updated as any)[field] });
 }

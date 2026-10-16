@@ -40,6 +40,7 @@ export type TestUser = {
 export async function createTestUser(opts: {
   plan?: string;
   planExpiresAt?: Date | null;
+  trialStartedAt?: Date | null;
   trialEndsAt?: Date | null;
   trialPlan?: string | null;
 } = {}): Promise<TestUser> {
@@ -49,6 +50,7 @@ export async function createTestUser(opts: {
       name: "Integration Test",
       plan: opts.plan ?? "free",
       planExpiresAt: opts.planExpiresAt ?? null,
+      trialStartedAt: opts.trialStartedAt ?? null,
       trialEndsAt: opts.trialEndsAt ?? null,
       trialPlan: opts.trialPlan ?? null,
     },

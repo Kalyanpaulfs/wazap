@@ -4,7 +4,7 @@ import { MessageCircle } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Acceptable Use Policy — Wazap",
-  description: "Rules for lawful, consent-based use of Wazap WhatsApp tools, shared workspaces, APIs, marketplace packages, AI assistance, and automations.",
+  description: "Rules for lawful, consent-based use of Wazap WhatsApp tools, APIs, marketplace packages, AI assistance, and automations.",
   alternates: { canonical: "https://wazap.lt/acceptable-use" },
 };
 
@@ -21,7 +21,7 @@ export default function AcceptableUsePage() {
       </nav>
       <div className="max-w-2xl mx-auto px-4 py-16">
         <h1 className="text-3xl font-bold text-white mb-2">Acceptable Use Policy</h1>
-        <p className="text-slate-500 text-sm mb-10">Last updated: July 2026</p>
+        <p className="text-slate-500 text-sm mb-10">Last updated: 16 October 2026</p>
 
         <div className="space-y-8 text-slate-400 text-sm leading-relaxed">
           <section>

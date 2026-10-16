@@ -51,12 +51,12 @@ try {
   assert.match(exportResponse.headers.get("content-disposition") || "", /wazap-account-export/);
   const body = await exportResponse.text();
   const data = JSON.parse(body);
-  assert.equal(data.exportVersion, "2026-08-03");
-  const owned = data.ownedWorkspaces?.[0];
-  assert.equal(owned.inboxTasks?.[0]?.title, "Standalone export task");
-  assert.equal(owned.apiRequestLogs?.[0]?.requestId, `req-${stamp}`);
-  assert.equal(owned.webhookEndpoints?.[0]?.deliveries?.[0]?.deliveryAttempts?.[0]?.outcome, "delivered");
-  assert.equal(owned.channelConnections?.[0]?.config?.safe, "kept");
+  assert.equal(data.exportInfo.formatVersion, "2026-10-16");
+  const older = data.olderFeatures;
+  assert.equal(older.inbox.tasks?.[0]?.title, "Standalone export task");
+  assert.equal(older.developerPlatform.apiRequestLogs?.[0]?.requestId, `req-${stamp}`);
+  assert.equal(older.developerPlatform.webhookEndpoints?.[0]?.deliveries?.[0]?.deliveryAttempts?.[0]?.outcome, "delivered");
+  assert.equal(older.channels.connections?.[0]?.config?.safe, "kept");
   assert(!body.includes(marker), "Secret marker leaked from the runtime export");
   assert(!body.includes("signingSecretEncrypted") && !body.includes("webhookPathToken") && !body.includes('"keyHash"'), "Secret fields were present in the runtime export");
   console.log(JSON.stringify({ ok: true, authenticatedExport: true, secretLeak: false, webhookAttempts: 1, standaloneTasks: 1 }));

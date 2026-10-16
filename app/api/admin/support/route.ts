@@ -6,6 +6,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { sameSiteRequest } from "@/lib/crm";
 import { prisma } from "@/lib/prisma";
+import { flaggedConversationCount, replyToConversation, setConversationStatus } from "@/lib/support-admin-service";
+import { supportReference } from "@/lib/support-handoff";
 
 async function requireAdmin() {
   const session = await getServerSession(authOptions);
@@ -27,6 +29,8 @@ async function getConversations() {
   return conversations.map(c => ({
     ...chatResponseState(c),
     id: c.id,
+    reference: supportReference(c.id),
+    flagged: c.status === "open",
     visitorId: c.visitorId,
     name: c.name,
     email: c.email,
@@ -62,7 +66,7 @@ async function getRequests(){
 }
 export async function GET() {
   if (!(await requireAdmin())) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  return NextResponse.json({ health:await supportMonitorHealth(), conversations: await getConversations(), requests: await getRequests() }, {headers:{"Cache-Control":"no-store"}});
+  return NextResponse.json({ health:await supportMonitorHealth(), conversations: await getConversations(), requests: await getRequests(), flaggedCount: await flaggedConversationCount() }, {headers:{"Cache-Control":"no-store"}});
 }
 
 export async function POST(req: Request) {
@@ -75,25 +79,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Missing conversation or message." }, { status: 400 });
   }
 
-  const conversation=await prisma.supportConversation.findUnique({where:{id:String(conversationId)}});
-  if(!conversation)return NextResponse.json({error:"Conversation not found."},{status:404});
-  await prisma.$transaction(async tx=>{
-  await tx.supportChatMessage.create({
-    data: {
-      conversationId,
-      sender: "admin",
-      body: cleanMessage,
-      readByAdmin: true,
-    },
-  });
-  await tx.supportConversation.update({
-    where: { id: conversationId },
-    data: { status: "open", lastMessageAt: new Date() },
-  });
-
-  if(conversation.crmLeadId)await tx.crmActivity.create({data:{leadId:conversation.crmLeadId,kind:'support_reply',body:`Support reply: ${cleanMessage}`}});
-  });
-  return NextResponse.json({ health:await supportMonitorHealth(), conversations: await getConversations(), requests: await getRequests() }, {headers:{"Cache-Control":"no-store"}});
+  const result = await replyToConversation(String(conversationId), cleanMessage);
+  if (!result) return NextResponse.json({ error: "Conversation not found." }, { status: 404 });
+  return NextResponse.json({ health:await supportMonitorHealth(), conversations: await getConversations(), requests: await getRequests(), flaggedCount: await flaggedConversationCount() }, {headers:{"Cache-Control":"no-store"}});
 }
 
 export async function PATCH(req: Request) {
@@ -110,8 +98,8 @@ export async function PATCH(req: Request) {
   });
 
   if (status === "open" || status === "closed") {
-    await prisma.supportConversation.update({ where: { id: conversationId }, data: { status } });
+    await setConversationStatus(conversationId, status);
   }
 
-  return NextResponse.json({ health:await supportMonitorHealth(), conversations: await getConversations(), requests: await getRequests() }, {headers:{"Cache-Control":"no-store"}});
+  return NextResponse.json({ health:await supportMonitorHealth(), conversations: await getConversations(), requests: await getRequests(), flaggedCount: await flaggedConversationCount() }, {headers:{"Cache-Control":"no-store"}});
 }

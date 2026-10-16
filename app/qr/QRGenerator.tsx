@@ -2,24 +2,22 @@
 
 import { useState, useRef, useCallback } from "react";
 import { QRCodeSVG } from "qrcode.react";
-import { Download, Copy, Check, QrCode, Lock } from "lucide-react";
-import Link from "next/link";
+import { Download, Copy, Check, QrCode } from "lucide-react";
 import CountryPicker from "@/app/CountryPicker";
 
 interface Props {
-  status: "guest" | "trial_active" | "trial_expired" | "paid";
-  qrLimit: number | null;
-  qrUsed: number;
+  // Logged-in users get a lightweight (best-effort, non-blocking) usage
+  // count recorded for analytics. Everyone — guests included — can always
+  // generate and download a QR code: no daily caps, no trial gate.
+  isLoggedIn: boolean;
 }
 
-export default function QRGenerator({ status, qrLimit, qrUsed: initialUsed }: Props) {
+export default function QRGenerator({ isLoggedIn }: Props) {
   const [dial, setDial] = useState("+971");
   const [number, setNumber] = useState("");
   const [message, setMessage] = useState("");
   const [color, setColor] = useState("#25D366");
   const [copied, setCopied] = useState(false);
-  const [qrUsed, setQrUsed] = useState(initialUsed);
-  const [blocked, setBlocked] = useState(false);
   const qrRef = useRef<HTMLDivElement>(null);
 
   const clean = number.replace(/\D/g, "");
@@ -40,23 +38,14 @@ export default function QRGenerator({ status, qrLimit, qrUsed: initialUsed }: Pr
   async function downloadQR() {
     if (!waUrl || !qrRef.current) return;
 
-    if (status === "guest" || status === "trial_expired") {
-      setBlocked(true);
-      return;
+    // Best-effort analytics only — never blocks the download.
+    if (isLoggedIn) {
+      fetch("/api/usage", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "qr" }),
+      }).catch(() => {});
     }
-
-    if (qrLimit !== null && qrUsed >= qrLimit) {
-      setBlocked(true);
-      return;
-    }
-
-    const res = await fetch("/api/usage", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ type: "qr" }),
-    });
-
-    if (!res.ok) { setBlocked(true); return; }
 
     const svg = qrRef.current.querySelector("svg");
     if (!svg) return;
@@ -77,13 +66,9 @@ export default function QRGenerator({ status, qrLimit, qrUsed: initialUsed }: Pr
       link.download = `wazap-qr-${fullNumber}.png`;
       link.href = canvas.toDataURL("image/png");
       link.click();
-      setQrUsed(n => n + 1);
     };
     img.src = "data:image/svg+xml;base64," + btoa(svgData);
   }
-
-  const qrRemaining = qrLimit !== null ? Math.max(0, qrLimit - qrUsed) : null;
-  const atLimit = qrLimit !== null && qrUsed >= qrLimit;
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-4xl mx-auto">
@@ -135,22 +120,12 @@ export default function QRGenerator({ status, qrLimit, qrUsed: initialUsed }: Pr
               <QRCodeSVG value={waUrl} size={220} fgColor={color} bgColor="#ffffff" level="H" includeMargin={false} />
             </div>
             <p className="text-sm text-slate-400 text-center mb-1">Scan with any camera to open WhatsApp</p>
+            <p className="text-xs text-slate-600 mb-4">Unlimited downloads — free for everyone</p>
 
-            {qrRemaining !== null && (
-              <p className="text-xs text-slate-600 mb-4">{qrRemaining} download{qrRemaining !== 1 ? "s" : ""} remaining today</p>
-            )}
-            {qrRemaining === null && <p className="text-xs text-slate-600 mb-4">Unlimited downloads</p>}
-
-            <button onClick={downloadQR} disabled={!waUrl || atLimit}
+            <button onClick={downloadQR} disabled={!waUrl}
               className="flex items-center gap-2 rounded-full bg-[#25D366] hover:bg-[#1fba58] disabled:opacity-40 disabled:cursor-not-allowed px-6 py-2.5 text-sm font-semibold text-black transition-colors">
               <Download className="h-4 w-4" /> Download PNG
             </button>
-
-            {atLimit && (status === "trial_active" || status === "paid") && (
-              <p className="text-xs text-amber-400 mt-3 text-center">
-                Daily limit reached — <Link href="/pricing" className="underline">upgrade your plan</Link> for higher limits.
-              </p>
-            )}
           </>
         ) : (
           <div className="text-center">
@@ -158,64 +133,9 @@ export default function QRGenerator({ status, qrLimit, qrUsed: initialUsed }: Pr
               <QrCode className="h-16 w-16 text-slate-700" />
             </div>
             <p className="text-slate-500 text-sm">Enter your phone number<br />to generate a QR code</p>
-            {status === "guest" && (
-              <p className="text-xs text-slate-600 mt-2">
-                <Link href="/signup?redirect=/qr" className="text-[#25D366] hover:underline">Sign up free</Link> for a 30-day trial
-              </p>
-            )}
-            {status === "trial_expired" && (
-              <p className="text-xs text-amber-400 mt-2">
-                Trial ended — <Link href="/pricing" className="underline">upgrade to download</Link>
-              </p>
-            )}
           </div>
         )}
       </div>
-
-      {/* Guest gate modal */}
-      {blocked && status === "guest" && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={() => setBlocked(false)}>
-          <div className="rounded-2xl border border-[#25D366]/30 bg-[#111811] p-8 max-w-sm w-full text-center" onClick={e => e.stopPropagation()}>
-            <Lock className="h-10 w-10 text-[#25D366] mx-auto mb-4" />
-            <h3 className="text-xl font-bold text-white mb-2">Free account required</h3>
-            <p className="text-slate-400 text-sm mb-6">Create a free account and get a 30-day trial with QR downloads included.</p>
-            <Link href="/signup?redirect=/qr" className="block w-full rounded-full bg-[#25D366] hover:bg-[#1fba58] py-3 text-sm font-bold text-black transition-colors mb-3">
-              Sign Up Free — 30-Day Trial
-            </Link>
-            <Link href="/login?redirect=/qr" className="block text-sm text-slate-500 hover:text-slate-300">Already have an account? Sign in</Link>
-          </div>
-        </div>
-      )}
-
-      {/* Trial expired modal */}
-      {blocked && status === "trial_expired" && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={() => setBlocked(false)}>
-          <div className="rounded-2xl border border-amber-500/30 bg-[#111811] p-8 max-w-sm w-full text-center" onClick={e => e.stopPropagation()}>
-            <Lock className="h-10 w-10 text-amber-400 mx-auto mb-4" />
-            <h3 className="text-xl font-bold text-white mb-2">Free trial ended</h3>
-            <p className="text-slate-400 text-sm mb-6">Your 30-day free trial has expired. Upgrade to keep downloading QR codes.</p>
-            <Link href="/pricing" className="block w-full rounded-full bg-[#25D366] hover:bg-[#1fba58] py-3 text-sm font-bold text-black transition-colors mb-3">
-              View Plans
-            </Link>
-            <button onClick={() => setBlocked(false)} className="text-sm text-slate-500 hover:text-slate-300">Maybe later</button>
-          </div>
-        </div>
-      )}
-
-      {/* Daily limit modal */}
-      {blocked && (status === "trial_active" || status === "paid") && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={() => setBlocked(false)}>
-          <div className="rounded-2xl border border-[#25D366]/30 bg-[#111811] p-8 max-w-sm w-full text-center" onClick={e => e.stopPropagation()}>
-            <Lock className="h-10 w-10 text-[#25D366] mx-auto mb-4" />
-            <h3 className="text-xl font-bold text-white mb-2">Daily limit reached</h3>
-            <p className="text-slate-400 text-sm mb-6">You&apos;ve used all your QR downloads for today. Upgrade your plan for higher daily limits.</p>
-            <Link href="/pricing" onClick={() => setBlocked(false)} className="block w-full rounded-full bg-[#25D366] hover:bg-[#1fba58] py-3 text-sm font-bold text-black transition-colors mb-3">
-              Upgrade Plan
-            </Link>
-            <button onClick={() => setBlocked(false)} className="text-sm text-slate-500 hover:text-slate-300">Maybe later</button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

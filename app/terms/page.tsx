@@ -4,7 +4,7 @@ import { MessageCircle } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Terms of Use — Wazap",
-  description: "Terms governing Wazap accounts, WhatsApp workflow tools, subscriptions, shared workspaces, APIs, AI assistance, and marketplace packages.",
+  description: "Terms governing Wazap accounts, WhatsApp workflow tools, subscriptions, APIs, AI assistance, and marketplace packages.",
   alternates: { canonical: "https://wazap.lt/terms" },
 };
 
@@ -21,7 +21,7 @@ export default function TermsPage() {
       </nav>
       <div className="max-w-2xl mx-auto px-4 py-16">
         <h1 className="text-3xl font-bold text-white mb-2">Terms of Use</h1>
-        <p className="text-slate-500 text-sm mb-10">Last updated: July 2026</p>
+        <p className="text-slate-500 text-sm mb-10">Last updated: 16 October 2026</p>
 
         <div className="space-y-8 text-slate-400 text-sm leading-relaxed">
           <section>
@@ -31,7 +31,7 @@ export default function TermsPage() {
 
           <section>
             <h2 className="text-lg font-semibold text-white mb-2">2. What Wazap does</h2>
-            <p>Wazap provides business-conversation productivity software, including click-to-chat tools, shared workspaces, lead tracking, a shared omnichannel inbox, signed inbound channel bridges, assignments, tasks, analytics, and governed AI-assistance controls. A message is only represented as transmitted when a supported channel provider confirms that action; manually recorded or approved drafts are labelled accordingly.</p>
+            <p>Wazap provides business-conversation productivity software, including click-to-chat tools, lead tracking, signed inbound channel bridges, tasks, analytics, and governed AI-assistance controls. A message is only represented as transmitted when a supported channel provider confirms that action; manually recorded or approved drafts are labelled accordingly.</p>
           </section>
 
           <section>
@@ -63,7 +63,7 @@ export default function TermsPage() {
 
           <section>
             <h2 className="text-lg font-semibold text-white mb-2">6. AI-assisted features</h2>
-            <p>AI outputs may be incomplete or incorrect and must be reviewed for the customer&apos;s context. Workspace owners are responsible for instructions, approved knowledge, user permissions, and the lawful use of outputs. Wazap may require human approval or handoff and may prevent autonomous actions when delivery, safety, or provider requirements are not satisfied.</p>
+            <p>AI outputs may be incomplete or incorrect and must be reviewed for the customer&apos;s context. Workspace owners are responsible for instructions, approved knowledge, and the lawful use of outputs. Wazap may require human approval or handoff and may prevent autonomous actions when delivery, safety, or provider requirements are not satisfied.</p>
           </section>
 
           <section>
@@ -87,8 +87,8 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="text-lg font-semibold text-white mb-2">11. Automation and analytics</h2>
-            <p>Workspace owners are responsible for reviewing automation conditions and actions before live activation. Wazap automation is limited to internal workflow state, tasks, assignments, follow-up dates, tags, lead stages, and human handoffs; it does not authorize customer-message transmission. Analytics reflect recorded workspace activity and should not be treated as audited financial statements.</p>
+            <h2 className="text-lg font-semibold text-white mb-2">11. Analytics</h2>
+            <p>Wazap provides reports and counters, such as chat and click counts, derived from recorded workspace activity. Analytics are provided for informational purposes and should not be treated as audited financial statements.</p>
           </section>
 
           <section>

@@ -2,9 +2,9 @@ import {ownsSupport} from "@/lib/support-session";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { rateLimit } from "@/lib/rate-limit";
-import { notifySupportChat, queueSupportAlert } from "@/lib/support-notify";
 import {capturedChat,sameSiteRequest} from "@/lib/crm";
 import { requestIp } from "@/lib/request-ip";
+import { recordLiveChatTurn } from "@/lib/support-chat-service";
 
 function cleanText(value: unknown, max = 4000) {
   return typeof value === "string" ? value.trim().slice(0, max) : "";
@@ -74,48 +74,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Missing visitor or message." }, { status: 400 });
   }
 
-  const conversation = await prisma.$transaction(async tx=>{
-  const saved = await tx.supportConversation.upsert({
-    where: { visitorId },
-    create: {
-      visitorId,
-      email: email || null,
-      name: name || null,
-      subject,
-      lastMessageAt: new Date(),
-    },
-    update: {
-      ...(email ? { email } : {}),
-      ...(name ? { name } : {}),
-      subject,
-      status: "open",
-      lastMessageAt: new Date(),
-    },
-  });
-
-  const incoming = await tx.supportChatMessage.create({
-    data: {
-      conversationId: saved.id,
-      sender: "visitor",
-      body: message,
-      readByVisitor: true,
-    },
-  });
-
-  if(profile.crmLeadId)await tx.crmLead.update({where:{id:profile.crmLeadId},data:{lastActivityAt:new Date()}});
-  await queueSupportAlert({eventKey:'chat:'+incoming.id,name:saved.name,email:saved.email,subject:'Wazap live support: new customer message',message:incoming.body,link:`https://wazap.lt/admin/crm/support?chat=${encodeURIComponent(saved.id)}`},tx);
-  return {...saved,messageId:incoming.id};
-  });
-  await notifySupportChat({
-    name: name || conversation.name,
-    email: email || conversation.email,
-    message,
-    conversationId: conversation.id,
-    messageId: conversation.messageId,
-  });
+  const { conversationId } = await recordLiveChatTurn({ visitorId, message, name, email, subject, crmLeadId: profile.crmLeadId });
 
   const updated = await prisma.supportConversation.findUniqueOrThrow({
-    where: { id: conversation.id },
+    where: { id: conversationId },
     include: { messages: { orderBy: { createdAt: "desc" }, take: 100 } },
   });
 

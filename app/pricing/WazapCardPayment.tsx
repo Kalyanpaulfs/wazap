@@ -58,7 +58,7 @@ export default function WazapCardPayment({
           response_status: res.status,
         });
         if (res.status === 401) { window.location.href = `/login?redirect=${encodeURIComponent(`/pricing?plan=${planName}`)}`; return; }
-        if (data.manageUrl === "/dashboard#billing") setManageUrl(data.manageUrl);
+        if (data.manageUrl === "/billing") setManageUrl(data.manageUrl);
         setError(data.error ?? "Could not start checkout. Please try again.");
         setLoadingProvider(null);
         return;

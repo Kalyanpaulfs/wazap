@@ -48,7 +48,7 @@ export const metadata: Metadata = {
     "whatsapp lead router", "whatsapp link rotator", "whatsapp round robin", "whatsapp lead distribution",
     "whatsapp tools", "whatsapp qr code generator", "whatsapp click to chat",
     "click to whatsapp", "whatsapp business tools", "whatsapp widget",
-    "whatsapp link rotator", "whatsapp vcard", "wazap",
+    "whatsapp link rotator", "wazap",
   ],
   authors: [{ name: "Wazap", url: BASE }],
   creator: "Wazap",

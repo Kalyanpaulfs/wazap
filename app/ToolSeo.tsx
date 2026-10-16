@@ -2,21 +2,13 @@ import { publicOffers } from "@/lib/marketing-offer";
 import Link from "next/link";
 import { TOOL_GUIDES } from "@/lib/tool-guides";
 import { TOOL_SEO } from "@/lib/tool-seo";
+import ToolGuideSection from "@/app/components/ToolGuideSection";
 
-// Visible answers and matching structured data. Rich-result display is not guaranteed.
-export default function ToolSeo({ k }: { k: string }) {
+// Per-tool setup guide and matching structured data. Rich-result display is not guaranteed.
+export default function ToolSeo({ k, children }: { k: string; children?: React.ReactNode }) {
   const d = TOOL_SEO[k];
   if (!d) return null;
   const guide = TOOL_GUIDES[k];
-  const faqLd = {
-    "@context": "https://schema.org",
-    "@type": "FAQPage",
-    mainEntity: d.faqs.map((f) => ({
-      "@type": "Question",
-      name: f.q,
-      acceptedAnswer: { "@type": "Answer", text: f.a },
-    })),
-  };
   const appLd = {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
@@ -25,7 +17,7 @@ export default function ToolSeo({ k }: { k: string }) {
     description: d.appDesc,
     applicationCategory: "BusinessApplication",
     operatingSystem: "Web",
-    offers: ["link", "templates", "qr"].includes(k) ? { "@type": "Offer", price: "0", priceCurrency: "USD" } : publicOffers,
+    offers: ["link", "qr"].includes(k) ? { "@type": "Offer", price: "0", priceCurrency: "USD" } : publicOffers,
   };
   const breadcrumbLd = {
     "@context": "https://schema.org",
@@ -37,11 +29,11 @@ export default function ToolSeo({ k }: { k: string }) {
     ],
   };
   return (
-    <section className="border-t border-slate-800/60 px-4 py-14">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd) }} />
+    <section className="border-t border-slate-800/60 py-10">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(appLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }} />
-      <div className="mx-auto max-w-3xl min-w-0 break-words">
+      <ToolGuideSection>
+        {children}
         {guide && <div className="mb-12">
           <h2 className="text-2xl font-bold text-white">{guide.title}</h2>
           <ol className="mt-5 space-y-3">
@@ -55,17 +47,7 @@ export default function ToolSeo({ k }: { k: string }) {
             {guide.related.map(key => { const tool = TOOL_SEO[key]; return tool ? <Link key={key} href={tool.href} className="inline-flex min-h-11 items-center rounded-full border border-slate-700 px-4 py-2 text-sm text-[#25D366] hover:border-[#25D366]">{tool.name}</Link> : null; })}
           </nav>
         </div>}
-
-        <h2 className="text-2xl font-bold text-white mb-6 text-center">Frequently asked questions</h2>
-        <div className="space-y-3">
-          {d.faqs.map((f) => (
-            <div key={f.q} className="rounded-2xl border border-slate-800 bg-[#111811] p-5">
-              <h3 className="font-semibold text-white mb-1.5">{f.q}</h3>
-              <p className="text-sm text-slate-400 leading-relaxed">{f.a}</p>
-            </div>
-          ))}
-        </div>
-      </div>
+      </ToolGuideSection>
     </section>
   );
 }

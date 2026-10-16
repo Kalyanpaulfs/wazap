@@ -13,8 +13,8 @@ export const metadata: Metadata = {
 };
 
 export default function Layout({ children }: { children: React.ReactNode }) {
-  return <>{children}
-    <section className="mx-auto max-w-3xl px-4 py-10 text-sm leading-7 text-slate-300" aria-labelledby="router-setup-guide">
+  return <>{children}<ToolSeo k="rotator">
+    <section className="mb-12 text-sm leading-7 text-slate-300" aria-labelledby="router-setup-guide">
       <h2 id="router-setup-guide" className="text-2xl font-bold text-white">One WhatsApp link for multiple team numbers</h2>
       <p className="mt-3">A normal click-to-chat link opens one number. A link rotator chooses the next number from your configured team, so you can share one public link on a campaign landing page, social profile or QR code.</p>
       <ol className="mt-5 space-y-4">
@@ -25,7 +25,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       <p className="mt-4"><Link href="/guides/one-whatsapp-link-multiple-numbers#walkthrough" className="text-[#8be8ac] underline">Watch the actual product walkthrough</Link> · <Link href="/guides/whatsapp-round-robin-routing" className="text-[#8be8ac] underline">Read the round-robin routing checklist</Link></p>
       <h2 className="mt-8 text-xl font-bold text-white">What round-robin routing measures</h2>
       <p className="mt-3">Sequential handoffs take turns across configured numbers. Wazap does not check who is online or guarantee exact ordering during simultaneous requests. Total handoffs and the last 30 days by destination help you review distribution; repeated clicks and abandoned chats can appear in those counts.</p>
-      <p className="mt-3">A handoff does not confirm a sent message, a unique lead or a sale. Record received enquiries and qualified appointments separately. If visitors need to choose a department, use a <Link href="/tools/linktree" className="text-[#8be8ac] underline">WhatsApp team page</Link> instead of automatic rotation.</p>
+      <p className="mt-3">A handoff does not confirm a sent message, a unique lead or a sale. Record received enquiries and qualified appointments separately.</p>
       <h2 className="mt-8 text-xl font-bold text-white">Free allowance and paid routing plans</h2>
       <p className="mt-3">{routingOfferText}</p><p className="mt-2">{workspaceTrialText}</p><p className="mt-2">{routerPrivacyText}</p>
       <aside className="mt-8 rounded-2xl border border-[#25D366]/25 bg-[#111811] p-5" aria-labelledby="router-workflow">
@@ -33,6 +33,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         <p className="mt-2">See a <Link href="/solutions/real-estate" className="text-[#8be8ac] underline">real-estate enquiry workflow</Link>, learn how <Link href="/solutions/agencies" className="text-[#8be8ac] underline">agencies manage campaign handoffs</Link>, or use the <Link href="/guides/whatsapp-campaign-tracking" className="text-[#8be8ac] underline">campaign measurement guide</Link>.</p>
         <p className="mt-4"><Link href="/pricing" className="inline-flex rounded-full bg-[#25D366] px-5 py-2 font-semibold text-black">Compare routing plans</Link></p>
       </aside>
-    </section><ToolSeo k="rotator" />
+    </section></ToolSeo>
   </>;
 }

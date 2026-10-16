@@ -20,14 +20,20 @@ export default function AdBuilderPage() {
   const [creating, setCreating] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
   const [form, setForm] = useState({ name: "", dial: "971", number: "", message: "", utmSource: "", utmMedium: "", utmCampaign: "" });
+  const [limit, setLimit] = useState<number | null>(null);
+  const [planLabel, setPlanLabel] = useState("");
 
   useEffect(() => { fetchLinks(); }, []);
 
   async function fetchLinks() {
     try {
       const res = await fetch("/api/adlinks");
-      if (res.ok) setLinks(await res.json());
-      else if (res.status !== 401) throw new Error("Saved links could not be loaded. Try reloading the page.");
+      if (res.ok) {
+        const data = await res.json();
+        setLinks(data.links ?? []);
+        setLimit(typeof data.limit === "number" ? data.limit : null);
+        setPlanLabel(data.planLabel ?? "");
+      } else if (res.status !== 401) throw new Error("Saved links could not be loaded. Try reloading the page.");
     } catch (e) { setError(e instanceof Error ? e.message : "Links could not be loaded."); }
     finally { setLoading(false); }
   }
@@ -115,6 +121,12 @@ export default function AdBuilderPage() {
                 </div>
               ))}
             </div>
+            {limit !== null && (
+              <p className="text-xs text-slate-500">
+                {links.length} of {limit === 0 ? "0 (not in your plan)" : limit} ad links on your {planLabel} plan
+                {links.length >= limit && <> · <Link href="/pricing" className="text-[#25D366] underline">Upgrade for more</Link></>}
+              </p>
+            )}
             <button type="submit" disabled={creating}
               className="rounded-full bg-[#25D366] hover:bg-[#1fba58] disabled:opacity-50 px-6 py-2.5 text-sm font-bold text-black transition-colors">
               {creating ? "Creating..." : "Create Ad Link"}

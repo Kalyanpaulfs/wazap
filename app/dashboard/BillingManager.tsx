@@ -133,7 +133,7 @@ export default function BillingManager({
         return;
       }
       if (data.checkout) {
-        router.push("/pricing");
+        router.push("/plans");
         return;
       }
       if (data.url) {
@@ -286,7 +286,7 @@ export default function BillingManager({
       )}
       {notice && <p role="status" className="text-xs leading-5 text-slate-400">{notice}</p>}
       {updateCardButton}
-      <Link href="/pricing" className="block text-xs font-semibold text-[#25D366] hover:underline">
+      <Link href="/plans" className="block text-xs font-semibold text-[#25D366] hover:underline">
         Change plan →
       </Link>
     </div>

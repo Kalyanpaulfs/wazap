@@ -1,8 +1,8 @@
-import Link from "next/link";
 import type { Metadata } from "next";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import PricingPlans from "./PricingPlans";
+import FreePlanStrip from "./FreePlanStrip";
 import PricingViewTracker from "./PricingViewTracker";
 import { currentSubscriptionRecord } from "@/lib/subscription-record";
 import { getBillingSummary } from "@/lib/billing-summary";
@@ -19,14 +19,6 @@ export const metadata: Metadata = {
   },
 };
 
-const pricingFaq = [
-  { q: "Do I need an account?", a: "Yes for any paid plan. Create your Wazap account first, then pay from the signed-in pricing page." },
-  { q: "Is this monthly?", a: "Yes. Solo, Growth, and Agency are monthly subscriptions that renew until cancelled." },
-  { q: "How do I pay?", a: "While signed in, pick a plan and pay securely through the listed checkout provider. Your plan activates automatically after payment confirmation." },
-  { q: "Why create an account first?", a: "Your Wazap account is where your paid access is stored. This avoids paid orders without a user to activate." },
-  { q: "Can I upgrade later?", a: "Yes. Route your first 25 leads free, then upgrade to keep the public routing link active with unlimited routed leads." },
-];
-
 const pricingJsonLd = [
   {
     "@context": "https://schema.org",
@@ -41,15 +33,6 @@ const pricingJsonLd = [
       { "@type": "Offer", name: "Agency", price: "49", priceCurrency: "USD" },
     ],
   },
-  {
-    "@context": "https://schema.org",
-    "@type": "FAQPage",
-    mainEntity: pricingFaq.map((faq) => ({
-      "@type": "Question",
-      name: faq.q,
-      acceptedAnswer: { "@type": "Answer", text: faq.a },
-    })),
-  },
 ];
 
 export default async function PricingPage({
@@ -59,7 +42,7 @@ export default async function PricingPage({
 }) {
   const session = await getServerSession(authOptions);
   const requestedPlan = (await searchParams).plan;
-  const selectedPlan = ["basic", "pro", "ultimate", "business"].includes(requestedPlan ?? "")
+  const selectedPlan = ["basic", "pro", "ultimate"].includes(requestedPlan ?? "")
     ? requestedPlan ?? null
     : null;
   const isLoggedIn = !!session?.user;
@@ -87,29 +70,19 @@ export default async function PricingPage({
               <div className="inline-flex items-center gap-2 rounded-full bg-[#25D366]/10 border border-[#25D366]/30 px-4 py-1.5 text-sm text-[#25D366]">
                 25 routed handoffs free per account · lifetime allowance · no card required
               </div>
+              <div className="inline-flex items-center gap-2 rounded-full bg-[#25D366]/10 border border-[#25D366]/30 px-4 py-1.5 text-sm text-[#25D366]">
+                New accounts: 3-day free trial of Solo ($9 plan) · includes 100 routed leads
+              </div>
               <div className="inline-flex items-center gap-2 rounded-full bg-green-500/10 border border-green-500/30 px-4 py-1.5 text-sm text-green-300">
                 Secure monthly checkout
               </div>
             </div>
           </div>
 
-          {/* Free plan strip */}
-          <div className="rounded-2xl border border-slate-800 bg-[#111811] p-5 mb-6 flex items-center justify-between gap-4 flex-wrap">
-            <div>
-              <h3 className="text-white font-semibold">Free</h3>
-              <p className="text-slate-500 text-sm mt-0.5">1 WhatsApp rotator · round-robin routing · click totals · no card required</p>
-            </div>
-            <div className="flex items-center gap-3">
-              <span className="text-2xl font-bold text-white">$0</span>
-              <Link href="/signup?redirect=/tools/rotator" className="rounded-full border border-slate-700 hover:border-[#25D366] px-5 py-2 text-sm font-semibold text-slate-300 hover:text-white transition-colors">
-                Route 25 Leads Free
-              </Link>
-            </div>
-          </div>
-
           <PricingPlans
             isLoggedIn={isLoggedIn}
             userEmail={userEmail}
+            freePlan={<FreePlanStrip />}
             cardCheckoutEnabled={cardCheckoutEnabled}
             selectedPlan={selectedPlan}
             activeSubscriptionPlan={activeSubscription?.plan || null}
@@ -144,19 +117,6 @@ export default async function PricingPage({
             <p className="mt-2">
               Payments purchase access to Wazap productivity software and higher usage limits. Wazap does not offer referral bonuses, commissions, affiliate payouts, financial rewards, or earnings opportunities.
             </p>
-          </div>
-
-          {/* FAQ */}
-          <div className="mt-16 rounded-2xl border border-slate-800 bg-[#111811] p-8">
-            <h3 className="text-lg font-semibold text-white mb-6 text-center">Frequently Asked Questions</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {pricingFaq.map((faq) => (
-                <div key={faq.q}>
-                  <h4 className="font-medium text-white mb-1">{faq.q}</h4>
-                  <p className="text-sm text-slate-500">{faq.a}</p>
-                </div>
-              ))}
-            </div>
           </div>
         </div>
       </div>

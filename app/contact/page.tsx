@@ -13,8 +13,6 @@ export default function ContactPage() {
     const subject = new URLSearchParams(window.location.search).get("subject");
     if (subject === "Business plan" || subject === "business") {
       setForm(current => ({ ...current, subject: "business", message: "I'm interested in the Wazap Business package. Please contact me about my team and routing needs." }));
-    } else if (subject === "migration") {
-      setForm(current => ({ ...current, subject: "migration", message: "I need help preparing a contact migration. My current provider/file format and approximate contact count are: " }));
     }
   }, []);
 
@@ -52,7 +50,7 @@ export default function ContactPage() {
           <CheckCircle className="h-8 w-8 text-[#25D366]" />
         </div>
         <h1 className="text-2xl font-bold text-white mb-2">Message received!</h1>
-        <p className="text-slate-400 mb-6">Your request is queued for review. A response will be sent to <strong className="text-white">{form.email}</strong>; timing varies by impact and current demand.</p>
+        <p className="text-slate-400 mb-6">Your request is queued for review. A response will be sent to <strong className="text-white">{form.email}</strong> within 12 hours.</p>
         <Link href="/" className="rounded-full border border-slate-700 hover:border-[#25D366]/40 px-6 py-2.5 text-sm text-slate-400 hover:text-white transition-colors">
           Back to Home
         </Link>
@@ -67,7 +65,7 @@ export default function ContactPage() {
           <Mail className="h-7 w-7 text-[#25D366]" />
         </div>
         <h1 className="text-3xl font-bold text-white">Contact Us</h1>
-        <p className="text-slate-400 mt-2">Requests are prioritized by account, safety, billing, and service impact. No guaranteed response window is currently offered.</p>
+        <p className="text-slate-400 mt-2">Our AI assistant can answer most questions right away in the chat widget. For anything else, send a message here and our team replies within 12 hours.</p>
       </div>
 
       <div className="grid sm:grid-cols-3 gap-3 mb-8">
@@ -105,8 +103,6 @@ export default function ContactPage() {
             <option value="account">Account / login</option>
             <option value="tool">Tool issue</option>
             <option value="feature">Feature request</option>
-            <option value="migration">Contact migration</option>
-            <option value="integration">API / integration</option>
             <option value="business">Business package</option>
             <option value="other">Other</option>
           </select>
@@ -127,7 +123,7 @@ export default function ContactPage() {
       </form>
 
       <p className="text-center text-xs text-slate-600 mt-4">
-        Have a quick question? Check the <Link href="/faq" className="text-[#25D366] hover:underline">FAQ</Link> first.
+        Have a quick question? Check the <Link href="/#faq" className="text-[#25D366] hover:underline">FAQ</Link> first.
       </p>
     </div>
   );

@@ -84,11 +84,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Enter the latest code we emailed you." }, { status: 403 });
   }
   const blockers = await accountClosureBlockers(user.id);
-  if (blockers.billing || blockers.sharedOwnedWorkspaces.length) {
+  if (blockers.billing) {
     return NextResponse.json({
-      error: blockers.billing
-        ? "Cancel the active subscription before closing this account."
-        : "Transfer or remove the other members from workspaces you own before closing this account.",
+      error: "Cancel the active subscription before closing this account.",
       blockers,
     }, { status: 409 });
   }

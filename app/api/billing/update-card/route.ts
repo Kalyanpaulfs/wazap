@@ -18,7 +18,7 @@ export async function POST(req: Request) {
   if (subscription?.method !== "dodo" || !subscription.txId) return NextResponse.json({ error: "No card subscription found." }, { status: 409 });
   try {
     const base = process.env.NEXTAUTH_URL ?? "https://wazap.lt";
-    const url = await updateDodoPaymentMethod(subscription.txId, `${base}/dashboard#billing`);
+    const url = await updateDodoPaymentMethod(subscription.txId, `${base}/billing`);
     if (!url) return NextResponse.json({ error: "Could not open the card update page." }, { status: 502 });
     return NextResponse.json({ url });
   } catch (err) {

@@ -15,30 +15,6 @@ import { cleanAttribution, createVerifiedAccount } from "./account-create";
 import { readPartnerTouchCookie } from "./partner-attribution";
 import { CONSENT_WORDING } from "./marketing-consent";
 
-export const TRIAL_DAYS = 30;
-
-export const PLAN_LIMITS = {
-  free:     { opens: 5,   qr: 2 },   // qr only during trial
-  basic:    { opens: 50,  qr: 10 },
-  pro:      { opens: 200, qr: 50 },
-  ultimate: { opens: Infinity, qr: Infinity },
-  business: { opens: Infinity, qr: Infinity },
-};
-
-export function getQrLimit(plan: string, createdAt: Date): number {
-  if (plan === "ultimate" || plan === "business") return Infinity;
-  if (plan !== "free") return PLAN_LIMITS[plan as keyof typeof PLAN_LIMITS]?.qr ?? 0;
-  const trialEnd = new Date(createdAt);
-  trialEnd.setDate(trialEnd.getDate() + TRIAL_DAYS);
-  return new Date() < trialEnd ? PLAN_LIMITS.free.qr : 0;
-}
-
-export function isTrialActive(createdAt: Date): boolean {
-  const trialEnd = new Date(createdAt);
-  trialEnd.setDate(trialEnd.getDate() + TRIAL_DAYS);
-  return new Date() < trialEnd;
-}
-
 export const authOptions: NextAuthOptions = {
   session: { strategy: "jwt", maxAge: 7 * 24 * 60 * 60 },
   jwt: { maxAge: 7 * 24 * 60 * 60 },

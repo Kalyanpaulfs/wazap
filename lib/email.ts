@@ -64,7 +64,7 @@ export function renderWelcomeEmail(name: string | null, base: string): string {
     <div style="padding:30px 28px;color:#cbd5e1;font-size:15px;line-height:1.65">
       <p style="margin:0 0 12px">${hi}</p>
       <h1 style="margin:0 0 12px;color:#fff;font-size:28px;line-height:1.2;letter-spacing:-.7px">Turn more WhatsApp clicks into conversations.</h1>
-      <p style="margin:0 0 20px;color:#9fb0a3">Your workspace and 14-day Growth trial are ready—no card required. Create your first professional WhatsApp workflow in a few minutes.</p>
+      <p style="margin:0 0 20px;color:#9fb0a3">Your account is ready, with a 3-day free trial of Solo ($9 plan)—no card required, includes 100 routed leads. Create your first professional WhatsApp workflow in a few minutes.</p>
       <div style="background:#0f1b13;border:1px solid #1d3323;border-radius:14px;padding:17px 18px;margin:0 0 22px">
         <div style="color:#fff;font-weight:700;margin-bottom:7px">A good first workflow</div>
         <div style="color:#9fb0a3">Create a tracked link or QR code, add your message, then follow every click from your dashboard. Teams can also route leads automatically with the WhatsApp rotator.</div>
@@ -86,8 +86,8 @@ export function renderTrialReminderEmail(name: string | null, days: number, base
     <div style="background:#0d1710;padding:22px 28px;border-bottom:1px solid #1d3323"><span style="color:#25D366;font-weight:800;font-size:20px">Wazap</span></div>
     <div style="padding:30px 28px;color:#cbd5e1;font-size:15px;line-height:1.65">
       <p style="margin:0 0 12px">${hi}</p>
-      <h1 style="margin:0 0 12px;color:#fff;font-size:27px;line-height:1.2">Your Growth trial has ${days} day${days !== 1 ? "s" : ""} left.</h1>
-      <p style="margin:0 0 20px;color:#9fb0a3">Keep your saved workflows, attribution, lead pipeline, and Growth limits active by choosing a plan before the trial ends.</p>
+      <h1 style="margin:0 0 12px;color:#fff;font-size:27px;line-height:1.2">Your Solo trial has ${days} day${days !== 1 ? "s" : ""} left.</h1>
+      <p style="margin:0 0 20px;color:#9fb0a3">Keep your tracked links, QR codes, WhatsApp rotator, and Growth limits active by choosing a plan before the trial ends.</p>
       <p style="margin:22px 0"><a href="${base}/pricing" style="display:inline-block;background:#25D366;color:#061008;text-decoration:none;font-weight:800;padding:13px 22px;border-radius:999px">Choose my plan →</a></p>
       <p style="margin:18px 0 0;color:#718078;font-size:12px">No automatic charge will occur. If you do not upgrade, your account returns to Free limits and your saved data remains in your workspace.</p>
     </div>
@@ -97,8 +97,8 @@ export function renderTrialReminderEmail(name: string | null, days: number, base
 export function renderTrialConversionEmail(name: string | null, days: number, base: string): string {
   const hi = name ? `Hi ${escapeHtml(name)},` : "Hi,";
   const timeLeft = days > 0
-    ? `${days} day${days !== 1 ? "s" : ""} left in your Growth trial`
-    : "your Growth trial ending today";
+    ? `${days} day${days !== 1 ? "s" : ""} left in your Solo trial`
+    : "your Solo trial ending today";
   return `
   <div style="font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif;max-width:600px;margin:0 auto;background:#0b120d;border-radius:20px;overflow:hidden;border:1px solid #1d3323">
     <div style="background:#0d1710;padding:22px 28px;border-bottom:1px solid #1d3323"><span style="color:#25D366;font-weight:800;font-size:20px">Wazap</span></div>
@@ -108,29 +108,12 @@ export function renderTrialConversionEmail(name: string | null, days: number, ba
       <p style="margin:0 0 20px;color:#9fb0a3">With ${timeLeft}, now is the best time to choose the plan that fits how you handle WhatsApp leads.</p>
       <div style="background:#0f1b13;border:1px solid #1d3323;border-radius:14px;padding:17px 18px;margin:0 0 22px;color:#9fb0a3">
         <div style="color:#fff;font-weight:700;margin-bottom:8px">Plans start at $9/month</div>
-        Keep your tracked links, lead pipeline, follow-up workflows, analytics and higher usage limits. Pay securely by card or PayPal.
+        Keep your tracked links, QR codes, WhatsApp rotator, performance reports and higher usage limits. Pay securely by card or PayPal.
       </div>
       <p style="margin:22px 0"><a href="${base}/pricing?utm_source=trial_email&amp;utm_medium=email&amp;utm_campaign=trial_conversion_20260813" style="display:inline-block;background:#25D366;color:#061008;text-decoration:none;font-weight:800;padding:13px 22px;border-radius:999px">Choose my Wazap plan →</a></p>
       <p style="margin:18px 0 0;color:#718078;font-size:12px">No automatic charge will occur. Need help choosing? Reply to this email and tell us how many people handle your WhatsApp leads.</p>
     </div>
     <div style="padding:16px 28px;background:#080e09;color:#5f6f63;font-size:11px;text-align:center">Wazap.lt · Business conversation software</div>
-  </div>`;
-}
-
-export function renderWorkspaceInviteEmail(opts: { inviterName: string | null; workspaceName: string; acceptUrl: string }): string {
-  return `
-  <div style="font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif;max-width:600px;margin:0 auto;background:#0b120d;border-radius:20px;overflow:hidden;border:1px solid #1d3323">
-    <div style="background:#0d1710;padding:22px 28px;border-bottom:1px solid #1d3323">
-      <span style="color:#25D366;font-weight:800;font-size:20px">Wazap</span>
-    </div>
-    <div style="padding:30px 28px;color:#cbd5e1;font-size:15px;line-height:1.65">
-      <p style="margin:0 0 12px">${escapeHtml(opts.inviterName || "A teammate")} invited you to collaborate.</p>
-      <h1 style="margin:0 0 12px;color:#fff;font-size:27px;line-height:1.2">Join ${escapeHtml(opts.workspaceName)}</h1>
-      <p style="margin:0 0 20px;color:#9fb0a3">Work together on leads, follow-ups, attribution, and customer outcomes in one Wazap workspace.</p>
-      <p style="margin:22px 0"><a href="${opts.acceptUrl}" style="display:inline-block;background:#25D366;color:#061008;text-decoration:none;font-weight:800;padding:13px 22px;border-radius:999px">Accept invitation →</a></p>
-      <p style="margin:18px 0 0;color:#718078;font-size:12px">This invitation expires in 7 days and can only be accepted by the email address it was sent to.</p>
-    </div>
-    <div style="padding:16px 28px;background:#080e09;color:#5f6f63;font-size:11px;text-align:center">Wazap.lt · Business conversation workspace</div>
   </div>`;
 }
 
@@ -182,7 +165,7 @@ export function renderAccountClosureEmail(opts: { name: string | null; scheduled
       <h1 style="margin:0 0 12px;color:#fff;font-size:27px;line-height:1.2">Account closure scheduled</h1>
       <p style="margin:0 0 20px;color:#9fb0a3">Your Wazap account is scheduled for permanent deletion on <strong style="color:#fff">${date}</strong>. You can cancel this request from Account settings any time before then.</p>
       <p style="margin:22px 0"><a href="${accountUrl}" style="display:inline-block;background:#25D366;color:#061008;text-decoration:none;font-weight:800;padding:13px 22px;border-radius:999px">Review or restore my account →</a></p>
-      <p style="margin:18px 0 0;color:#718078;font-size:12px">If you did not request this, restore the account immediately and change your password. Active subscriptions and shared workspaces with other members prevent closure.</p>
+      <p style="margin:18px 0 0;color:#718078;font-size:12px">If you did not request this, restore the account immediately and change your password. Active subscriptions prevent closure.</p>
     </div>
     <div style="padding:16px 28px;background:#080e09;color:#5f6f63;font-size:11px;text-align:center">Wazap.lt · Secure business conversation workspace</div>
   </div>`;
@@ -197,7 +180,7 @@ export function renderAccountRestoredEmail(opts: { name: string | null; accountU
     <div style="padding:30px 28px;color:#cbd5e1;font-size:15px;line-height:1.65">
       <p style="margin:0 0 12px">${greeting}</p>
       <h1 style="margin:0 0 12px;color:#fff;font-size:27px;line-height:1.2">Account closure cancelled</h1>
-      <p style="margin:0 0 20px;color:#9fb0a3">Your Wazap account and workspace data will remain active. No data was deleted.</p>
+      <p style="margin:0 0 20px;color:#9fb0a3">Your Wazap account stays active, including your rotators, tracked links, chats and reports. No data was deleted.</p>
       <p style="margin:22px 0"><a href="${accountUrl}" style="display:inline-block;background:#25D366;color:#061008;text-decoration:none;font-weight:800;padding:13px 22px;border-radius:999px">Open Account settings →</a></p>
     </div>
     <div style="padding:16px 28px;background:#080e09;color:#5f6f63;font-size:11px;text-align:center">Wazap.lt · Secure business conversation workspace</div>
@@ -221,36 +204,6 @@ export function renderOperationalIncidentEmail(opts: { name: string | null; work
   </div>`;
 }
 
-export function renderWorkspaceOwnershipEmail(opts: {
-  name: string | null;
-  workspaceName: string;
-  newOwnerName: string | null;
-  previousOwnerName: string | null;
-  isNewOwner: boolean;
-  workspaceUrl: string;
-  effectivePlan: string;
-}): string {
-  const greeting = opts.name ? `Hi ${escapeHtml(opts.name)},` : "Hi,";
-  const workspaceName = escapeHtml(opts.workspaceName);
-  const workspaceUrl = escapeHtml(opts.workspaceUrl);
-  const effectivePlan = escapeHtml(opts.effectivePlan.charAt(0).toUpperCase() + opts.effectivePlan.slice(1));
-  const summary = opts.isNewOwner
-    ? `${escapeHtml(opts.previousOwnerName || "The previous owner")} transferred ownership of <strong style="color:#fff">${workspaceName}</strong> to you.`
-    : `You transferred ownership of <strong style="color:#fff">${workspaceName}</strong> to ${escapeHtml(opts.newOwnerName || "the new owner")}. Your workspace role is now Admin.`;
-  return `
-  <div style="font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif;max-width:600px;margin:0 auto;background:#0b120d;border-radius:20px;overflow:hidden;border:1px solid #1d3323">
-    <div style="background:#0d1710;padding:22px 28px;border-bottom:1px solid #1d3323"><span style="color:#25D366;font-weight:800;font-size:20px">Wazap</span></div>
-    <div style="padding:30px 28px;color:#cbd5e1;font-size:15px;line-height:1.65">
-      <p style="margin:0 0 12px">${greeting}</p>
-      <h1 style="margin:0 0 12px;color:#fff;font-size:27px;line-height:1.2">Workspace ownership changed</h1>
-      <p style="margin:0 0 16px;color:#9fb0a3">${summary}</p>
-      <p style="margin:0 0 20px;color:#9fb0a3">Workspace limits now follow the new owner’s <strong style="color:#fff">${effectivePlan}</strong> plan. Shared conversations, leads, channels, automations, API keys, webhooks, notes, tasks, and installed apps remain with the workspace.</p>
-      <p style="margin:22px 0"><a href="${workspaceUrl}" style="display:inline-block;background:#25D366;color:#061008;text-decoration:none;font-weight:800;padding:13px 22px;border-radius:999px">Review workspace access →</a></p>
-      <p style="margin:18px 0 0;color:#718078;font-size:12px">If you did not expect this change, review workspace members and contact Wazap support immediately.</p>
-    </div>
-    <div style="padding:16px 28px;background:#080e09;color:#5f6f63;font-size:11px;text-align:center">Wazap.lt · Secure business conversation workspace</div>
-  </div>`;
-}
 
 export function renderSupportReplyEmail(opts: {
   name: string | null;
@@ -278,6 +231,31 @@ export function renderSupportReplyEmail(opts: {
   </div>`;
 }
 
+export function renderSupportChatContinueEmail(opts: {
+  name: string | null;
+  reply: string;
+  continueUrl: string;
+}): string {
+  const greeting = opts.name ? `Hi ${escapeHtml(opts.name)},` : "Hi,";
+  const reply = escapeHtml(opts.reply).replace(/\n/g, "<br>");
+  return `
+  <div style="font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif;max-width:600px;margin:0 auto;background:#0b120d;border-radius:20px;overflow:hidden;border:1px solid #1d3323">
+    <div style="background:#0d1710;padding:22px 28px;border-bottom:1px solid #1d3323">
+      <span style="display:inline-block;width:12px;height:12px;border:2px solid #25D366;border-radius:50%;vertical-align:-1px;margin-right:9px"></span><span style="color:#25D366;font-weight:800;font-size:20px">Wazap Support</span>
+    </div>
+    <div style="padding:30px 28px;color:#cbd5e1;font-size:15px;line-height:1.65">
+      <p style="margin:0 0 12px">${greeting}</p>
+      <h1 style="margin:0 0 12px;color:#fff;font-size:25px;line-height:1.25">Our team replied to your chat.</h1>
+      <div style="background:#0f1b13;border:1px solid #1d3323;border-radius:14px;padding:17px 18px;margin:20px 0;color:#dbe7de">${reply}</div>
+      <p style="margin:22px 0">
+        <a href="${escapeHtml(opts.continueUrl)}" style="display:inline-block;background:#25D366;color:#061008;text-decoration:none;font-weight:800;padding:13px 22px;border-radius:999px">Continue the chat →</a>
+      </p>
+      <p style="margin:18px 0 0;color:#718078;font-size:12px">This link opens your saved conversation and works for 14 days. You can also reply directly to this email.</p>
+    </div>
+    <div style="padding:16px 28px;background:#080e09;color:#5f6f63;font-size:11px;text-align:center">Wazap.lt · Professional WhatsApp workflow software</div>
+  </div>`;
+}
+
 export function renderExpiryEmail(name: string | null, planLabel: string, days: number, base: string): string {
   const hi = name ? `Hi ${escapeHtml(name)},` : "Hi,";
   const when = days <= 0 ? "today" : `in ${days} day${days !== 1 ? "s" : ""}`;
@@ -288,7 +266,7 @@ export function renderExpiryEmail(name: string | null, planLabel: string, days: 
     </div>
     <div style="padding:24px;color:#cbd5e1;font-size:14px;line-height:1.6">
       <p style="margin:0 0 12px">${hi}</p>
-      <p style="margin:0 0 12px">Your <b style="color:#fff">${escapeHtml(planLabel)}</b> plan expires <b style="color:#fbbf24">${when}</b>. Renew now to keep uninterrupted access to every Wazap tool — widgets, linktree, rotator, QR and more.</p>
+      <p style="margin:0 0 12px">Your <b style="color:#fff">${escapeHtml(planLabel)}</b> plan expires <b style="color:#fbbf24">${when}</b>. Renew now to keep uninterrupted access to every Wazap tool — widgets, rotator, QR and more.</p>
       <p style="margin:20px 0">
         <a href="${base}/pricing" style="display:inline-block;background:#25D366;color:#000;text-decoration:none;font-weight:600;padding:12px 22px;border-radius:999px;font-size:14px">Renew my plan →</a>
       </p>

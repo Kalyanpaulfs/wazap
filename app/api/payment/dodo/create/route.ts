@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { PLAN_PRICES } from "@/lib/billing";
+import { PLAN_PRICES, PURCHASABLE_PLANS } from "@/lib/billing";
 import { recordFunnelEvent } from "@/lib/funnel";
 import { dodoProductForPlan, getDodoClient } from "@/lib/dodo";
 
@@ -44,6 +44,9 @@ export async function POST(req: Request) {
     const plan = (body.plan ?? "").toLowerCase();
     checkoutUserId = userId;
     checkoutPlan = plan;
+    if (!(PURCHASABLE_PLANS as readonly string[]).includes(plan)) {
+      return NextResponse.json({ error: "This Wazap plan is no longer available for new checkouts." }, { status: 400 });
+    }
     const productId = dodoProductForPlan(plan);
     if (!productId || !(plan in PLAN_PRICES)) {
       return NextResponse.json({ error: "This Wazap plan is still being connected to Dodo." }, { status: 501 });
@@ -55,7 +58,7 @@ export async function POST(req: Request) {
     }
 
     const existingSubscription = await currentSubscriptionRecord(user.id);
-    if (existingSubscription) return NextResponse.json({ error: "You already have a subscription. Manage your current plan in the dashboard before starting another.", manageUrl: "/dashboard#billing" }, { status: 409 });
+    if (existingSubscription) return NextResponse.json({ error: "You already have a subscription. Manage your current plan in the dashboard before starting another.", manageUrl: "/billing" }, { status: 409 });
     if (!(await sharedRateLimit(`checkout:${user.id}`, 10, 60_000))) return NextResponse.json({ error: "Please wait a minute before trying checkout again." }, { status: 429 });
 
     const client = await getDodoClient();

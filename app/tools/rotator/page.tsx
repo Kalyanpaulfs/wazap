@@ -1,12 +1,17 @@
 "use client";
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { MessageCircle, Plus, Trash2, Copy, Check, RefreshCw } from "lucide-react";
+import { Plus, Trash2, Copy, Check, RefreshCw } from "lucide-react";
 import { COUNTRIES } from "@/lib/countries";
 import PlanPausedBadge from "@/app/components/PlanPausedBadge";
+import RotatorQR from "./RotatorQR";
 
-interface Rotator { id: string; name: string; fallbackNumber?: string | null; message?: string | null; code: string; numbers: string[]; totalClicks: number; last30Days: number; destinationClicks: Record<string, number>; createdAt: string; planPausedAt?: string | null; }
+interface Rotator { id: string; name: string; fallbackNumber?: string | null; message?: string | null; code: string; numbers: string[]; numberNames?: Record<string, string> | null; totalClicks: number; last30Days: number; destinationClicks: Record<string, number>; createdAt: string; planPausedAt?: string | null; }
 interface RouterQuota { plan: string; limit: number | null; used: number; remaining: number | null; allowed: boolean; grace: boolean; graceEndsAt: string | null; }
+interface PlanLimits { plan: string; planLabel: string; rotators: number; numbersPerRotator: number; }
+interface NumberRow { name: string; number: string; }
+
+function digitsOnly(value: string) { return value.replace(/\D/g, ""); }
 
 export default function RotatorPage() {
   const [rotators, setRotators] = useState<Rotator[]>([]);
@@ -19,8 +24,9 @@ export default function RotatorPage() {
   const [message, setMessage] = useState("");
   const [saving, setSaving] = useState<string | null>(null);
   const [dial, setDial] = useState("971");
-  const [inputs, setInputs] = useState(["", ""]);
+  const [rows, setRows] = useState<NumberRow[]>([{ name: "", number: "" }, { name: "", number: "" }]);
   const [quota, setQuota] = useState<RouterQuota | null>(null);
+  const [limits, setLimits] = useState<PlanLimits | null>(null);
 
   useEffect(() => { fetchRotators(); }, []);
 
@@ -30,6 +36,7 @@ export default function RotatorPage() {
       const data = await res.json();
       setRotators(data.rotators ?? []);
       setQuota(data.quota ?? null);
+      setLimits(data.limits ?? null);
       setAuthRequired(false);
     } else if (res.status === 401) {
       setAuthRequired(true);
@@ -39,21 +46,26 @@ export default function RotatorPage() {
 
   async function create(e: React.FormEvent) {
     e.preventDefault();
-    const numbers = inputs.map(n => dial + n.replace(/\D/g, "")).filter(n => n.replace(dial, "").length > 5);
+    const numbers = rows.map(r => dial + digitsOnly(r.number)).filter(n => n.replace(dial, "").length > 5);
     if (!name || numbers.length < 2) return;
+    const numberNames: Record<string, string> = {};
+    rows.forEach(r => {
+      const number = dial + digitsOnly(r.number);
+      if (r.name.trim() && number.replace(dial, "").length > 5) numberNames[number] = r.name.trim();
+    });
     setError("");
     setCreating(true);
     const res = await fetch("/api/rotator", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, numbers, message }),
+      body: JSON.stringify({ name, numbers, numberNames, message }),
     });
     if (res.ok) {
       await fetchRotators();
       window.gtag?.("event", "rotator_created");
       setName("");
       setMessage("");
-      setInputs(["", ""]);
+      setRows([{ name: "", number: "" }, { name: "", number: "" }]);
     } else {
       const data = await res.json().catch(() => ({}));
       if (res.status === 401) setAuthRequired(true);
@@ -69,14 +81,14 @@ export default function RotatorPage() {
     setRotators(r => r.filter(x => x.id !== id));
   }
 
-  async function saveMessage(id: string, data: FormData) {
+  async function saveRotator(id: string, payload: { name: string; numbers: string[]; numberNames: Record<string, string>; fallbackNumber: string; message: string }) {
     setSaving(id);
     setError("");
     try {
-      const res = await fetch("/api/rotator", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, message: String(data.get("message") || ""), name: String(data.get("name") || ""), numbers: String(data.get("numbers") || "").split(/\r?\n/).map(n => n.trim()).filter(Boolean), fallbackNumber: String(data.get("fallbackNumber") || "").trim() }) });
-      if (!res.ok) { const data = await res.json().catch(() => ({})); throw new Error(data.error || "Could not save the message."); }
+      const res = await fetch("/api/rotator", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, ...payload }) });
+      if (!res.ok) { const data = await res.json().catch(() => ({})); throw new Error(data.error || "Could not save the rotator."); }
       await fetchRotators();
-    } catch (err) { setError(err instanceof Error ? err.message : "Could not save the message."); }
+    } catch (err) { setError(err instanceof Error ? err.message : "Could not save the rotator."); }
     finally { setSaving(null); }
   }
 
@@ -116,7 +128,7 @@ export default function RotatorPage() {
                   <p className="mt-1 text-sm text-slate-400">
                     {quota.grace && quota.graceEndsAt
                       ? `Free routing ends ${new Date(quota.graceEndsAt).toLocaleDateString()}. Upgrade before then to keep every link live.`
-                      : `Free includes ${quota.limit ?? 25} routed leads total. Solo keeps up to 3 rotators live for $9/month.`}
+                      : `${quota.limit === 100 ? "Your trial includes" : "Free includes"} ${quota.limit ?? 25} routed leads total. Solo gives unlimited leads for $9/month.`}
                   </p>
                 </div>
                 <Link href="/pricing?source=rotator_quota" className="rounded-full bg-[#25D366] px-5 py-2.5 text-sm font-bold text-black hover:bg-[#1fba58]">Upgrade to keep routing</Link>
@@ -149,22 +161,33 @@ export default function RotatorPage() {
               </select>
             </div>
             <div className="space-y-2">
-              <label className="text-xs text-slate-400 block">WhatsApp Numbers (min 2)</label>
-              {inputs.map((inp, i) => (
+              <label className="text-xs text-slate-400 block">
+                Salespeople (min 2){limits && <span className="text-slate-500"> · {rows.length} of {limits.numbersPerRotator}</span>}
+              </label>
+              {rows.map((row, i) => (
                 <div key={i} className="flex gap-2">
-                  <input value={inp} onChange={e => setInputs(prev => prev.map((v, j) => j === i ? e.target.value : v))}
-                    placeholder={`Agent ${i + 1} phone number`}
+                  <input value={row.name} onChange={e => setRows(prev => prev.map((v, j) => j === i ? { ...v, name: e.target.value } : v))}
+                    placeholder="e.g. Ravi" aria-label={`Salesperson ${i + 1} name (optional)`}
+                    className="min-w-0 w-28 sm:w-36 rounded-xl bg-slate-900 border border-slate-700 px-3 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#25D366]" />
+                  <input value={row.number} onChange={e => setRows(prev => prev.map((v, j) => j === i ? { ...v, number: e.target.value } : v))}
+                    placeholder={`Agent ${i + 1} phone number`} aria-label={`Salesperson ${i + 1} phone number`}
                     className="min-w-0 flex-1 rounded-xl bg-slate-900 border border-slate-700 px-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#25D366]" />
-                  {inputs.length > 2 && (
-                    <button type="button" onClick={() => setInputs(prev => prev.filter((_, j) => j !== i))}
+                  {rows.length > 2 && (
+                    <button type="button" onClick={() => setRows(prev => prev.filter((_, j) => j !== i))}
                       className="text-slate-600 hover:text-red-400 p-2 transition-colors">
                       <Trash2 className="h-4 w-4" />
                     </button>
                   )}
                 </div>
               ))}
-              <button type="button" onClick={() => setInputs(prev => [...prev, ""])}
-                className="text-xs text-[#25D366] hover:underline">+ Add another number</button>
+              {limits && rows.length >= limits.numbersPerRotator ? (
+                <p className="text-xs text-amber-400">
+                  Your {limits.planLabel} plan allows {limits.numbersPerRotator} numbers per rotator. <Link href="/pricing" className="underline">Upgrade</Link> to add more.
+                </p>
+              ) : (
+                <button type="button" onClick={() => setRows(prev => [...prev, { name: "", number: "" }])}
+                  className="text-xs text-[#25D366] hover:underline">+ Add salesperson</button>
+              )}
             </div>
             <div>
               <label className="text-xs text-slate-400 block mb-1" htmlFor="rotator-message">Predefined WhatsApp message (optional)</label>
@@ -172,6 +195,12 @@ export default function RotatorPage() {
               <p className="text-xs text-slate-500 mt-1">Shown in WhatsApp for every destination. The visitor chooses whether to send it.</p>
             </div>
             {error && !authRequired && <p role="alert" className="text-sm text-red-400">{error}</p>}
+            {limits && !authRequired && (
+              <p className="text-xs text-slate-500">
+                {rotators.length} of {limits.rotators} rotators on your {limits.planLabel} plan
+                {rotators.length >= limits.rotators && <> · <Link href="/pricing" className="text-[#25D366] underline">Upgrade for more</Link></>}
+              </p>
+            )}
             <button type="submit" disabled={creating || authRequired}
               className="rounded-full bg-[#25D366] hover:bg-[#1fba58] disabled:opacity-50 px-6 py-2.5 text-sm font-bold text-black transition-colors">
               {authRequired ? "Sign up above to create" : creating ? "Creating..." : "Create Rotator"}
@@ -209,25 +238,32 @@ export default function RotatorPage() {
                         </button>
                       </div>
                     </div>
-                    <form className="space-y-2" onSubmit={e => { e.preventDefault(); const data = new FormData(e.currentTarget); saveMessage(r.id, data); }}>
-                      <label className="text-xs text-slate-400 block" htmlFor={`name-${r.id}`}>Router name</label>
-                      <input id={`name-${r.id}`} name="name" defaultValue={r.name} required maxLength={100} className="w-full rounded-xl bg-slate-900 border border-slate-700 px-3 py-2 text-sm text-white" />
-                      <label className="text-xs text-slate-400 block" htmlFor={`numbers-${r.id}`}>Team numbers, including country code (one per line)</label>
-                      <textarea id={`numbers-${r.id}`} name="numbers" defaultValue={r.numbers.join("\n")} required rows={3} className="w-full rounded-xl bg-slate-900 border border-slate-700 px-3 py-2 text-sm text-white" />
-                      <label className="text-xs text-slate-400 block" htmlFor={`fallback-${r.id}`}>Fallback number</label>
-                      <input id={`fallback-${r.id}`} name="fallbackNumber" defaultValue={r.fallbackNumber || r.numbers[0]} className="w-full rounded-xl bg-slate-900 border border-slate-700 px-3 py-2 text-sm text-white" />
-                      <label className="text-xs text-slate-400 block" htmlFor={`message-${r.id}`}>Predefined WhatsApp message</label>
-                      <textarea key={r.message || "empty"} id={`message-${r.id}`} name="message" defaultValue={r.message || ""} maxLength={2000} className="w-full rounded-xl bg-slate-900 border border-slate-700 px-3 py-2 text-sm text-white" />
-                      <button disabled={saving === r.id} className="text-xs text-[#25D366] disabled:opacity-50">{saving === r.id ? "Saving…" : "Save router"}</button>
-                    </form>
+                    <RotatorEditForm
+                      key={`${r.id}:${r.numbers.join(",")}:${JSON.stringify(r.numberNames ?? {})}`}
+                      rotator={r}
+                      limits={limits}
+                      saving={saving === r.id}
+                      onSave={payload => saveRotator(r.id, payload)}
+                    />
                     <div className="bg-slate-900 rounded-xl px-3 py-2 text-xs text-slate-400 font-mono">{url}</div>
+                    <RotatorQR url={url} name={r.name} />
                     <div className="mt-4 grid gap-2 sm:grid-cols-2">
-                      {r.numbers.map((n, i) => (
-                        <div key={i} className="flex items-center justify-between rounded-xl bg-slate-900 px-3 py-2 text-xs">
-                          <span className="font-mono text-slate-400">+{n}</span>
-                          <span className="font-semibold text-[#25D366]">{r.destinationClicks?.[n] ?? 0} routed / 30d</span>
-                        </div>
-                      ))}
+                      {r.numbers.map((n, i) => {
+                        const label = r.numberNames?.[n];
+                        return (
+                          <div key={i} className="flex items-center justify-between rounded-xl bg-slate-900 px-3 py-2 text-xs">
+                            {label ? (
+                              <span>
+                                <span className="block font-semibold text-white">{label}</span>
+                                <span className="block font-mono text-slate-500">+{n}</span>
+                              </span>
+                            ) : (
+                              <span className="font-mono text-slate-400">+{n}</span>
+                            )}
+                            <span className="font-semibold text-[#25D366]">{r.destinationClicks?.[n] ?? 0} routed / 30d</span>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 );
@@ -237,5 +273,80 @@ export default function RotatorPage() {
         </div>
       </div>
     </>
+  );
+}
+
+function RotatorEditForm({
+  rotator,
+  limits,
+  saving,
+  onSave,
+}: {
+  rotator: Rotator;
+  limits: PlanLimits | null;
+  saving: boolean;
+  onSave: (payload: { name: string; numbers: string[]; numberNames: Record<string, string>; fallbackNumber: string; message: string }) => void;
+}) {
+  const [name, setName] = useState(rotator.name);
+  const [rows, setRows] = useState<NumberRow[]>(() =>
+    rotator.numbers.map(n => ({ number: n, name: rotator.numberNames?.[n] ?? "" }))
+  );
+  const [fallbackNumber, setFallbackNumber] = useState(rotator.fallbackNumber || rotator.numbers[0] || "");
+  const [message, setMessage] = useState(rotator.message || "");
+
+  function submit(e: React.FormEvent) {
+    e.preventDefault();
+    const numbers = rows.map(r => digitsOnly(r.number)).filter(Boolean);
+    const numberNames: Record<string, string> = {};
+    rows.forEach(r => {
+      const number = digitsOnly(r.number);
+      if (number && r.name.trim()) numberNames[number] = r.name.trim();
+    });
+    onSave({ name, numbers, numberNames, fallbackNumber: digitsOnly(fallbackNumber), message });
+  }
+
+  const atLimit = Boolean(limits && rows.length >= limits.numbersPerRotator);
+
+  return (
+    <form className="space-y-2" onSubmit={submit}>
+      <label className="text-xs text-slate-400 block" htmlFor={`name-${rotator.id}`}>Router name</label>
+      <input id={`name-${rotator.id}`} value={name} onChange={e => setName(e.target.value)} required maxLength={100} className="w-full rounded-xl bg-slate-900 border border-slate-700 px-3 py-2 text-sm text-white" />
+
+      <label className="text-xs text-slate-400 block">
+        Salespeople{limits && <span className="text-slate-500"> · {rows.length} of {limits.numbersPerRotator}</span>}
+      </label>
+      <div className="space-y-2">
+        {rows.map((row, i) => (
+          <div key={i} className="flex gap-2">
+            <input value={row.name} onChange={e => setRows(prev => prev.map((v, j) => j === i ? { ...v, name: e.target.value } : v))}
+              placeholder="e.g. Ravi" aria-label={`Salesperson ${i + 1} name (optional)`}
+              className="min-w-0 w-28 sm:w-36 rounded-xl bg-slate-900 border border-slate-700 px-3 py-2 text-sm text-white placeholder-slate-600" />
+            <input value={row.number} onChange={e => setRows(prev => prev.map((v, j) => j === i ? { ...v, number: e.target.value } : v))}
+              placeholder="WhatsApp number" aria-label={`Salesperson ${i + 1} phone number`}
+              className="min-w-0 flex-1 rounded-xl bg-slate-900 border border-slate-700 px-3 py-2 text-sm text-white placeholder-slate-600" />
+            {rows.length > 1 && (
+              <button type="button" onClick={() => setRows(prev => prev.filter((_, j) => j !== i))}
+                className="text-slate-600 hover:text-red-400 p-2 transition-colors">
+                <Trash2 className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+        ))}
+      </div>
+      {atLimit ? (
+        <p className="text-xs text-amber-400">
+          Your {limits?.planLabel} plan allows {limits?.numbersPerRotator} numbers per rotator. <Link href="/pricing" className="underline">Upgrade</Link> to add more.
+        </p>
+      ) : (
+        <button type="button" onClick={() => setRows(prev => [...prev, { name: "", number: "" }])}
+          className="text-xs text-[#25D366] hover:underline">+ Add salesperson</button>
+      )}
+
+      <label className="text-xs text-slate-400 block" htmlFor={`fallback-${rotator.id}`}>Fallback number</label>
+      <input id={`fallback-${rotator.id}`} value={fallbackNumber} onChange={e => setFallbackNumber(e.target.value)} className="w-full rounded-xl bg-slate-900 border border-slate-700 px-3 py-2 text-sm text-white" />
+      <label className="text-xs text-slate-400 block" htmlFor={`message-${rotator.id}`}>Predefined WhatsApp message</label>
+      <textarea id={`message-${rotator.id}`} value={message} onChange={e => setMessage(e.target.value)} maxLength={2000} className="w-full rounded-xl bg-slate-900 border border-slate-700 px-3 py-2 text-sm text-white" />
+      <button disabled={saving} className="text-xs text-[#25D366] disabled:opacity-50">{saving ? "Saving…" : "Save router"}</button>
+    </form>
   );
 }
