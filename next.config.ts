@@ -232,6 +232,17 @@ const nextConfig: NextConfig = {
           { key: "X-Robots-Tag", value: "noindex, nofollow" },
         ],
       },
+      // More specific than the /api/(.*) rule above, so it wins for this one
+      // route (last matching header for the same key overrides the earlier
+      // one): the served image needs a cacheable, locked-down CSP of its
+      // own, not the site-wide no-store/CSP meant for JSON responses.
+      {
+        source: "/api/support/attachment/:id",
+        headers: [
+          { key: "Cache-Control", value: "private, max-age=3600" },
+          { key: "Content-Security-Policy", value: "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'" },
+        ],
+      },
     ];
   },
 };

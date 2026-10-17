@@ -23,7 +23,7 @@ async function getConversations() {
     where:{OR:[{crmLeadId:null},{crmLead:activeCrmContacts}]},
     orderBy: { lastMessageAt: "desc" },
     take: 50,
-    include: { messages: { orderBy: { createdAt: "desc" }, take: 100 } },
+    include: { messages: { orderBy: { createdAt: "desc" }, take: 100, include: { attachments: { select: { id: true, mimeType: true } } } } },
   });
 
   return conversations.map(c => ({
@@ -51,6 +51,7 @@ async function getConversations() {
       readByAdmin: m.readByAdmin,
       readByVisitor: m.readByVisitor,
       createdAt: m.createdAt.toISOString(),
+      attachments: m.attachments,
     })),
   }));
 }

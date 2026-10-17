@@ -15,7 +15,7 @@ function publicConversation(conversation: {
   name: string | null;
   email: string | null;
   status: string;
-  messages: { id: string; sender: string; body: string; createdAt: Date }[];
+  messages: { id: string; sender: string; body: string; createdAt: Date; attachments: { id: string; mimeType: string }[] }[];
 }) {
   return {
     id: conversation.id,
@@ -27,6 +27,7 @@ function publicConversation(conversation: {
       sender: m.sender,
       body: m.body,
       createdAt: m.createdAt.toISOString(),
+      attachments: m.attachments,
     })),
   };
 }
@@ -39,7 +40,7 @@ export async function GET(req: Request) {
 
   const conversation = await prisma.supportConversation.findUnique({
     where: { visitorId },
-    include: { messages: { orderBy: { createdAt: "desc" }, take: 100 } },
+    include: { messages: { orderBy: { createdAt: "desc" }, take: 100, include: { attachments: { select: { id: true, mimeType: true } } } } },
   });
   if (!conversation) return NextResponse.json({ conversation: null });
 
@@ -78,7 +79,7 @@ export async function POST(req: Request) {
 
   const updated = await prisma.supportConversation.findUniqueOrThrow({
     where: { id: conversationId },
-    include: { messages: { orderBy: { createdAt: "desc" }, take: 100 } },
+    include: { messages: { orderBy: { createdAt: "desc" }, take: 100, include: { attachments: { select: { id: true, mimeType: true } } } } },
   });
 
   return NextResponse.json({ conversation: publicConversation(updated) });

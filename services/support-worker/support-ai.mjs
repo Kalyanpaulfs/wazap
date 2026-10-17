@@ -37,6 +37,7 @@ Q: How do I change my plan? A: Go to /billing and choose change plan.
 Q: How do I turn off auto-pay? A: Go to /billing; turning it off keeps access until the current period ends.
 Q: Can I get a refund? A: New subscriptions can request one within 7 days of purchase; see /refund — refunds need a human to review.
 Q: How do I log in? A: With a one-time code emailed to your account address, or Google sign-in; there's no account password for new sign-ins.
+Q: Can I attach a screenshot in this chat? A: Yes, tap the paperclip button next to the message box to attach a PNG, JPG or WebP screenshot (max 5 MB); the team will look at it.
 Q: Can I download my data? A: Yes, from /account, a full export.
 Q: Can I delete my account? A: Yes, from /account; closure has a 7-day recovery window before permanent deletion.
 Q: Do you have a team inbox, CRM, automations or AI agents? A: No, those were removed and aren't offered any more.

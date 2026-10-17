@@ -1332,6 +1332,7 @@ model SupportConversation {
   createdAt         DateTime             @default(now())
   updatedAt         DateTime             @updatedAt
   messages          SupportChatMessage[]
+  attachments       SupportAttachment[]
 
   @@index([crmLeadId])
 }
@@ -1345,7 +1346,27 @@ model SupportChatMessage {
   readByVisitor  Boolean             @default(false)
   createdAt      DateTime            @default(now())
   conversation   SupportConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  attachments    SupportAttachment[]
 
+  @@index([conversationId, createdAt])
+}
+
+// Screenshots customers attach in the support chat widget. Bytes live in
+// Postgres (data Bytes), not the filesystem, because a deploy replaces
+// folders. Verified by magic bytes at upload time, see lib/support-attachment.ts.
+model SupportAttachment {
+  id             String              @id @default(cuid())
+  conversationId String
+  messageId      String
+  mimeType       String
+  size           Int
+  data           Bytes
+  createdAt      DateTime            @default(now())
+  conversation   SupportConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  message        SupportChatMessage  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId])
+  @@index([messageId])
   @@index([conversationId, createdAt])
 }
 

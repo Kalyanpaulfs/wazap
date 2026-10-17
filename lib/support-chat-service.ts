@@ -99,6 +99,66 @@ export async function recordChatbotTurn(input: ChatbotTurnInput): Promise<Chatbo
   return { conversationId: outcome.conversationId, supportRequest: decision.flagged, handoff: outcome.handoff };
 }
 
+export type AttachmentTurnInput = {
+  visitorId: string;
+  caption: string | null;
+  mimeType: string;
+  size: number;
+  data: Buffer;
+};
+
+export type AttachmentTurnResult = { conversationId: string; messageId: string; attachmentId: string; handoff: HandoffPayload };
+
+/**
+ * Records one visitor screenshot upload (app/api/support/attachment/route.ts).
+ * The AI cannot see images, so an attachment always flags the chat for the
+ * team - same decideSupportAlert/sendHandoffAlert rule as the text flows
+ * above, so there is no extra email if the chat is already flagged.
+ * Caller (the route) must already have verified the conversation exists
+ * with contact captured, the file's size/type, and the per-conversation
+ * rate limit.
+ */
+export async function recordAttachmentTurn(input: AttachmentTurnInput): Promise<AttachmentTurnResult> {
+  const visitorId = input.visitorId.trim().slice(0, 120);
+  const caption = input.caption?.trim().slice(0, 4000) || null;
+  const body = caption || "📎 Screenshot";
+  const existing = await prisma.supportConversation.findUniqueOrThrow({
+    where: { visitorId },
+    include: { messages: { orderBy: { createdAt: "desc" }, take: 1 } },
+  });
+  const previousStatus = existing.status;
+  const lastMessageSender = existing.messages[0]?.sender ?? null;
+  const decision = decideSupportAlert({ previousStatus, lastMessageSender, flaggedNow: true });
+  const reference = supportReference(existing.id);
+  const handoffText = handoffMessage(reference, SUPPORT_REPLY_TARGET_HOURS);
+  const handoff: HandoffPayload = { reference, replyWithinHours: SUPPORT_REPLY_TARGET_HOURS, message: handoffText };
+
+  const outcome = await prisma.$transaction(async tx => {
+    const saved = await tx.supportConversation.update({ where: { id: existing.id }, data: { status: "open", lastMessageAt: new Date() } });
+
+    const incoming = await tx.supportChatMessage.create({ data: { conversationId: saved.id, sender: "visitor", body, readByVisitor: true } });
+    const attachment = await tx.supportAttachment.create({ data: { conversationId: saved.id, messageId: incoming.id, mimeType: input.mimeType, size: input.size, data: input.data } });
+
+    // Same rule as recordChatbotTurn: only save the handoff text to history
+    // on the transition into flagged (or re-flag), not on every subsequent
+    // attachment while already flagged and waiting on the admin.
+    if (decision.shouldAlert) {
+      await tx.supportChatMessage.create({ data: { conversationId: saved.id, sender: "bot", body: handoffText, readByAdmin: false, readByVisitor: true } });
+      await sendHandoffAlert(tx, { conversationId: saved.id, incomingMessageId: incoming.id, name: saved.name, email: saved.email, reason: "Customer sent a screenshot", message: body });
+    }
+
+    if (existing.crmLeadId) await tx.crmLead.update({ where: { id: existing.crmLeadId }, data: { lastActivityAt: new Date() } });
+
+    return { conversationId: saved.id, name: saved.name, email: saved.email, messageId: incoming.id, attachmentId: attachment.id };
+  });
+
+  if (decision.shouldAlert) {
+    await notifySupportChatTelegram({ name: outcome.name, email: outcome.email, message: body, conversationId: outcome.conversationId });
+  }
+
+  return { conversationId: outcome.conversationId, messageId: outcome.messageId, attachmentId: outcome.attachmentId, handoff };
+}
+
 export type LiveChatTurnInput = {
   visitorId: string;
   message: string;
