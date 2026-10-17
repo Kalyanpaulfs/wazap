@@ -6,8 +6,8 @@ export const marketingPlans = [
   { name: "Growth", price: PLAN_PRICES.pro },
   { name: "Agency", price: PLAN_PRICES.ultimate },
 ];
-export const routingOfferText = "Every new account gets a 3-day free trial with unlimited routed handoffs across all rotators. Paid routing starts at $9/month after the trial.";
-export const workspaceTrialText = "The 3-day free trial includes everything in Solo, with unlimited routed leads while it lasts.";
+export const routingOfferText = "Every new account gets a 3-day free trial with 100 routed handoffs across all rotators. Paid routing starts at $9/month after the trial.";
+export const workspaceTrialText = "The 3-day free trial includes everything in Solo, with 100 routed leads while it lasts.";
 export const routerPrivacyText = "Link routing records handoff activity and destinations; it does not read the messages you send in WhatsApp. Connected inbox workflows can store messages and conversation records. See the privacy policy for those features.";
 export const publicOffers = {
   "@type": "AggregateOffer", priceCurrency: "USD", lowPrice: "0", highPrice: String(PLAN_PRICES.ultimate), offerCount: 4,

@@ -11,7 +11,7 @@ export default function RouterLimitPage() {
           <AlertTriangle className="h-7 w-7 text-amber-300" />
         </div>
         <h1 className="mt-5 text-3xl font-bold text-white">This WhatsApp link is paused</h1>
-        <p className="mt-3 text-slate-400">The owner&apos;s Wazap free trial has ended or their plan isn&apos;t active. If you manage this link, choose a plan to turn routing back on instantly.</p>
+        <p className="mt-3 text-slate-400">Either the owner&apos;s free trial has ended, they&apos;ve used the 100 leads in their free trial, or their plan isn&apos;t active. If you manage this link, choose a plan to turn routing back on instantly.</p>
         <div className="mt-7 flex flex-col justify-center gap-3 sm:flex-row">
           <Link href="/pricing?source=router_limit" className="inline-flex items-center justify-center gap-2 rounded-full bg-[#25D366] px-6 py-3 text-sm font-bold text-black hover:bg-[#1fba58]">
             Choose a plan <ArrowRight className="h-4 w-4" />

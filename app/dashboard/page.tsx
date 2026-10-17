@@ -19,6 +19,7 @@ import {
 } from "@/app/tools/ToolIcons";
 import { TOOL_LIMITS } from "@/lib/tool-access";
 import { rotatorLimit, shortLinkLimit, adLinkLimit } from "@/lib/plan-limits";
+import { routerQuota, TRIAL_ROUTED_LEADS } from "@/lib/router-entitlements";
 import { getPlanDaysLeft, isPlanExpired } from "@/lib/billing";
 import { downgradeIfExpired } from "@/lib/billing-expiry";
 import { notifySupportReplySeen } from "@/lib/support-notify";
@@ -92,6 +93,7 @@ export default async function DashboardPage({
     chatStarts30d,
     billingSummary,
     marketingLead,
+    rotatorLeadsUsed,
   ] = await Promise.all([
     prisma.user.findUnique({ where: { id: userId } }),
     prisma.dailyUsage.findUnique({
@@ -110,6 +112,7 @@ export default async function DashboardPage({
     prisma.conversationStart.count({where:{userId,createdAt:{gte:new Date(new Date().getTime()-30*24*60*60*1000)}}}),
     getBillingSummary(userId),
     prisma.crmLead.findUnique({ where: { email: userEmail }, select: { marketingStatus: true, doNotContact: true, emailSuppressedAt: true } }),
+    prisma.conversationStart.count({ where: { userId, assetType: "rotator" } }),
   ]);
 
   const showConsentBanner = shouldShowConsentBanner({ isAdmin: sessionUser.isAdmin, marketingOptOutAt: user?.marketingOptOutAt ?? null, lead: marketingLead });
@@ -152,6 +155,10 @@ export default async function DashboardPage({
   const inTrial = isProductTrialActive(user);
   const productTrialDaysLeft = trialDaysLeft(user);
   const trialEnded = plan === "free" && !inTrial;
+  const routerQuotaInfo = routerQuota(user, rotatorLeadsUsed);
+  // Trial still active by date, but the 100 routed leads are used up -
+  // distinct from a trial that has actually ended (trialEnded above).
+  const trialCapHit = inTrial && !routerQuotaInfo.allowed;
   const rotatorMax = rotatorLimit(plan);
   const shortLinkMax = shortLinkLimit(plan);
   const adLinkMax = adLinkLimit(plan);
@@ -249,19 +256,23 @@ export default async function DashboardPage({
 
           {(inTrial || trialEnded) && (
             <div
-              className={`rounded-2xl border p-4 ${trialEnded ? "border-red-500/40 bg-red-500/10" : "border-yellow-500/30 bg-yellow-500/5"}`}
+              className={`rounded-2xl border p-4 ${trialEnded || trialCapHit ? "border-red-500/40 bg-red-500/10" : "border-yellow-500/30 bg-yellow-500/5"}`}
             >
               <div className="flex flex-wrap items-center gap-3">
-                <AlertTriangle className={`h-5 w-5 shrink-0 ${trialEnded ? "text-red-400" : "text-yellow-400"}`} />
+                <AlertTriangle className={`h-5 w-5 shrink-0 ${trialEnded || trialCapHit ? "text-red-400" : "text-yellow-400"}`} />
                 <div className="flex-1">
-                  <p className={`text-sm font-semibold ${trialEnded ? "text-red-300" : "text-yellow-300"}`}>
+                  <p className={`text-sm font-semibold ${trialEnded || trialCapHit ? "text-red-300" : "text-yellow-300"}`}>
                     {trialEnded
                       ? "Your free trial has ended — your links are paused"
-                      : `Your free trial ends in ${productTrialDaysLeft} day${productTrialDaysLeft !== 1 ? "s" : ""}`}
+                      : trialCapHit
+                      ? `You've used your ${TRIAL_ROUTED_LEADS} trial leads`
+                      : `Your free trial ends in ${productTrialDaysLeft} day${productTrialDaysLeft !== 1 ? "s" : ""} · ${routerQuotaInfo.used} of ${TRIAL_ROUTED_LEADS} trial leads used`}
                   </p>
                   <p className="mt-0.5 text-xs text-slate-400">
                     {trialEnded
                       ? "Choose a plan and your rotators, short links and ad links start working again."
+                      : trialCapHit
+                      ? `You've used the ${TRIAL_ROUTED_LEADS} leads in your free trial. Choose a plan to keep routing.`
                       : "After that, your rotators, short links and ad links stop working until you choose a plan."}
                   </p>
                 </div>

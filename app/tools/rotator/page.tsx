@@ -136,6 +136,28 @@ export default function RotatorPage() {
             </div>
           )}
 
+          {/* Trial lead cap reached mid-trial (trial still active by date, but the 100 routed leads are used up) */}
+          {quota && quota.plan !== "free" && quota.limit != null && !quota.allowed && (
+            <div className="rounded-2xl border border-amber-400/30 bg-amber-400/10 p-5">
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div>
+                  <p className="font-semibold text-white">You&apos;ve used your {quota.limit} trial leads</p>
+                  <p className="mt-1 text-sm text-slate-400">
+                    You&apos;ve used the {quota.limit} leads in your free trial. Choose a plan to keep routing.
+                  </p>
+                </div>
+                <Link href="/pricing?source=rotator_quota" className="rounded-full bg-[#25D366] px-5 py-2.5 text-sm font-bold text-black hover:bg-[#1fba58]">Choose a plan</Link>
+              </div>
+            </div>
+          )}
+
+          {/* Trial lead meter (non-blocking, shown while still under the cap) */}
+          {quota && quota.allowed && quota.limit != null && (
+            <p className={`text-sm ${quota.used >= quota.limit - 10 ? "font-semibold text-red-400" : "text-slate-500"}`}>
+              {quota.used} of {quota.limit} trial leads used
+            </p>
+          )}
+
           <form onSubmit={create} className="rounded-2xl border border-slate-800 bg-[#111811] p-6 space-y-4">
             <h2 className="font-semibold text-white flex items-center gap-2"><Plus className="h-4 w-4 text-[#25D366]" /> New Rotator</h2>
             {authRequired && (

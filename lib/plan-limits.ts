@@ -13,8 +13,8 @@
 // lib/router-entitlements.ts routerQuota). Every new sign-up instead gets a
 // one-time 3-day Free trial with exactly Solo's limits (resolved to "basic"
 // by lib/entitlements.ts effectivePlan / lib/router-entitlements.ts
-// linkPlan) plus unlimited routed leads while it lasts — it never reads the
-// free column below.
+// linkPlan) plus 100 routed leads (TRIAL_ROUTED_LEADS) while it lasts — it
+// never reads the free column below.
 //
 // lib/plan-limit-sync.ts (the billing pause engine) reads ROTATOR_LIMITS/
 // SHORT_LINK_LIMITS/AD_LINK_LIMITS from here directly (FEAT-AUDIT-HARDENING).
@@ -62,9 +62,10 @@ export const ROTATOR_LIMITS: Record<PlanKey, number> = { free: 0, basic: 3, pro:
 // Numbers (salespeople) allowed per rotator.
 export const NUMBERS_PER_ROTATOR_LIMITS: Record<PlanKey, number> = { free: 0, basic: 3, pro: 10, ultimate: 20 };
 
-// Routed leads: unlimited on every paid plan and during an active Free
-// trial; zero (blocked) for free/no-trial — see
-// lib/router-entitlements.ts routerQuota. Not duplicated here.
+// Routed leads: unlimited on every paid plan, capped at 100
+// (TRIAL_ROUTED_LEADS) during an active Free trial; zero (blocked) for
+// free/no-trial — see lib/router-entitlements.ts routerQuota. Not
+// duplicated here.
 
 // Branded short links.
 export const SHORT_LINK_LIMITS: Record<PlanKey, number> = { free: 0, basic: 2, pro: 5, ultimate: 15 };

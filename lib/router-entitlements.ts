@@ -2,12 +2,16 @@ import type { PlanEntitlementUser } from "./entitlements";
 import { isProductTrialActive, PRODUCT_TRIAL_PLAN } from "./entitlements";
 import { isPlanExpired } from "./billing";
 
-// Owner rule (Free-trial restructure, FEAT-FREE-TRIAL): routed leads are
-// UNLIMITED on every paid plan and during an active Free trial, and ZERO
-// (blocked, no routing at all) for anyone on plan "free" with no active
-// trial. The old 25-lifetime-lead free allowance and the 100-lead trial cap
-// are gone — there is no lead count to meter any more, just a plan check.
+// Owner rule (100-lead trial cap, FEAT-TRIAL-100-LEADS): routed leads are
+// UNLIMITED on every paid plan, capped at TRIAL_ROUTED_LEADS during an
+// active Free trial (no paid plan), and ZERO (blocked, no routing at all)
+// for anyone on plan "free" with no active trial. There is no lifetime free
+// allowance any more - just the trial cap and the paid/free plan check.
 export const ROUTER_METERING_LAUNCHED_AT = new Date("2026-10-05T20:00:00.000Z");
+
+// Routed leads allowed during the one-time 3-day Free trial (no paid plan).
+// Paid plans (Solo/Growth/Agency) stay unlimited - see routerQuota below.
+export const TRIAL_ROUTED_LEADS = 100;
 // In the past as of this restructure — hasLegacyRouterGrace is always false
 // now and is effectively inert. Kept (harmless) rather than deleted.
 export const EXISTING_ROUTER_GRACE_END = new Date("2026-10-12T20:00:00.000Z");
@@ -44,11 +48,25 @@ export function linkPlan(user: RouterEntitlementUser | null | undefined, now = n
   return isProductTrialActive(user, now) ? PRODUCT_TRIAL_PLAN : "free";
 }
 
-// Owner rule (Free-trial restructure): lead routing now honours the Free
-// trial exactly like the link/count limits do — an active trial routes
-// leads just like Solo (unlimited), and free/no-trial routes none at all.
+// Owner rule: lead routing honours the Free trial exactly like the
+// link/count limits do for WHICH plan applies — an active trial resolves to
+// Solo ("basic"), same as linkPlan. routerQuota below is what actually caps
+// the trial at TRIAL_ROUTED_LEADS; paid Solo (a real, unexpired paid plan)
+// stays unlimited even though it resolves to the same plan string.
 export function routerPlan(user: RouterEntitlementUser | null | undefined, now = new Date()): string {
   return linkPlan(user, now);
+}
+
+// True when the user has a real, unexpired PAID plan (not a Free trial).
+// Needed because routerPlan/linkPlan resolve an active trial to "basic" too
+// (same as a paying Solo customer) - routerQuota uses this to tell "paid
+// Solo: unlimited" apart from "trial currently at Solo's limits: capped at
+// TRIAL_ROUTED_LEADS".
+function isPaidPlanActive(user: RouterEntitlementUser | null | undefined, now = new Date()): boolean {
+  if (!user) return false;
+  const expiry = user.planExpiresAt ? new Date(user.planExpiresAt) : null;
+  const rawPlan = (user.plan ?? "free").toLowerCase();
+  return !isPlanExpired(rawPlan, expiry) && rawPlan !== "free";
 }
 
 // True when the owner's public links (rotator, short link, ad link) may
@@ -67,15 +85,28 @@ export function hasLegacyRouterGrace(user: RouterEntitlementUser | null | undefi
 
 export function routerQuota(user: RouterEntitlementUser | null | undefined, used: number, now = new Date()) {
   const plan = routerPlan(user, now);
-  const entitled = plan !== "free";
-  const grace = !entitled && hasLegacyRouterGrace(user, now);
-  const allowed = entitled || grace;
+
+  // Paid plan (real, unexpired Solo/Growth/Agency): unlimited, same as always.
+  if (isPaidPlanActive(user, now)) {
+    return { plan, limit: null, used, remaining: null, allowed: true, grace: false, graceEndsAt: null };
+  }
+
+  // Active Free trial (no paid plan): Solo's other limits, capped at
+  // TRIAL_ROUTED_LEADS routed leads for the life of the trial.
+  if (isProductTrialActive(user, now)) {
+    const limit = TRIAL_ROUTED_LEADS;
+    const allowed = used < limit;
+    return { plan, limit, used, remaining: Math.max(0, limit - used), allowed, grace: false, graceEndsAt: null };
+  }
+
+  // Free / no active trial: blocked entirely, except the (now-inert) legacy grace window.
+  const grace = hasLegacyRouterGrace(user, now);
   return {
     plan,
-    limit: allowed ? null : 0,
+    limit: grace ? null : 0,
     used,
-    remaining: allowed ? null : 0,
-    allowed,
+    remaining: grace ? null : 0,
+    allowed: grace,
     grace,
     graceEndsAt: grace ? EXISTING_ROUTER_GRACE_END.toISOString() : null,
   };

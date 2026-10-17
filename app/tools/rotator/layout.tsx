@@ -3,7 +3,7 @@ import ToolSeo from "@/app/ToolSeo";
 import Link from "next/link";
 import { routingOfferText, workspaceTrialText, routerPrivacyText } from "@/lib/marketing-offer";
 
-const description = "Create one WhatsApp link for multiple team numbers. Rotate handoffs, add a predefined message and track destinations. Start with a 3-day free trial — unlimited handoffs.";
+const description = "Create one WhatsApp link for multiple team numbers. Rotate handoffs, add a predefined message and track destinations. Start with a 3-day free trial — 100 handoffs.";
 export const metadata: Metadata = {
   title: "WhatsApp Link Rotator — Round-Robin Lead Routing",
   description,

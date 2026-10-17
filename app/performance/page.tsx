@@ -6,7 +6,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getPerformanceSnapshot } from "@/lib/performance";
 import { reportsTier } from "@/lib/plan-limits";
-import { routerQuota } from "@/lib/router-entitlements";
+import { routerQuota, TRIAL_ROUTED_LEADS } from "@/lib/router-entitlements";
 import { accountPlanLabel, isProductTrialActive, trialDaysLeft } from "@/lib/entitlements";
 import CopyLinkButton from "./CopyLinkButton";
 
@@ -51,6 +51,9 @@ export default async function PerformancePage() {
   const quota = routerQuota(routerUser, rotatorLeadsUsed, now);
   const onActiveTrial = isProductTrialActive(routerUser, now);
   const routingBlocked = !quota.allowed;
+  // Trial still active by date, but the 100 routed leads are used up -
+  // distinct from a trial that has actually ended (routingBlocked + !onActiveTrial).
+  const trialCapHit = onActiveTrial && routingBlocked;
 
   const statCards = [
     { label: "Chats today", value: totals.chatsToday, icon: Zap, detail: "Since midnight UTC" },
@@ -79,8 +82,8 @@ export default async function PerformancePage() {
 
         {onActiveTrial && (
           <section className="rounded-2xl border border-slate-800 bg-[#111811] p-5" aria-label="Trial status">
-            <p className="text-sm font-semibold text-white">
-              Free trial · {trialDaysLeft(routerUser, now)} day{trialDaysLeft(routerUser, now) !== 1 ? "s" : ""} left · unlimited leads
+            <p className={`text-sm font-semibold ${quota.used >= TRIAL_ROUTED_LEADS - 10 ? "text-red-400" : "text-white"}`}>
+              Free trial · {trialDaysLeft(routerUser, now)} day{trialDaysLeft(routerUser, now) !== 1 ? "s" : ""} left · {quota.used} of {TRIAL_ROUTED_LEADS} trial leads used
             </p>
           </section>
         )}
@@ -88,7 +91,11 @@ export default async function PerformancePage() {
         {routingBlocked && (
           <section className="rounded-2xl border border-amber-400/30 bg-amber-400/10 p-5" aria-label="Links paused">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
-              <p className="text-sm font-semibold text-white">Your free trial has ended — links paused. Choose a plan to resume.</p>
+              <p className="text-sm font-semibold text-white">
+                {trialCapHit
+                  ? `You've used the ${TRIAL_ROUTED_LEADS} leads in your free trial. Choose a plan to keep routing.`
+                  : "Your free trial has ended — links paused. Choose a plan to resume."}
+              </p>
               <Link href="/plans" className="text-sm font-semibold text-[#25D366] hover:underline">
                 Choose a plan →
               </Link>

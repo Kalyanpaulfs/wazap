@@ -14,7 +14,7 @@ export const metadata: Metadata = {
   alternates: { canonical: "https://wazap.lt/pricing" },
   openGraph: {
     title: "Wazap Pricing — WhatsApp Lead Routing Plans",
-    description: "Start a 3-day free trial with unlimited WhatsApp lead routing, then scale across campaigns and teams from $9/month.",
+    description: "Start a 3-day free trial with 100 routed WhatsApp leads, then scale across campaigns and teams from $9/month.",
     url: "https://wazap.lt/pricing",
   },
 };
@@ -65,10 +65,10 @@ export default async function PricingPage({
         <div className="mx-auto max-w-7xl">
           <div className="text-center mb-14">
             <h1 className="text-4xl font-bold text-white mb-3">Route Every WhatsApp Lead to the Right Team Member</h1>
-            <p className="text-slate-400 text-lg">Start a 3-day free trial with unlimited routed leads. Choose a plan from $9/month to keep your public routing links active after the trial.</p>
+            <p className="text-slate-400 text-lg">Start a 3-day free trial with 100 routed leads. Choose a plan from $9/month to keep your public routing links active after the trial.</p>
             <div className="mt-3 flex items-center justify-center gap-3 flex-wrap">
               <div className="inline-flex items-center gap-2 rounded-full bg-[#25D366]/10 border border-[#25D366]/30 px-4 py-1.5 text-sm text-[#25D366]">
-                3-day free trial · everything in Solo · unlimited leads · no card required
+                3-day free trial · everything in Solo · 100 leads · no card required
               </div>
               <div className="inline-flex items-center gap-2 rounded-full bg-green-500/10 border border-green-500/30 px-4 py-1.5 text-sm text-green-300">
                 Secure monthly checkout

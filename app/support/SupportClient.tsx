@@ -26,7 +26,7 @@ const quickAnswers: { q: string; a: React.ReactNode }[] = [
     q: "What does each plan include?",
     a: (
       <>
-        <strong className="text-white">Free trial (3 days):</strong> everything in Solo — 3 rotators, 3 numbers each, unlimited leads, 2 short links, widget, basic reports. After the trial, links pause until you choose a plan.{" "}
+        <strong className="text-white">Free trial (3 days):</strong> everything in Solo — 3 rotators, 3 numbers each, 100 leads, 2 short links, widget, basic reports. After the trial, links pause until you choose a plan.{" "}
         <strong className="text-white">Solo ($9/mo):</strong> same, ongoing — no 3-day limit.{" "}
         <strong className="text-white">Growth ($19/mo):</strong> 10 rotators, 10 numbers each, 5 short links, 5 ad
         links, full reports.{" "}

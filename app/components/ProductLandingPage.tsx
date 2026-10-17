@@ -44,7 +44,7 @@ function planPrice(plan: PlanKey): string {
 
 // The "free" column represents the 3-day Free trial every new account gets,
 // not a standing free plan (owner rule: never show "Free" as a plan name).
-// The trial is exactly Solo's limits plus unlimited routed leads, so it
+// The trial is exactly Solo's limits plus 100 routed leads, so it
 // borrows Solo's numbers here rather than reading the free=0 entitlement
 // columns (which describe the POST-trial/no-trial "everything stopped"
 // state, not what a prospect sees when they sign up).
@@ -153,7 +153,7 @@ export default function ProductLandingPage({ content }: { content: ProductLandin
           <div className="mx-auto mb-10 max-w-2xl text-center">
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#25D366]">Which plan includes it</p>
             <h2 className="mt-3 text-3xl font-bold text-white">Plan limits at a glance</h2>
-            <p className="mt-3 text-sm text-slate-400">New accounts get a 3-day free trial with everything in Solo ($9/month), including unlimited routed leads, with no card required.</p>
+            <p className="mt-3 text-sm text-slate-400">New accounts get a 3-day free trial with everything in Solo ($9/month), including 100 routed leads, with no card required.</p>
           </div>
           <div className="overflow-x-auto rounded-2xl border border-slate-800">
             <table className="w-full min-w-[640px] text-left text-sm">
@@ -185,7 +185,7 @@ export default function ProductLandingPage({ content }: { content: ProductLandin
               </tbody>
             </table>
           </div>
-          <p className="mt-4 text-xs text-slate-500">New accounts get a 3-day free trial with unlimited routed leads. After the trial, a paid plan is required to keep routing. Location and device tracking is coming soon on Growth and Agency.</p>
+          <p className="mt-4 text-xs text-slate-500">New accounts get a 3-day free trial with 100 routed leads. After the trial, a paid plan is required to keep routing. Location and device tracking is coming soon on Growth and Agency.</p>
         </div>
       </section>
 

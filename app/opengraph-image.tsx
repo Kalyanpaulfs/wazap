@@ -53,7 +53,7 @@ export default function OGImage() {
           fontSize: "26px", color: "#94a3b8", textAlign: "center", display: "flex",
           maxWidth: "700px", marginBottom: "48px",
         }}>
-          Rotate handoffs across your team. Start with a 3-day free trial — unlimited routed handoffs.
+          Rotate handoffs across your team. Start with a 3-day free trial — 100 routed handoffs.
         </div>
 
         <div style={{ display: "flex", gap: "16px", justifyContent: "center" }}>

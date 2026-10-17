@@ -350,11 +350,13 @@ async function main() {
     assertEqual(sess!.user!.plan, "basic", "session effective plan during trial should be basic");
   });
 
-  await check("B", "trial grants unlimited routed leads (Free-trial restructure: no 100-lead cap any more)", async () => {
+  await check("B", "trial is capped at 100 routed leads (FEAT-TRIAL-100-LEADS)", async () => {
     const r = await http(signupJar, "/api/rotator");
     assertEqual(r.status, 200, "GET /api/rotator");
-    assertEqual(r.body.quota.limit, null, "trial should have no lead limit at all (unlimited)");
-    assertEqual(r.body.quota.allowed, true, "trial routing should be allowed");
+    assertEqual(r.body.quota.limit, 100, "trial should be capped at 100 leads");
+    assertEqual(r.body.quota.used, 0, "no leads used yet");
+    assertEqual(r.body.quota.remaining, 100, "all 100 trial leads should be remaining");
+    assertEqual(r.body.quota.allowed, true, "trial routing should be allowed while under the cap");
     assertEqual(r.body.quota.plan, "basic", "routerPlan now honours the trial, same as linkPlan (Solo-equivalent)");
   });
 
@@ -612,7 +614,7 @@ async function main() {
     assertTrue((r.location || "").includes("/router-limit"), `free/no-trial user should land on /router-limit even at 0 leads used, got ${r.location}`);
   });
 
-  await check("F", "trial user has unlimited routed leads (Free-trial restructure: no 100-lead cap any more)", async () => {
+  await check("F", "trial user is allowed at 99 leads used, blocked at 100 (FEAT-TRIAL-100-LEADS)", async () => {
     const trialUser = await createDbUser("trial-cap", {
       plan: "free",
       trialPlan: "basic",
@@ -622,12 +624,15 @@ async function main() {
     const rotator = await prisma.rotatorLink.create({
       data: { userId: trialUser.id, code: `E2ETRIALCAP${RUN}`, name: "trial cap test", numbers: ["919844400001"], fallbackNumber: "919844400001" },
     });
-    // Seed well past the old 100-lead cap to prove it no longer applies.
+    // Seed 99 used leads: the 100th click should still be allowed (used < limit).
     await prisma.conversationStart.createMany({
-      data: Array.from({ length: 150 }, () => ({ userId: trialUser.id, assetType: "rotator", assetId: rotator.id, destination: "919844400001" })),
+      data: Array.from({ length: 99 }, () => ({ userId: trialUser.id, assetType: "rotator", assetId: rotator.id, destination: "919844400001" })),
     });
-    const wayOverOldCap = await http(null, `/r/${rotator.code}`, { ip: "10.77.3.1" });
-    assertTrue((wayOverOldCap.location || "").includes("wa.me"), `at 150 leads (past the old 100 cap), a trial user should still route, got ${wayOverOldCap.location}`);
+    const at99Used = await http(null, `/r/${rotator.code}`, { ip: "10.77.3.1" });
+    assertTrue((at99Used.location || "").includes("wa.me"), `at 99 leads used, the trial's 100th lead should still route, got ${at99Used.location}`);
+    // That click just consumed the 100th lead - the next one should be blocked.
+    const at100Used = await http(null, `/r/${rotator.code}`, { ip: "10.77.3.2" });
+    assertTrue((at100Used.location || "").includes("/router-limit"), `at 100 leads used, a trial user should land on /router-limit, got ${at100Used.location}`);
   });
 
   await check("F", "bot speed limit: >10 hits/min from one device still redirect but aren't counted", async () => {
@@ -717,11 +722,11 @@ async function main() {
     assertTrue(/free trial has ended/i.test(cleanHtml(r.text)), "free/no-trial user should see the trial-ended paused banner");
   });
 
-  await check("H", "trial user: performance page shows 'Free trial · N days left · unlimited leads'", async () => {
+  await check("H", "trial user: performance page shows 'Free trial · N days left · X of 100 trial leads used'", async () => {
     const trialJar = await loggedInJar(emailFor("trial-cap"));
     const r = await http(trialJar, "/performance");
     assertEqual(r.status, 200, "GET /performance as trial user");
-    assertTrue(/free trial.*unlimited leads/i.test(cleanHtml(r.text)), "trial user should see the unlimited-leads trial banner, not a leads-used meter");
+    assertTrue(/free trial.*\d+ of 100 trial leads used/i.test(cleanHtml(r.text)), "trial user should see the trial leads-used meter");
   });
 
   // -------------------------------------------------------------------------

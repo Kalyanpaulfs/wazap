@@ -25,19 +25,19 @@ export const landingFaqs: LandingFaq[] = [
   },
   {
     q: "What plans are available?",
-    a: "Every account gets a 3-day free trial with everything in Solo — 3 rotators, 3 numbers per rotator, unlimited routed leads — no card required. After the trial, paid plans are Solo ($9/month), Growth ($19/month) and Agency ($49/month), with up to 25 rotators on Agency.",
+    a: "Every account gets a 3-day free trial with everything in Solo — 3 rotators, 3 numbers per rotator, 100 routed leads — no card required. After the trial, paid plans are Solo ($9/month), Growth ($19/month) and Agency ($49/month), with up to 25 rotators on Agency.",
   },
   {
     q: "Is there a free trial?",
-    a: "Yes. New accounts get a 3-day free trial with everything in Solo (the $9/month plan), no card required — including unlimited routed leads while the trial lasts. After the trial, your links pause unless you choose a paid plan from the pricing page.",
+    a: "Yes. New accounts get a 3-day free trial with everything in Solo (the $9/month plan), no card required — including 100 routed leads while the trial lasts. After the trial, your links pause unless you choose a paid plan from the pricing page.",
   },
   {
     q: "What's included in the free trial, and how long does it last?",
-    a: "Your first 3 days are a free trial with everything in Solo, including unlimited routed leads. Choose a paid plan from the pricing page to keep routing after the trial ends.",
+    a: "Your first 3 days are a free trial with everything in Solo, including 100 routed leads. Choose a paid plan from the pricing page to keep routing after the trial ends.",
   },
   {
     q: "Can I upgrade or change my team without replacing my link?",
-    a: "Yes to both. Your 3-day free trial already routes unlimited leads; choose a paid plan anytime to keep your public routing link active after the trial. You can also update the destination numbers behind an existing rotator at any time — the same link keeps reaching your current team.",
+    a: "Yes to both. Your 3-day free trial already routes up to 100 leads; choose a paid plan anytime to keep your public routing link active after the trial. You can also update the destination numbers behind an existing rotator at any time — the same link keeps reaching your current team.",
   },
   {
     q: "Does a tracked click mean a message was sent or a sale was made?",

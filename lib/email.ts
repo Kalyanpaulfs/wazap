@@ -64,7 +64,7 @@ export function renderWelcomeEmail(name: string | null, base: string): string {
     <div style="padding:30px 28px;color:#cbd5e1;font-size:15px;line-height:1.65">
       <p style="margin:0 0 12px">${hi}</p>
       <h1 style="margin:0 0 12px;color:#fff;font-size:28px;line-height:1.2;letter-spacing:-.7px">Turn more WhatsApp clicks into conversations.</h1>
-      <p style="margin:0 0 20px;color:#9fb0a3">Your account is ready, with a 3-day free trial—everything in Solo ($9 plan), no card required, unlimited routed leads while it lasts. Create your first professional WhatsApp workflow in a few minutes.</p>
+      <p style="margin:0 0 20px;color:#9fb0a3">Your account is ready, with a 3-day free trial—everything in Solo ($9 plan), no card required, 100 routed leads while it lasts. Create your first professional WhatsApp workflow in a few minutes.</p>
       <div style="background:#0f1b13;border:1px solid #1d3323;border-radius:14px;padding:17px 18px;margin:0 0 22px">
         <div style="color:#fff;font-weight:700;margin-bottom:7px">A good first workflow</div>
         <div style="color:#9fb0a3">Create a tracked link or QR code, add your message, then follow every click from your dashboard. Teams can also route leads automatically with the WhatsApp rotator.</div>

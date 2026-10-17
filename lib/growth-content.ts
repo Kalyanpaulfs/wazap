@@ -38,8 +38,8 @@ export const growthArticles: GrowthArticle[] = [
       {
         "heading": "Run a small pilot before expanding",
         "paragraphs": [
-          "Use your 3-day free trial — unlimited routed handoffs across all your rotators while it lasts — to validate the setup. Public paid routing plans start at Solo $9/month; Growth is $19/month and Agency is $49/month.",
-          "The 3-day free trial gives every new account Solo's features with unlimited routed leads while it lasts. Simple link routing records a handoff attempt only; it does not read the content of the resulting WhatsApp messages."
+          "Use your 3-day free trial — 100 routed handoffs across all your rotators while it lasts — to validate the setup. Public paid routing plans start at Solo $9/month; Growth is $19/month and Agency is $49/month.",
+          "The 3-day free trial gives every new account Solo's features with 100 routed leads while it lasts. Simple link routing records a handoff attempt only; it does not read the content of the resulting WhatsApp messages."
         ]
       }
     ],
@@ -82,7 +82,7 @@ export const growthArticles: GrowthArticle[] = [
         "heading": "Choose a plan for the workflow you manage",
         "paragraphs": [
           "The public plans are Solo $9/month, Growth $19/month and Agency $49/month. Agency includes up to 25 rotators and a shared workspace for up to five members; confirm current details on the pricing page before proposing a package.",
-          "Every account gets a 3-day free trial with unlimited routed handoffs across all rotators. After the trial, a paid plan is required to keep routing. Never promise a client autonomous message sending or delivery confirmation from a simple routing link."
+          "Every account gets a 3-day free trial with 100 routed handoffs across all rotators. After the trial, a paid plan is required to keep routing. Never promise a client autonomous message sending or delivery confirmation from a simple routing link."
         ]
       }
     ],
@@ -124,7 +124,7 @@ export const growthArticles: GrowthArticle[] = [
         "heading": "Know what the activity means",
         "paragraphs": [
           "A routed handoff is an attempt to open a destination in WhatsApp, not a confirmed sent message or customer response. Keep messaging and sales outcomes separate.",
-          "Wazap gives every new account a 3-day free trial with unlimited routed handoffs. Paid routing starts at $9/month after the trial. Simple routing does not require connecting a WhatsApp Business API channel."
+          "Wazap gives every new account a 3-day free trial with 100 routed handoffs. Paid routing starts at $9/month after the trial. Simple routing does not require connecting a WhatsApp Business API channel."
         ]
       }
     ],
@@ -168,7 +168,7 @@ export const growthArticles: GrowthArticle[] = [
         "heading": "Use rotation inside a wider sales process",
         "paragraphs": [
           "Assign coverage hours, agree response expectations and record confirmed enquiries in a CRM. Use appointment and sales outcomes to judge the workflow.",
-          "New accounts get a 3-day free trial with unlimited routed handoffs. Paid routing plans start at $9/month after the trial; see pricing for current limits."
+          "New accounts get a 3-day free trial with 100 routed handoffs. Paid routing plans start at $9/month after the trial; see pricing for current limits."
         ]
       }
     ],
@@ -247,7 +247,7 @@ export const growthArticles: GrowthArticle[] = [
       {
         "heading": "Compare total cost using the same assumptions",
         "paragraphs": [
-          "Wazap’s public monthly plans are Solo $9, Growth $19 and Agency $49. Every new account gets a 3-day free trial with unlimited routed leads; after the trial, a paid plan is required to keep routing.",
+          "Wazap’s public monthly plans are Solo $9, Growth $19 and Agency $49. Every new account gets a 3-day free trial with 100 routed leads; after the trial, a paid plan is required to keep routing.",
           "Calculate the cost for your actual number of links, destinations, traffic and collaborators. This page does not reproduce a changing Linkly price table; open the vendor’s current pricing before deciding."
         ]
       },
@@ -284,7 +284,7 @@ export const growthArticles: GrowthArticle[] = [
       {
         "heading": "Start with the free allowance",
         "paragraphs": [
-          "WasepJe advertises a free tier with unlimited phone numbers, number weightage and a link click count. Wazap gives every new account a 3-day free trial with unlimited routed handoffs, after which a paid plan is required to keep routing. If unrestricted ongoing free routing is your main criterion, this is a material difference.",
+          "WasepJe advertises a free tier with unlimited phone numbers, number weightage and a link click count. Wazap gives every new account a 3-day free trial with 100 routed handoffs, after which a paid plan is required to keep routing. If unrestricted ongoing free routing is your main criterion, this is a material difference.",
           "Verify current vendor terms before selecting a plan. A generous routing allowance does not establish how many enquiries are received or which workflow produces more qualified appointments."
         ]
       },

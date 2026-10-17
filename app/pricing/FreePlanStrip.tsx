@@ -2,16 +2,16 @@ import Link from "next/link";
 import { NUMBERS_PER_ROTATOR_LIMITS, ROTATOR_LIMITS, SHORT_LINK_LIMITS } from "@/lib/plan-limits";
 
 // Shared between /pricing and /plans so the Free-trial card's facts are
-// written once (FEAT-BILLING-PLANS-PAGES; updated for the Free-trial
-// restructure, FEAT-FREE-TRIAL). This card represents the 3-day Free trial
-// every new account gets — EXACTLY Solo's features, plus unlimited routed
+// written once (FEAT-BILLING-PLANS-PAGES; updated for the 100-lead trial
+// cap, FEAT-TRIAL-100-LEADS). This card represents the 3-day Free trial
+// every new account gets — EXACTLY Solo's features, plus 100 routed
 // leads while the trial lasts. It is never a permanent "Free" plan: there
 // is no standing free tier to show here. Rendered as the first card in the
 // PricingPlans grid so it sits next to the paid plans.
 const FREE_FEATURES = [
   `${ROTATOR_LIMITS.basic} WhatsApp rotator links`,
   `Up to ${NUMBERS_PER_ROTATOR_LIMITS.basic} numbers per rotator`,
-  "Unlimited routed leads (trial)",
+  "100 routed leads",
   `${SHORT_LINK_LIMITS.basic} branded short links`,
   "Website widget",
   "Basic reports (last 30 days)",

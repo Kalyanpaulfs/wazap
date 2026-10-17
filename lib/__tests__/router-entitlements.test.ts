@@ -3,13 +3,15 @@ import { linkPlan, routerPlan, canRouteLinks } from "@/lib/router-entitlements";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-// Free-trial restructure (FEAT-FREE-TRIAL): the Free trial is EXACTLY Solo's
-// limits plus unlimited routed leads. linkPlan now governs BOTH how many
-// rotators/short links/ad links a user may HAVE and whether leads route at
-// all - routerPlan is just an alias for linkPlan (no more paid-only lead
-// metering split). The stored trialPlan is ignored: a trial always resolves
-// to "basic" (pre-restructure accounts can carry trialPlan: "pro" from the
-// old Growth trial, and must not get Growth limits).
+// Free-trial restructure (FEAT-FREE-TRIAL; lead cap updated by
+// FEAT-TRIAL-100-LEADS): the Free trial is EXACTLY Solo's limits plus 100
+// routed leads (see lib/__tests__/router-quota.test.ts for the lead cap
+// itself - routerQuota is what enforces it, not linkPlan/routerPlan here).
+// linkPlan governs how many rotators/short links/ad links a user may HAVE
+// and whether links route AT ALL - routerPlan is just an alias for linkPlan.
+// The stored trialPlan is ignored: a trial always resolves to "basic"
+// (pre-restructure accounts can carry trialPlan: "pro" from the old Growth
+// trial, and must not get Growth limits).
 describe("linkPlan", () => {
   it("is free for no user / null", () => {
     expect(linkPlan(null)).toBe("free");

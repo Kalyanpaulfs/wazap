@@ -60,7 +60,7 @@ const content: ProductLandingContent = {
     { q: "How many rotators can I create?", a: "Your 3-day free trial includes 3 rotators with up to 3 salespeople each — the same as Solo. Solo ($9) keeps that ongoing, Growth ($19) includes 10 rotators with up to 10 salespeople each, and Agency ($49) includes 25 rotators with up to 20 salespeople each." },
     { q: "Does Wazap read the WhatsApp messages?", a: "No. Wazap routes the click to the right WhatsApp number — it doesn't read or store the conversation that follows." },
     { q: "What happens if a salesperson is unavailable?", a: "Set a fallback number on the rotator. Routing is based on configured numbers, not on whether someone is actually online to reply." },
-    { q: "Is there a free trial?", a: "Yes — new accounts get a 3-day free trial with everything in Solo, including unlimited routed leads, with no card required." },
+    { q: "Is there a free trial?", a: "Yes — new accounts get a 3-day free trial with everything in Solo, including 100 routed leads, with no card required." },
   ],
   crossLinks: [
     { href: "/whatsapp-ad-tracking", title: "WhatsApp ad tracking", text: "See which ad or campaign is bringing in chats." },

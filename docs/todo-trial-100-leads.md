@@ -1,6 +1,6 @@
-# TODO (later): Free trial = 100 leads, not unlimited
+# DONE: Free trial = 100 leads, not unlimited
 
-**Decided by Kalyan, 17 Oct 2026. Not built yet.** Today the 3-day Free trial gives unlimited routed leads.
+**Decided by Kalyan, 17 Oct 2026. Built 17 Oct 2026.** The 3-day Free trial now caps routed leads at 100 (`TRIAL_ROUTED_LEADS` in `lib/router-entitlements.ts`); paid plans stay unlimited. `npx tsc --noEmit`, `npx vitest run` (251 passed) and `npm run test:integration` (34 passed) all pass; `tests/e2e/customer-e2e.ts` was updated but not run (no dev server per instructions).
 
 ## What to change
 - Free trial: **100 routed leads** (all other Solo features stay: 3 rotators, 3 numbers, 2 short links, widget, basic reports, 3 days, once per account).
