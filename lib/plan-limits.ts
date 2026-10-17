@@ -1,7 +1,20 @@
-// Owner-approved plan limits (2026 restructure, "FEAT-PLAN-LIMITS").
-// free / basic ("Solo" $9) / pro ("Growth" $19) / ultimate ("Agency" $49).
-// "business" ($149) is no longer sold — any existing business user is
-// mapped onto ultimate's numbers everywhere in this file.
+// Owner-approved plan limits (2026 restructure, "FEAT-PLAN-LIMITS"; updated
+// for the Free-trial restructure, FEAT-FREE-TRIAL).
+// basic ("Solo" $9) / pro ("Growth" $19) / ultimate ("Agency" $49) are the
+// only plans a customer can buy. "business" ($149) is no longer sold — any
+// existing business user is mapped onto ultimate's numbers everywhere in
+// this file.
+//
+// "free" is NOT a sellable plan. It is the internal key for "no paid plan
+// and no active Free trial" (trial ended, never trialled, refunded, or paid
+// plan expired). In that state EVERY limit below is 0 and nothing is
+// grandfathered: 0 rotators, 0 numbers per rotator, 0 short links, 0 ad
+// links, no widget, no reports, and no routed leads at all (see
+// lib/router-entitlements.ts routerQuota). Every new sign-up instead gets a
+// one-time 3-day Free trial with exactly Solo's limits (resolved to "basic"
+// by lib/entitlements.ts effectivePlan / lib/router-entitlements.ts
+// linkPlan) plus unlimited routed leads while it lasts — it never reads the
+// free column below.
 //
 // lib/plan-limit-sync.ts (the billing pause engine) reads ROTATOR_LIMITS/
 // SHORT_LINK_LIMITS/AD_LINK_LIMITS from here directly (FEAT-AUDIT-HARDENING).
@@ -13,9 +26,13 @@
 // had, with no plan change at all. That risk is closed at the trigger level
 // instead: the engine only ever PAUSES these three when it can verify, from
 // the previous plan passed in by the caller, that the user's plan rank
-// (free < basic < pro < ultimate) actually went down. A renewal, an upgrade,
-// a same-plan admin re-activation, or an unresolvable previous plan all skip
-// pausing (resume still runs normally) — see lib/plan-limit-sync.ts.
+// (free < basic < pro < ultimate) actually went down, OR that the user now
+// resolves to free (no paid plan, no active trial) — in that state pausing
+// is always allowed, since every free limit is 0 and nothing is
+// grandfathered, regardless of how the user arrived there. A renewal, an
+// upgrade, a same-plan admin re-activation, or an unresolvable previous plan
+// (while still on a paid/trial plan) all skip pausing (resume still runs
+// normally) — see lib/plan-limit-sync.ts.
 
 export type PlanKey = "free" | "basic" | "pro" | "ultimate";
 const PLAN_KEYS: PlanKey[] = ["free", "basic", "pro", "ultimate"];
@@ -26,22 +43,28 @@ export function normalizePlanKey(plan: string | null | undefined): PlanKey {
   return (PLAN_KEYS as string[]).includes(mapped) ? (mapped as PlanKey) : "free";
 }
 
+// Key-only fallback label. "free" is never a plan the customer chose, and
+// the bare word "Free" must never be shown as a plan name anywhere
+// user-facing (owner rule). When a user record is available, prefer
+// lib/entitlements.ts accountPlanLabel(user), which correctly says
+// "Free trial" (active) vs "Free trial ended" (lapsed/never trialled).
+// This fallback is used only where no user record is at hand.
 export const PLAN_DISPLAY_NAME: Record<PlanKey, string> = {
-  free: "Free",
+  free: "Free trial ended",
   basic: "Solo",
   pro: "Growth",
   ultimate: "Agency",
 };
 
 // Rotator links (lead-routing pages) a user may have active at once.
-export const ROTATOR_LIMITS: Record<PlanKey, number> = { free: 1, basic: 3, pro: 10, ultimate: 25 };
+export const ROTATOR_LIMITS: Record<PlanKey, number> = { free: 0, basic: 3, pro: 10, ultimate: 25 };
 
 // Numbers (salespeople) allowed per rotator.
-export const NUMBERS_PER_ROTATOR_LIMITS: Record<PlanKey, number> = { free: 2, basic: 3, pro: 10, ultimate: 20 };
+export const NUMBERS_PER_ROTATOR_LIMITS: Record<PlanKey, number> = { free: 0, basic: 3, pro: 10, ultimate: 20 };
 
-// Routed leads: unchanged existing behaviour (lib/router-entitlements.ts
-// FREE_ROUTED_LEADS_LIFETIME = 25 lifetime for free, unlimited for any paid
-// plan) — not duplicated here.
+// Routed leads: unlimited on every paid plan and during an active Free
+// trial; zero (blocked) for free/no-trial — see
+// lib/router-entitlements.ts routerQuota. Not duplicated here.
 
 // Branded short links.
 export const SHORT_LINK_LIMITS: Record<PlanKey, number> = { free: 0, basic: 2, pro: 5, ultimate: 15 };
@@ -106,6 +129,7 @@ export function numbersPatchAllowed(previousCount: number, nextCount: number, li
 export function upgradeHint(plan: string | null | undefined): string {
   const key = normalizePlanKey(plan);
   if (key === "ultimate") return "";
-  const next = key === "free" ? "Solo" : key === "basic" ? "Growth" : "Agency";
+  if (key === "free") return "Choose a plan to turn your links back on.";
+  const next = key === "basic" ? "Growth" : "Agency";
   return `Upgrade to ${next} for more.`;
 }

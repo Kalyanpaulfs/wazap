@@ -25,8 +25,8 @@ export default function RefundPage() {
 
         <div className="space-y-8 text-slate-400 text-sm leading-relaxed">
           <section>
-            <h2 className="text-lg font-semibold text-white mb-2">1. Free plan</h2>
-            <p>The free plan is available at no cost and requires no payment details. No refunds are applicable.</p>
+            <h2 className="text-lg font-semibold text-white mb-2">1. Free trial</h2>
+            <p>New accounts get a one-time 3-day free trial. It costs nothing and needs no payment details, so no refunds apply. When the trial ends, your links pause until you choose a paid plan.</p>
           </section>
 
           <section>

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { X } from "lucide-react";
 
-const LABEL: Record<string, string> = { free: "Free", basic: "Solo", pro: "Growth", ultimate: "Agency", business: "Business" };
+const LABEL: Record<string, string> = { free: "Free trial ended", basic: "Solo", pro: "Growth", ultimate: "Agency", business: "Business" };
 function paidAccess(plan: string, expiresAt: string | null, expectedPlan?: string) {
   return plan !== "free" && (!expectedPlan || plan === expectedPlan) && (!expiresAt || new Date(expiresAt).getTime() > Date.now());
 }

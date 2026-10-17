@@ -2,7 +2,7 @@
 // small billing box and the /billing page, so the two can never say
 // different things about the same account (FEAT-BILLING-PLANS-PAGES).
 export const BILLING_PLAN_LABELS: Record<string, string> = {
-  free: "Free",
+  free: "Free trial ended",
   basic: "Solo",
   pro: "Growth",
   ultimate: "Agency",
@@ -78,7 +78,7 @@ export function billingStatusSentence(input: BillingStatusSentenceInput): string
       const endsAt = formatDate(input.trialEndsAt);
       return `Free trial of ${trialLabel}${endsAt ? ` — ends ${endsAt}` : ""}`;
     }
-    return "Free plan — no billing";
+    return "Free trial ended — no billing";
   }
 
   if (input.pendingChange) {

@@ -6,7 +6,8 @@ import { prisma } from "@/lib/prisma";
 import { recordFunnelEvent } from "@/lib/funnel";
 import { cacheRoute, removeCachedRoute } from "@/lib/routing-cache";
 import { routerQuota, linkPlan } from "@/lib/router-entitlements";
-import { rotatorLimit, numbersPerRotatorLimit, numbersPatchAllowed, PLAN_DISPLAY_NAME, normalizePlanKey } from "@/lib/plan-limits";
+import { rotatorLimit, numbersPerRotatorLimit, numbersPatchAllowed } from "@/lib/plan-limits";
+import { accountPlanLabel } from "@/lib/entitlements";
 import { normalizeNumberNames } from "@/lib/salesperson-names";
 
 function getLimit(plan: string) {
@@ -55,7 +56,7 @@ export async function GET() {
       destinationClicks: analytics.get(rotator.id)?.destinations ?? {},
     })),
     quota: routerQuota(user, lifetimeStarts),
-    limits: { plan, planLabel: PLAN_DISPLAY_NAME[normalizePlanKey(plan)], rotators: getLimit(plan), numbersPerRotator: numbersPerRotatorLimit(plan) },
+    limits: { plan, planLabel: accountPlanLabel(user), rotators: getLimit(plan), numbersPerRotator: numbersPerRotatorLimit(plan) },
   });
 }
 
@@ -72,11 +73,11 @@ export async function POST(req: Request) {
   const limit = getLimit(plan);
 
   if (limit === 0) {
-    return NextResponse.json({ error: "Rotators require a paid plan. Upgrade to create your first rotator.", upgrade: true }, { status: 403 });
+    return NextResponse.json({ error: "Your free trial has ended. Choose a plan to create rotators.", upgrade: true }, { status: 403 });
   }
   const count = await prisma.rotatorLink.count({ where: { userId, planPausedAt: null } });
   if (count >= limit) {
-    return NextResponse.json({ error: `Plan limit reached. Your ${PLAN_DISPLAY_NAME[normalizePlanKey(plan)]} plan allows ${limit} rotator${limit !== 1 ? "s" : ""}. Upgrade for more.`, upgrade: true }, { status: 403 });
+    return NextResponse.json({ error: `Plan limit reached. Your ${accountPlanLabel(entitlementUser)} plan allows ${limit} rotator${limit !== 1 ? "s" : ""}. Upgrade for more.`, upgrade: true }, { status: 403 });
   }
 
   const body = await req.json().catch(() => null);
@@ -89,7 +90,7 @@ export async function POST(req: Request) {
   if (!cleanNumbers.length) return NextResponse.json({ error: "Add at least one valid WhatsApp number." }, { status: 400 });
   const numberLimit = numbersPerRotatorLimit(plan);
   if (cleanNumbers.length > numberLimit) {
-    return NextResponse.json({ error: `Your ${PLAN_DISPLAY_NAME[normalizePlanKey(plan)]} plan allows ${numberLimit} numbers per rotator. Upgrade to add more.`, upgrade: true }, { status: 403 });
+    return NextResponse.json({ error: `Your ${accountPlanLabel(entitlementUser)} plan allows ${numberLimit} numbers per rotator. Upgrade to add more.`, upgrade: true }, { status: 403 });
   }
   const cleanNumberNames = normalizeNumberNames(numberNames, cleanNumbers);
   const code = await uniqueCode();
@@ -138,7 +139,7 @@ export async function PATCH(req: Request) {
     const plan = linkPlan(entitlementUser);
     const numberLimit = numbersPerRotatorLimit(plan);
     if (!numbersPatchAllowed(existing.numbers.length, data.numbers.length, numberLimit)) {
-      return NextResponse.json({ error: `Your ${PLAN_DISPLAY_NAME[normalizePlanKey(plan)]} plan allows ${numberLimit} numbers per rotator. Upgrade to add more.`, upgrade: true }, { status: 403 });
+      return NextResponse.json({ error: `Your ${accountPlanLabel(entitlementUser)} plan allows ${numberLimit} numbers per rotator. Upgrade to add more.`, upgrade: true }, { status: 403 });
     }
   }
   if (body.fallbackNumber !== undefined) {

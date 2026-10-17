@@ -1,27 +1,34 @@
 import Link from "next/link";
-import { FREE_ROUTED_LEADS_LIFETIME } from "@/lib/router-entitlements";
-import { NUMBERS_PER_ROTATOR_LIMITS, ROTATOR_LIMITS } from "@/lib/plan-limits";
+import { NUMBERS_PER_ROTATOR_LIMITS, ROTATOR_LIMITS, SHORT_LINK_LIMITS } from "@/lib/plan-limits";
 
-// Shared between /pricing and /plans so the Free plan's facts are written
-// once (FEAT-BILLING-PLANS-PAGES). Rendered as the first card in the
-// PricingPlans grid so Free sits next to the paid plans.
+// Shared between /pricing and /plans so the Free-trial card's facts are
+// written once (FEAT-BILLING-PLANS-PAGES; updated for the Free-trial
+// restructure, FEAT-FREE-TRIAL). This card represents the 3-day Free trial
+// every new account gets — EXACTLY Solo's features, plus unlimited routed
+// leads while the trial lasts. It is never a permanent "Free" plan: there
+// is no standing free tier to show here. Rendered as the first card in the
+// PricingPlans grid so it sits next to the paid plans.
 const FREE_FEATURES = [
-  `${ROTATOR_LIMITS.free} WhatsApp rotator link`,
-  `Up to ${NUMBERS_PER_ROTATOR_LIMITS.free} numbers per rotator`,
-  `${FREE_ROUTED_LEADS_LIFETIME} routed leads (lifetime)`,
+  `${ROTATOR_LIMITS.basic} WhatsApp rotator links`,
+  `Up to ${NUMBERS_PER_ROTATOR_LIMITS.basic} numbers per rotator`,
+  "Unlimited routed leads (trial)",
+  `${SHORT_LINK_LIMITS.basic} branded short links`,
+  "Website widget",
+  "Basic reports (last 30 days)",
   "Round-robin distribution",
-  "Link builder & QR maker",
-  "Live performance page",
   "Basic support",
 ];
 
 export default function FreePlanStrip({
   isCurrent = false,
+  trialDaysLeft = null,
   ctaHref = "/signup?redirect=/tools/rotator",
-  ctaLabel = "Route 25 Leads Free",
+  ctaLabel = "Start 3-day free trial",
   note,
 }: {
   isCurrent?: boolean;
+  // Set while the user's free trial is running: marks this card as their current plan.
+  trialDaysLeft?: number | null;
   ctaHref?: string | null;
   ctaLabel?: string;
   note?: React.ReactNode;
@@ -30,17 +37,22 @@ export default function FreePlanStrip({
     <div className="relative min-w-0 rounded-2xl border border-slate-800 bg-[#111811] p-6 flex flex-col">
       <div>
         <div className="flex items-center gap-2">
-          <h2 className="text-xl font-bold text-white">Free</h2>
-          {isCurrent && (
+          <h2 className="text-xl font-bold text-white">Free trial</h2>
+          {trialDaysLeft != null && (
             <span className="rounded-full border border-[#25D366]/40 bg-[#25D366]/10 px-2.5 py-0.5 text-xs font-semibold text-[#25D366]">
-              Current plan
+              Current plan · {trialDaysLeft} day{trialDaysLeft !== 1 ? "s" : ""} left
+            </span>
+          )}
+          {isCurrent && (
+            <span className="rounded-full border border-amber-400/40 bg-amber-400/10 px-2.5 py-0.5 text-xs font-semibold text-amber-300">
+              Trial ended
             </span>
           )}
         </div>
-        <p className="text-slate-500 text-sm mt-1">Try lead routing with one link</p>
+        <p className="text-slate-500 text-sm mt-1">3 days, everything in Solo, no card needed</p>
         <div className="mt-5 mb-6 flex flex-wrap items-baseline gap-x-2">
           <span className="text-4xl font-bold tracking-tight text-white">$0</span>
-          <span className="text-slate-500 text-sm">no card required</span>
+          <span className="text-slate-500 text-sm">for 3 days</span>
         </div>
       </div>
 
@@ -54,7 +66,7 @@ export default function FreePlanStrip({
       </ul>
 
       {isCurrent ? (
-        <p className="rounded-full border border-[#25D366]/40 bg-[#25D366]/10 py-3 text-center text-sm font-semibold text-[#25D366]">Your current plan</p>
+        <p className="rounded-full border border-amber-400/40 bg-amber-400/10 py-3 text-center text-sm font-semibold text-amber-300">Trial ended — links paused</p>
       ) : note ? (
         <p className="text-center text-xs text-slate-500">{note}</p>
       ) : ctaHref ? (

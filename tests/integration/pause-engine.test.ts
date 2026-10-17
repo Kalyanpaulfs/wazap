@@ -235,12 +235,12 @@ describe("Case 16: plan-limit pausing engine", () => {
     expect(pausedIds(adLinkRows).sort()).toEqual(adLinks.map((r) => r.id).sort()); // basic ad-link limit is 0 - all paused
   });
 
-  it("paid plan expiring to free pauses rotators/short links/ad links per the free limits", async () => {
+  it("paid plan expiring to free pauses ALL rotators/short links/ad links (Free-trial restructure: free is 0 of everything)", async () => {
     const expiresAt = new Date(Date.now() - 60_000); // already expired
     const user0 = await createTestUser({ plan: "pro", planExpiresAt: expiresAt });
     userId = user0.id; email = user0.email;
 
-    // Free limits: rotators 1, short links 0, ad links 0 (lib/plan-limits.ts).
+    // Free limits: rotators 0, short links 0, ad links 0 (lib/plan-limits.ts).
     const rotators = await makeRotators(userId, [30, 20, 10]);
     const shortLinks = await makeShortLinks(userId, [30, 20]);
     const adLinks = await makeAdLinks(userId, [30]);
@@ -253,8 +253,8 @@ describe("Case 16: plan-limit pausing engine", () => {
     const freshUser = await getUser(userId);
     expect(freshUser.plan).toBe("free");
 
-    const rotatorRows = await prisma.rotatorLink.findMany({ where: { id: { in: rotators.map((r) => r.id) } }, orderBy: { totalClicks: "desc" } });
-    expect(rotatorRows.map((r) => r.planPausedAt !== null)).toEqual([false, true, true]); // free limit 1: top kept
+    const rotatorRows = await prisma.rotatorLink.findMany({ where: { id: { in: rotators.map((r) => r.id) } } });
+    expect(pausedIds(rotatorRows).sort()).toEqual(rotators.map((r) => r.id).sort()); // free limit 0: all paused
 
     const shortLinkRows = await prisma.shortLink.findMany({ where: { id: { in: shortLinks.map((r) => r.id) } } });
     expect(pausedIds(shortLinkRows).sort()).toEqual(shortLinks.map((r) => r.id).sort()); // free limit 0: all paused
@@ -303,32 +303,34 @@ describe("Case 16: plan-limit pausing engine", () => {
     expect(shortLinkRows.every((r) => r.planPausedAt === null)).toBe(true);
   });
 
-  // FEAT-AUDIT-HARDENING trial links: the 3-day Growth trial grants
-  // Growth-level rotator/short-link/ad-link limits for its duration. These
-  // cases match the owner's examples (a)-(d) exactly.
+  // Free-trial restructure (FEAT-FREE-TRIAL): the 3-day Free trial grants
+  // EXACTLY Solo-level rotator/short-link/ad-link limits for its duration
+  // (previously Growth-level, under FEAT-AUDIT-HARDENING). These cases match
+  // the owner's examples (a)-(d), updated for the new trial limits.
 
-  it("(a) a new-style trial ending with no purchase pauses extras down to FREE limits", async () => {
+  it("(a) a new-style trial ending with no purchase pauses ALL extras (Free-trial restructure: free is 0 of everything)", async () => {
     const trialEndsAt = daysFromNow(-1); // ended yesterday - within the cron's 2-day lookback
     const trialStartedAt = new Date(trialEndsAt.getTime() - 3 * 86_400_000); // 3-day (new-style) trial
     const user0 = await createTestUser({ plan: "free", trialStartedAt, trialEndsAt, trialPlan: "pro" });
     userId = user0.id; email = user0.email;
 
-    // Free limits: rotators 1, short links 0, ad links 0.
+    // Free limits: rotators 0, short links 0, ad links 0.
     const rotators = await makeRotators(userId, [30, 20, 10]);
     const shortLinks = await makeShortLinks(userId, [30, 20]);
     const adLinks = await makeAdLinks(userId, [30]);
 
     await withEnv({ PLAN_LIMIT_PAUSING_ENABLED: "true" }, async () => {
-      // Mirrors app/api/cron/expire-plans/route.ts's trial-lapse sweep: a
-      // new-style trial passes its own trialPlan as previousPlan.
-      const result = await syncPlanLimits(userId, "pro");
-      expect(result.rotators.paused).toBe(2);
+      // Mirrors app/api/cron/expire-plans/route.ts's trial-lapse sweep. No
+      // previousPlan is even needed any more: resolving to "free" always
+      // allows pausing now (lib/plan-limit-sync.ts).
+      const result = await syncPlanLimits(userId);
+      expect(result.rotators.paused).toBe(3);
       expect(result.shortLinks.paused).toBe(2);
       expect(result.adLinks.paused).toBe(1);
     });
 
-    const rotatorRows = await prisma.rotatorLink.findMany({ where: { id: { in: rotators.map((r) => r.id) } }, orderBy: { totalClicks: "desc" } });
-    expect(rotatorRows.map((r) => r.planPausedAt !== null)).toEqual([false, true, true]); // free limit 1: top kept
+    const rotatorRows = await prisma.rotatorLink.findMany({ where: { id: { in: rotators.map((r) => r.id) } } });
+    expect(pausedIds(rotatorRows).sort()).toEqual(rotators.map((r) => r.id).sort()); // free limit 0: all paused
 
     const shortLinkRows = await prisma.shortLink.findMany({ where: { id: { in: shortLinks.map((r) => r.id) } } });
     expect(pausedIds(shortLinkRows).sort()).toEqual(shortLinks.map((r) => r.id).sort()); // free limit 0: all paused
@@ -337,13 +339,19 @@ describe("Case 16: plan-limit pausing engine", () => {
     expect(pausedIds(adLinkRows).sort()).toEqual(adLinks.map((r) => r.id).sort()); // free limit 0: all paused
   });
 
-  it("(b) buying Solo during an active new-style trial pauses extras down to SOLO limits", async () => {
+  it("(b) buying Solo during an active new-style trial pauses nothing (Free-trial restructure: the trial is ALREADY exactly Solo's limits, ignoring any legacy stored trialPlan)", async () => {
     const trialStartedAt = daysFromNow(-1);
     const trialEndsAt = daysFromNow(2); // still active at the moment of purchase
+    // trialPlan "pro" is a legacy value (from the old Growth trial, pre-
+    // FEAT-FREE-TRIAL) - effectivePlan/linkPlan/previousLinkPlanFor all
+    // ignore it now and treat every trial as exactly Solo ("basic").
     const user0 = await createTestUser({ plan: "free", trialStartedAt, trialEndsAt, trialPlan: "pro" });
     userId = user0.id; email = user0.email;
 
-    // Solo (basic) limits: rotators 3, short links 2, ad links 0.
+    // Solo (basic) limits: rotators 3, short links 2, ad links 0. These were
+    // never blocked at creation time in this test (it writes rows directly),
+    // but buying Solo is a same-rank move from the trial's own Solo-equivalent
+    // limits, not a downgrade - so none of them get paused by this purchase.
     const rotators = await makeRotators(userId, [50, 40, 30, 20, 10]);
     const shortLinks = await makeShortLinks(userId, [40, 30, 20]);
     const adLinks = await makeAdLinks(userId, [40, 30]);
@@ -366,14 +374,12 @@ describe("Case 16: plan-limit pausing engine", () => {
     const freshUser = await getUser(userId);
     expect(freshUser.plan).toBe("basic");
 
-    const rotatorRows = await prisma.rotatorLink.findMany({ where: { id: { in: rotators.map((r) => r.id) } }, orderBy: { totalClicks: "desc" } });
-    expect(rotatorRows.map((r) => r.planPausedAt !== null)).toEqual([false, false, false, true, true]); // top 3 (Solo limit) kept
-
-    const shortLinkRows = await prisma.shortLink.findMany({ where: { id: { in: shortLinks.map((r) => r.id) } }, orderBy: { clicks: "desc" } });
-    expect(shortLinkRows.map((r) => r.planPausedAt !== null)).toEqual([false, false, true]); // top 2 (Solo limit) kept
-
+    const rotatorRows = await prisma.rotatorLink.findMany({ where: { id: { in: rotators.map((r) => r.id) } } });
+    expect(rotatorRows.every((r) => r.planPausedAt === null)).toBe(true);
+    const shortLinkRows = await prisma.shortLink.findMany({ where: { id: { in: shortLinks.map((r) => r.id) } } });
+    expect(shortLinkRows.every((r) => r.planPausedAt === null)).toBe(true);
     const adLinkRows = await prisma.adLink.findMany({ where: { id: { in: adLinks.map((r) => r.id) } } });
-    expect(pausedIds(adLinkRows).sort()).toEqual(adLinks.map((r) => r.id).sort()); // Solo ad-link limit is 0 - all paused
+    expect(adLinkRows.every((r) => r.planPausedAt === null)).toBe(true);
   });
 
   it("(c) buying Growth during an active new-style trial pauses nothing", async () => {
@@ -413,7 +419,7 @@ describe("Case 16: plan-limit pausing engine", () => {
     expect(adLinkRows.every((r) => r.planPausedAt === null)).toBe(true);
   });
 
-  it("(d) an old-style (14-day) trial ending never pauses anything (grandfathered)", async () => {
+  it("(d) an old-style (14-day) trial ending now pauses everything too (Free-trial restructure: free/no-trial is always pausable, no grandfathering, no previousPlan needed)", async () => {
     const trialEndsAt = daysFromNow(-1);
     const trialStartedAt = new Date(trialEndsAt.getTime() - 14 * 86_400_000); // 14-day (old-style) trial
     const user0 = await createTestUser({ plan: "free", trialStartedAt, trialEndsAt, trialPlan: "pro" });
@@ -423,17 +429,17 @@ describe("Case 16: plan-limit pausing engine", () => {
     const shortLinks = await makeShortLinks(userId, [30, 20]);
 
     await withEnv({ PLAN_LIMIT_PAUSING_ENABLED: "true" }, async () => {
-      // Mirrors the cron: isNewStyleTrial is false for a 14-day trial, so it
-      // passes no previousPlan at all - these users never had Growth link
-      // limits to lose.
+      // Mirrors the cron (app/api/cron/expire-plans): no previousPlan is
+      // passed, and none is needed - the user now resolves to "free" (their
+      // old-style trial grandfathering is gone), which is always pausable.
       const result = await syncPlanLimits(userId);
-      expect(result.rotators.paused).toBe(0);
-      expect(result.shortLinks.paused).toBe(0);
+      expect(result.rotators.paused).toBe(3);
+      expect(result.shortLinks.paused).toBe(2);
     });
 
     const rotatorRows = await prisma.rotatorLink.findMany({ where: { id: { in: rotators.map((r) => r.id) } } });
-    expect(rotatorRows.every((r) => r.planPausedAt === null)).toBe(true);
+    expect(pausedIds(rotatorRows).sort()).toEqual(rotators.map((r) => r.id).sort());
     const shortLinkRows = await prisma.shortLink.findMany({ where: { id: { in: shortLinks.map((r) => r.id) } } });
-    expect(shortLinkRows.every((r) => r.planPausedAt === null)).toBe(true);
+    expect(pausedIds(shortLinkRows).sort()).toEqual(shortLinks.map((r) => r.id).sort());
   });
 });

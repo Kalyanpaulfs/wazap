@@ -3,8 +3,9 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { recordFunnelEvent } from "@/lib/funnel";
-import { adLinkLimit, PLAN_DISPLAY_NAME, normalizePlanKey } from "@/lib/plan-limits";
+import { adLinkLimit, PLAN_DISPLAY_NAME } from "@/lib/plan-limits";
 import { linkPlan } from "@/lib/router-entitlements";
+import { accountPlanLabel } from "@/lib/entitlements";
 
 function getLimit(plan: string) {
   return adLinkLimit(plan);
@@ -25,7 +26,7 @@ export async function GET() {
     links: links.map(l => ({ ...l, clicks: l._count.clickEvents })),
     limit: getLimit(plan),
     plan,
-    planLabel: PLAN_DISPLAY_NAME[normalizePlanKey(plan)],
+    planLabel: accountPlanLabel(entitlementUser),
   });
 }
 
@@ -42,7 +43,7 @@ export async function POST(req: Request) {
   }
   const count = await prisma.adLink.count({ where: { userId, planPausedAt: null } });
   if (count >= limit) {
-    return NextResponse.json({ error: `Plan limit reached. Your ${PLAN_DISPLAY_NAME[normalizePlanKey(plan)]} plan allows ${limit} ad link${limit !== 1 ? "s" : ""}. Upgrade for more.`, upgrade: true }, { status: 403 });
+    return NextResponse.json({ error: `Plan limit reached. Your ${accountPlanLabel(entitlementUser)} plan allows ${limit} ad link${limit !== 1 ? "s" : ""}. Upgrade for more.`, upgrade: true }, { status: 403 });
   }
 
   const { name, number, message, utmSource, utmMedium, utmCampaign } = await req.json();

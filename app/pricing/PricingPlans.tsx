@@ -8,7 +8,7 @@ import { PLAN_PRICES } from "@/lib/billing";
 import { formatLocalPrice, useLocalization, usePricingText } from "@/app/pricing/local-price";
 
 const PLAN_RANK: Record<string, number> = { free: 0, basic: 1, pro: 2, ultimate: 3, business: 4 };
-const PLAN_LABELS: Record<string, string> = { free: "Free", basic: "Solo", pro: "Growth", ultimate: "Agency", business: "Business" };
+const PLAN_LABELS: Record<string, string> = { free: "Free trial ended", basic: "Solo", pro: "Growth", ultimate: "Agency", business: "Business" };
 
 type PendingPlanChange = { kind: string; toPlan: string; effectiveAt: string | null };
 type BillingInfo = {
@@ -162,11 +162,6 @@ export default function PricingPlans({
                 {currentPlanKey === plan.id && (
                   <span className="rounded-full border border-[#25D366]/40 bg-[#25D366]/10 px-2.5 py-0.5 text-xs font-semibold text-[#25D366]">
                     Current plan
-                  </span>
-                )}
-                {trialInfo && trialInfo.plan === plan.id && (
-                  <span className="rounded-full border border-yellow-400/30 bg-yellow-400/10 px-2.5 py-0.5 text-xs font-semibold text-yellow-300">
-                    Free trial of {plan.name} · {trialInfo.daysLeft} day{trialInfo.daysLeft !== 1 ? "s" : ""} left
                   </span>
                 )}
               </div>

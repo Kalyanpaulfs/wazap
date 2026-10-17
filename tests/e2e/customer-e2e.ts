@@ -10,6 +10,9 @@
 // and is deleted again in the `finally` block at the end, pass or fail.
 import fs from "node:fs";
 import { prisma } from "@/lib/prisma";
+import { getActiveWorkspace } from "@/lib/workspaces";
+
+const cleanHtml = (s: string) => s.replace(/<!--.*?-->/g, "");
 
 const BASE = process.env.E2E_BASE_URL || "http://localhost:3000";
 const DEV_LOG =
@@ -91,7 +94,7 @@ async function http(
 // ---------------------------------------------------------------------------
 function latestCodeInLog(email: string, purpose: "login" | "confirm"): string | null {
   if (!fs.existsSync(DEV_LOG)) return null;
-  const content = fs.readFileSync(DEV_LOG, "utf8");
+  const content = fs.readFileSync(DEV_LOG, "utf8").replace(/\0/g, "");
   const lines = content.split(/\r?\n/);
   const needle = `${purpose} code for ${email} is `;
   for (let i = lines.length - 1; i >= 0; i--) {
@@ -301,14 +304,25 @@ async function main() {
     });
   }
 
-  const PRIVATE_PAGES = ["/dashboard", "/performance", "/reports", "/plans", "/billing", "/account", "/tools/rotator"];
+  const PRIVATE_PAGES = ["/dashboard", "/performance", "/reports", "/plans", "/billing", "/account"];
   for (const path of PRIVATE_PAGES) {
     await check("A", `private page redirects to login when logged out: ${path}`, async () => {
       const r = await http(null, path);
-      assertTrue(r.status === 307 || r.status === 308, `GET ${path} should redirect when logged out, got ${r.status}`);
-      assertTrue((r.location || "").includes("/login"), `GET ${path} -> Location "${r.location}" should go to /login`);
+      const isHttpRedirect = (r.status === 307 || r.status === 308) && (r.location || "").includes("/login");
+      const isStreamRedirect = r.status === 200 && r.text.includes("NEXT_REDIRECT") && r.text.includes("/login");
+      assertTrue(isHttpRedirect || isStreamRedirect, `GET ${path} should redirect when logged out, got ${r.status}`);
+      if (isHttpRedirect) {
+        assertTrue((r.location || "").includes("/login"), `GET ${path} -> Location "${r.location}" should go to /login`);
+      }
     });
   }
+
+  await check("A", "logged-out /tools/rotator loads 200 and /api/rotator is 401 (auth banner displays on client)", async () => {
+    const pageRes = await http(null, "/tools/rotator");
+    assertEqual(pageRes.status, 200, "GET /tools/rotator should load 200");
+    const apiRes = await http(null, "/api/rotator");
+    assertEqual(apiRes.status, 401, "GET /api/rotator should be 401 when logged out");
+  });
 
   // -------------------------------------------------------------------------
   // B. Sign-up + login via the real flow
@@ -324,7 +338,7 @@ async function main() {
     assertEqual(sess!.user!.email, signupEmail, "session email");
   });
 
-  await check("B", "new account has 3-day Solo trial (trialPlan basic) and session plan basic", async () => {
+  await check("B", "new account has 3-day Free trial (trialPlan basic) and session plan basic", async () => {
     const dbUser = await prisma.user.findUnique({ where: { email: signupEmail } });
     assertTrue(!!dbUser, "user should exist in DB");
     assertEqual(dbUser!.plan, "free", "raw plan column should be free");
@@ -336,11 +350,12 @@ async function main() {
     assertEqual(sess!.user!.plan, "basic", "session effective plan during trial should be basic");
   });
 
-  await check("B", "trial grants lead cap of 100 (not the free 25)", async () => {
+  await check("B", "trial grants unlimited routed leads (Free-trial restructure: no 100-lead cap any more)", async () => {
     const r = await http(signupJar, "/api/rotator");
     assertEqual(r.status, 200, "GET /api/rotator");
-    assertEqual(r.body.quota.limit, 100, "trial lead cap should be 100");
-    assertEqual(r.body.quota.plan, "free", "routerPlan (lead-routing, paid-only) stays free during trial");
+    assertEqual(r.body.quota.limit, null, "trial should have no lead limit at all (unlimited)");
+    assertEqual(r.body.quota.allowed, true, "trial routing should be allowed");
+    assertEqual(r.body.quota.plan, "basic", "routerPlan now honours the trial, same as linkPlan (Solo-equivalent)");
   });
 
   // -------------------------------------------------------------------------
@@ -353,7 +368,9 @@ async function main() {
 
   type PlanCfg = { key: "free" | "basic" | "pro" | "ultimate"; rotatorLimit: number; numbersLimit: number; shortLimit: number; adLimit: number; widget: boolean };
   const PLANS: PlanCfg[] = [
-    { key: "free", rotatorLimit: 1, numbersLimit: 2, shortLimit: 0, adLimit: 0, widget: false },
+    // Free-trial restructure: "free" (no paid plan, no active trial) is 0 of
+    // everything - nothing is grandfathered any more.
+    { key: "free", rotatorLimit: 0, numbersLimit: 0, shortLimit: 0, adLimit: 0, widget: false },
     { key: "basic", rotatorLimit: 3, numbersLimit: 3, shortLimit: 2, adLimit: 0, widget: true },
     { key: "pro", rotatorLimit: 10, numbersLimit: 10, shortLimit: 5, adLimit: 5, widget: true },
     { key: "ultimate", rotatorLimit: 25, numbersLimit: 20, shortLimit: 15, adLimit: 15, widget: true },
@@ -409,10 +426,24 @@ async function main() {
         assertEqual(r.status, 403, `creating rotator #${plan.rotatorLimit + 1} should be refused`);
         assertTrue(r.body?.upgrade === true, "refusal should carry upgrade:true");
       }
+      // Clean up the count-limit pre-fills so later tests on this plan user aren't blocked by count limit
+      await prisma.rotatorLink.deleteMany({ where: { userId: user.id, code: { startsWith: `E2ER${RUN}${plan.key}` } } });
     });
 
     // --- D. Numbers-per-rotator limit ---
     await check("D", `${plan.key}: numbers-per-rotator limit is ${plan.numbersLimit}`, async () => {
+      if (plan.numbersLimit === 0) {
+        // 0-limit plan (free/no-trial): rotator creation itself is refused
+        // outright, before the numbers-per-rotator check is even reached -
+        // there's no "just within the limit" numbers array to test.
+        const r = await http(jar, "/api/rotator", {
+          method: "POST",
+          headers: await getOrigin(jar),
+          body: JSON.stringify({ name: "should fail", numbers: ["919800099999"] }),
+        });
+        assertEqual(r.status, 403, "rotator creation on a 0-numbers-limit plan should be refused");
+        return;
+      }
       const okNumbers = Array.from({ length: plan.numbersLimit }, (_, i) => `9198000${String(i).padStart(5, "0")}`);
       const tooMany = Array.from({ length: plan.numbersLimit + 1 }, (_, i) => `9198001${String(i).padStart(5, "0")}`);
       const okResult = await http(jar, "/api/rotator", {
@@ -570,22 +601,18 @@ async function main() {
     for (const s of starts) assertTrue(!!s.destination, "each ConversationStart should record a destination");
   });
 
-  await check("F", "free user is blocked once the 25-lifetime-lead cap is reached", async () => {
+  await check("F", "free (no-trial) user is blocked from routing at all (Free-trial restructure: no 25-lead lifetime allowance any more)", async () => {
     const freeUser = planUsers.get("free")!;
     const rotator = await prisma.rotatorLink.create({
       data: { userId: freeUser.id, code: `E2EFREECAP${RUN}`, name: "free cap test", numbers: ["919833300001"], fallbackNumber: "919833300001" },
     });
-    // Fast-forward to the cap via direct setup (seeding what the real
-    // claimRouterHandoff would have written one call at a time).
-    await prisma.conversationStart.createMany({
-      data: Array.from({ length: 25 }, () => ({ userId: freeUser.id, assetType: "rotator", assetId: rotator.id, destination: "919833300001" })),
-    });
+    // No leads used at all - free/no-trial still blocks routing immediately.
     const r = await http(null, `/r/${rotator.code}`, { ip: "10.77.2.1" });
     assertTrue(r.status === 307 || r.status === 308, `expected redirect, got ${r.status}`);
-    assertTrue((r.location || "").includes("/router-limit"), `free user over the 25 cap should land on /router-limit, got ${r.location}`);
+    assertTrue((r.location || "").includes("/router-limit"), `free/no-trial user should land on /router-limit even at 0 leads used, got ${r.location}`);
   });
 
-  await check("F", "trial user is allowed up to 100 leads (not capped at 25)", async () => {
+  await check("F", "trial user has unlimited routed leads (Free-trial restructure: no 100-lead cap any more)", async () => {
     const trialUser = await createDbUser("trial-cap", {
       plan: "free",
       trialPlan: "basic",
@@ -595,13 +622,12 @@ async function main() {
     const rotator = await prisma.rotatorLink.create({
       data: { userId: trialUser.id, code: `E2ETRIALCAP${RUN}`, name: "trial cap test", numbers: ["919844400001"], fallbackNumber: "919844400001" },
     });
+    // Seed well past the old 100-lead cap to prove it no longer applies.
     await prisma.conversationStart.createMany({
-      data: Array.from({ length: 99 }, () => ({ userId: trialUser.id, assetType: "rotator", assetId: rotator.id, destination: "919844400001" })),
+      data: Array.from({ length: 150 }, () => ({ userId: trialUser.id, assetType: "rotator", assetId: rotator.id, destination: "919844400001" })),
     });
-    const underCap = await http(null, `/r/${rotator.code}`, { ip: "10.77.3.1" });
-    assertTrue((underCap.location || "").includes("wa.me"), `at 99/100, a trial user should still route, got ${underCap.location}`);
-    const overCap = await http(null, `/r/${rotator.code}`, { ip: "10.77.3.2" });
-    assertTrue((overCap.location || "").includes("/router-limit"), `at 100/100, a trial user should be blocked, got ${overCap.location}`);
+    const wayOverOldCap = await http(null, `/r/${rotator.code}`, { ip: "10.77.3.1" });
+    assertTrue((wayOverOldCap.location || "").includes("wa.me"), `at 150 leads (past the old 100 cap), a trial user should still route, got ${wayOverOldCap.location}`);
   });
 
   await check("F", "bot speed limit: >10 hits/min from one device still redirect but aren't counted", async () => {
@@ -630,14 +656,14 @@ async function main() {
     const freeJar = planJars.get("free");
     const r = await http(freeJar!, "/reports");
     assertEqual(r.status, 200, "GET /reports as free");
-    assertTrue(r.text.includes("Reports start on Solo"), "free user should see the locked reports teaser");
+    assertTrue(r.text.includes("Your free trial has ended"), "free/no-trial user should see the locked reports teaser");
   });
 
   await check("G", "solo: 'Basic reports' badge, no date picker", async () => {
     const basicJar = planJars.get("basic");
     const r = await http(basicJar!, "/reports");
     assertEqual(r.status, 200, "GET /reports as basic");
-    assertTrue(r.text.includes("Basic reports"), "basic user should see the 'Basic reports' badge");
+    assertTrue(cleanHtml(r.text).includes("Basic reports"), "basic user should see the 'Basic reports' badge");
     assertTrue(!r.text.includes('type="date"'), "basic user should not see a custom date picker");
   });
 
@@ -645,7 +671,7 @@ async function main() {
     const proJar = planJars.get("pro");
     const r = await http(proJar!, "/reports");
     assertEqual(r.status, 200, "GET /reports as pro");
-    assertTrue(r.text.includes("Full reports"), "pro user should see the 'Full reports' badge");
+    assertTrue(cleanHtml(r.text).includes("Full reports"), "pro user should see the 'Full reports' badge");
     assertTrue(r.text.includes('type="date"'), "pro user should see a custom date picker");
     const customResult = await http(proJar!, "/reports?from=2026-10-01&to=2026-10-16");
     assertEqual(customResult.status, 200, "custom from/to range should load for a Growth user");
@@ -662,6 +688,7 @@ async function main() {
 
     // Give the pro user a named-salesperson chat to export.
     const proUser = planUsers.get("pro")!;
+    const proWorkspace = await getActiveWorkspace(proUser.id);
     const named = await prisma.rotatorLink.create({
       data: {
         userId: proUser.id,
@@ -673,7 +700,7 @@ async function main() {
       },
     });
     await prisma.conversationStart.create({
-      data: { userId: proUser.id, assetType: "rotator", assetId: named.id, assetName: named.name, destination: "919866600001" },
+      data: { userId: proUser.id, workspaceId: proWorkspace.workspaceId, assetType: "rotator", assetId: named.id, assetName: named.name, destination: "919866600001" },
     });
     const proResult = await http(planJars.get("pro")!, "/api/reports/export?from=2026-10-01&to=2026-10-17");
     assertEqual(proResult.status, 200, "CSV export should work for growth with from/to");
@@ -684,17 +711,17 @@ async function main() {
   // -------------------------------------------------------------------------
   // H. Performance
   // -------------------------------------------------------------------------
-  await check("H", "free user: performance page shows 'of 25 free leads used'", async () => {
+  await check("H", "free (no-trial) user: performance page shows the paused/choose-a-plan banner", async () => {
     const r = await http(planJars.get("free")!, "/performance");
     assertEqual(r.status, 200, "GET /performance as free");
-    assertTrue(/of 25 free leads used/.test(r.text), "free user should see the 25-free-leads meter");
+    assertTrue(/free trial has ended/i.test(cleanHtml(r.text)), "free/no-trial user should see the trial-ended paused banner");
   });
 
-  await check("H", "trial user: performance page shows 'trial leads'", async () => {
+  await check("H", "trial user: performance page shows 'Free trial · N days left · unlimited leads'", async () => {
     const trialJar = await loggedInJar(emailFor("trial-cap"));
     const r = await http(trialJar, "/performance");
     assertEqual(r.status, 200, "GET /performance as trial user");
-    assertTrue(/trial leads used/.test(r.text), "trial user should see the trial-leads meter, not the free one");
+    assertTrue(/free trial.*unlimited leads/i.test(cleanHtml(r.text)), "trial user should see the unlimited-leads trial banner, not a leads-used meter");
   });
 
   // -------------------------------------------------------------------------
@@ -776,14 +803,15 @@ async function main() {
       assertTrue(!!expiredEvent, "a trial_expired funnel event should be recorded");
     });
 
-    await check("J", "expire-plans: pauses rotators over the free limit once a Solo trial ends", async () => {
-      // isNewStyleTrial requires trialStartedAt/trialEndsAt <=4 days apart, and
-      // the trialCandidates lookback window in expire-plans is 2 days.
+    await check("J", "expire-plans: pauses ALL rotators once the Free trial ends (Free-trial restructure: free is 0 of everything)", async () => {
+      // The cron's free/no-trial sweep no longer depends on isNewStyleTrial
+      // or a lookback window - it matches ANY plan:"free" user who still has
+      // an un-paused link, however long ago their trial ended.
       const trialEndedUser = await createDbUser("trial-ended-pause", {
         plan: "free",
         trialPlan: "basic", // Solo-level link limits (rotatorLimit 3) while the trial ran
         trialStartedAt: new Date(Date.now() - 4 * 86_400_000),
-        trialEndsAt: new Date(Date.now() - 1 * 86_400_000), // ended within the 2-day lookback
+        trialEndsAt: new Date(Date.now() - 1 * 86_400_000),
       });
       // 3 rotators, legitimately created while the Solo-level trial boost was active.
       const rotators = await Promise.all(
@@ -797,10 +825,10 @@ async function main() {
       assertEqual(r.status, 200, `cron call: ${JSON.stringify(r.body)}`);
       const after = await prisma.rotatorLink.findMany({ where: { id: { in: rotators.map((r) => r.id) } } });
       const pausedCount = after.filter((row) => row.planPausedAt !== null).length;
-      // Free plan's rotator limit is 1, so 2 of the 3 should now be paused.
-      assertEqual(pausedCount, 2, `expected 2 of 3 rotators paused once back on free (limit 1), got ${pausedCount}`);
+      // Free plan's rotator limit is now 0, so all 3 should be paused.
+      assertEqual(pausedCount, 3, `expected all 3 rotators paused once back on free (limit 0), got ${pausedCount}`);
       const activeCount = after.filter((row) => row.planPausedAt === null).length;
-      assertEqual(activeCount, 1, "exactly 1 rotator should remain active, matching the free limit");
+      assertEqual(activeCount, 0, "no rotator should remain active on free/no-trial");
     });
   }
 
@@ -810,7 +838,8 @@ async function main() {
   await check("K", "scripts/support-flow-check.ts passes", async () => {
     const { execSync } = await import("node:child_process");
     const out = execSync("npx tsx scripts/support-flow-check.ts", { cwd: process.cwd(), encoding: "utf8" });
-    const parsed = JSON.parse(out.trim().split("\n").pop() || "{}");
+    const jsonMatch = out.match(/\{[\s\S]*\}/);
+    const parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : {};
     assertTrue(parsed.passed > 0 && Array.isArray(parsed.checks), `unexpected output: ${out}`);
     console.log(`  support-flow-check: ${parsed.passed} checks passed`);
   });
@@ -850,6 +879,7 @@ async function main() {
   // -------------------------------------------------------------------------
   await check("misc", "billing pages load and payment-create endpoints fail gracefully for a free user", async () => {
     const freeJar = planJars.get("free")!;
+    await sleep(500);
     const billingPage = await http(freeJar, "/billing");
     assertEqual(billingPage.status, 200, "GET /billing");
     const plansPage = await http(freeJar, "/plans");
@@ -866,8 +896,10 @@ async function main() {
       headers: await getOrigin(freeJar),
       body: JSON.stringify({ plan: "basic" }),
     });
-    assertTrue(paypalResult.status >= 400 && paypalResult.status < 600, `paypal create should fail gracefully, got ${paypalResult.status}`);
-    assertTrue(typeof paypalResult.body === "object" && paypalResult.body?.error, "paypal create should return a JSON error, not crash");
+    const paypalOk =
+      (paypalResult.status >= 400 && paypalResult.status < 600 && paypalResult.body?.error) ||
+      (paypalResult.status === 200 && paypalResult.body?.manual === true);
+    assertTrue(paypalOk, `paypal create should fail gracefully or offer manual invoice, got ${paypalResult.status}: ${JSON.stringify(paypalResult.body)}`);
   });
 }
 
@@ -888,7 +920,7 @@ async function main() {
     } catch (err) {
       console.error("Cleanup error:", err);
     }
-    const remaining = await prisma.user.count({ where: { email: { contains: "@wazap-qa.test" } } });
+    const remaining = await prisma.user.count({ where: { email: { startsWith: "e2e-" } } });
     console.log(`e2e users remaining after cleanup: ${remaining}`);
 
     console.log("\n=== RESULTS ===");

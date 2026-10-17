@@ -13,9 +13,14 @@
 // change being reported), and pausing those three is skipped whenever the
 // new plan's rank isn't strictly lower (renewal of the same plan, an
 // upgrade, a same-plan admin re-activation, or an unresolvable previous
-// plan all skip it) - see isLinkDowngrade. Resuming is never gated by this:
-// it always runs. Automations/AI/channels/API keys/webhooks/marketplace
-// installs are unaffected by this gate and keep their existing behaviour.
+// plan all skip it) - see isLinkDowngrade. The one exception (Free-trial
+// restructure, FEAT-FREE-TRIAL): whenever the user now resolves to "free"
+// (no paid plan, no active Free trial), pausing is ALWAYS allowed, because
+// every free limit is 0 and nothing is grandfathered there, no matter how
+// the user arrived (trial lapse, an old trial, never trialled, or an
+// unresolvable previous plan). Resuming is never gated by this: it always
+// runs. Automations/AI/channels/API keys/webhooks/marketplace installs are
+// unaffected by this gate and keep their existing behaviour.
 import type { Prisma } from "@prisma/client";
 import { prisma } from "./prisma";
 import { effectivePlan, PRODUCT_TRIAL_PLAN } from "./entitlements";
@@ -124,10 +129,13 @@ export function isLinkDowngrade(previousPlan: string | null | undefined, newRawP
   return PLAN_RANK[normalizePlanKey(newRawPlan)] < PLAN_RANK[normalizePlanKey(previousPlan)];
 }
 
-// Owner decision (FEAT-AUDIT-HARDENING trial links): a NEW-style trial
-// (trialStartedAt and trialEndsAt both set, and no more than 4 days apart -
-// the current 3-day Growth trial) grants Growth-level rotator/short-link/
-// ad-link limits for its duration (see lib/router-entitlements.ts linkPlan).
+// Owner decision (FEAT-AUDIT-HARDENING trial links, updated for the
+// Free-trial restructure): a NEW-style trial (trialStartedAt and
+// trialEndsAt both set, and no more than 4 days apart - the current 3-day
+// Free trial, which is exactly Solo's limits) grants Solo-level rotator/
+// short-link/ad-link limits for its duration (see
+// lib/router-entitlements.ts linkPlan). This mostly matters now for legacy
+// accounts whose stored trialPlan is still "pro" from the old Growth trial.
 // Old 14-day trials predate that and must NEVER be treated as having had
 // Growth link limits - missing trialStartedAt (never recorded for those
 // users) or too long a span both fail safe to "not new-style", which is the
@@ -173,9 +181,15 @@ function trialStillRelevant(user: TrialFieldsUser, now: Date): boolean {
 export function previousLinkPlanFor(previousPlan: string | null | undefined, user: TrialFieldsUser, now = new Date()): string | null | undefined {
   if (previousPlan == null || previousPlan === "") return previousPlan;
   const prevKey = normalizePlanKey(previousPlan);
-  if (PLAN_RANK[prevKey] >= PLAN_RANK.pro) return previousPlan;
+  if (PLAN_RANK[prevKey] >= PLAN_RANK.basic) return previousPlan;
   if (!trialStillRelevant(user, now)) return previousPlan;
-  const trialKey = normalizePlanKey(user.trialPlan || PRODUCT_TRIAL_PLAN);
+  // Owner rule (Free-trial restructure): the trial is EXACTLY Solo - the
+  // stored trialPlan is ignored here too, same as lib/entitlements.ts
+  // effectivePlan and lib/router-entitlements.ts linkPlan, so a legacy
+  // trialPlan: "pro" (from the old Growth trial) never makes a purchase
+  // during the trial look like a downgrade from Growth-level limits the
+  // user never actually had.
+  const trialKey = normalizePlanKey(PRODUCT_TRIAL_PLAN);
   return PLAN_RANK[trialKey] > PLAN_RANK[prevKey] ? trialKey : previousPlan;
 }
 
@@ -391,7 +405,13 @@ export async function syncPlanLimits(userId: string, previousPlan?: string | nul
       // so a trial ending, or a purchase made during one, is recognised as the
       // real downgrade it is - see previousLinkPlanFor's own comment.
       const currentLinkPlan = linkPlan(user);
-      const allowLinkPause = isLinkDowngrade(previousLinkPlanFor(previousPlan, user), currentLinkPlan, userId);
+      // Owner rule (Free-trial restructure): "free" (no paid plan, no active
+      // Free trial) has a 0 limit for every link type and nothing is
+      // grandfathered, so pausing is always allowed there regardless of how
+      // the user arrived (trial lapse, old trial, never trialled, unknown
+      // previous plan). For any paid/trial plan the verified-downgrade gate
+      // still applies as before.
+      const allowLinkPause = currentLinkPlan === "free" || isLinkDowngrade(previousLinkPlanFor(previousPlan, user), currentLinkPlan, userId);
       result.rotators = await syncLinkTool(tx, "rotatorLink", userId, linkLimitValue(ROTATOR_LIMITS, currentLinkPlan), "totalClicks", true, allowLinkPause);
       result.shortLinks = await syncLinkTool(tx, "shortLink", userId, linkLimitValue(SHORT_LINK_LIMITS, currentLinkPlan), "clicks", true, allowLinkPause);
       result.adLinks = await syncLinkTool(tx, "adLink", userId, linkLimitValue(AD_LINK_LIMITS, currentLinkPlan), "clicks", true, allowLinkPause);

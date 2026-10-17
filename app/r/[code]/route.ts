@@ -1,9 +1,10 @@
 import {claimRouterHandoff} from "@/lib/router-claim";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { cacheRoute, readCachedRoute } from "@/lib/routing-cache";
+import { cacheRoute, readCachedRoute, removeCachedRoute } from "@/lib/routing-cache";
 import { rateLimit } from "@/lib/rate-limit";
 import { requestIp } from "@/lib/request-ip";
+import { canRouteLinks, OWNER_ENTITLEMENT_SELECT } from "@/lib/router-entitlements";
 
 // Bot protection (FEAT-PLAN-LIMITS): a per-IP+code speed limit of ~10 hits/
 // minute. A real visitor is never blocked from the redirect itself — once
@@ -17,12 +18,24 @@ export async function GET(req: Request, { params }: { params: Promise<{ code: st
   const ip = requestIp(req.headers);
   const withinSpeedLimit = rateLimit(`redirect:r:${normalizedCode}:${ip}`, 10, 60_000);
   let rotator: { id?: string; userId?: string; name?: string; code: string; numbers: string[]; fallbackNumber?: string | null; message?: string | null; currentIdx: number; planPausedAt?: Date | null } | null = null;
+  let ownerBlocked = false;
   try {
-    rotator = await Promise.race([
-      prisma.rotatorLink.findUnique({ where: { code: normalizedCode } }),
+    const row = await Promise.race([
+      prisma.rotatorLink.findUnique({ where: { code: normalizedCode }, include: { user: { select: OWNER_ENTITLEMENT_SELECT } } }),
       new Promise<never>((_, reject) => setTimeout(() => reject(new Error("routing database timeout")), 1200)),
     ]);
-    if (rotator) await cacheRoute({ code: rotator.code, numbers: rotator.numbers, fallbackNumber: rotator.fallbackNumber, message: rotator.message, currentIdx: rotator.currentIdx }).catch(() => {});
+    if (row) {
+      const { user: owner, ...link } = row;
+      rotator = link;
+      // Live owner check on EVERY click (not just the cached planPausedAt
+      // flag): free with no active Free trial never routes, even before a
+      // pause-sync cron has run and regardless of the speed limit/metering
+      // availability below.
+      ownerBlocked = !canRouteLinks(owner);
+      // Never leave a paused/blocked rotator cached for the outage fallback.
+      if (link.planPausedAt || ownerBlocked) await removeCachedRoute(link.code);
+      else await cacheRoute({ code: link.code, numbers: link.numbers, fallbackNumber: link.fallbackNumber, message: link.message, currentIdx: link.currentIdx }).catch(() => {});
+    }
   } catch {
     rotator = await readCachedRoute(normalizedCode);
   }
@@ -30,6 +43,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ code: st
   // Only checked on the live DB path (not the degraded-cache fallback, which
   // intentionally fails open for availability - see the catch above).
   if (rotator.planPausedAt) redirect("/link-paused?type=rotator");
+  if (ownerBlocked) redirect(`/router-limit?code=${encodeURIComponent(normalizedCode)}`);
 
   const validNumbers = rotator.numbers.map(number => number.replace(/\D/g, "")).filter(number => number.length >= 8);
   const fallback = (rotator.fallbackNumber || process.env.WAZAP_DEFAULT_WHATSAPP_NUMBER || validNumbers[0] || "").replace(/\D/g, "");

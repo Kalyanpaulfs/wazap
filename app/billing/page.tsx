@@ -6,7 +6,7 @@ import { prisma } from "@/lib/prisma";
 import BillingManager from "../dashboard/BillingManager";
 import { getBillingSummary } from "@/lib/billing-summary";
 import { getPlanDaysLeft, PLAN_PRICES } from "@/lib/billing";
-import { effectivePlan, isProductTrialActive, trialDaysLeft } from "@/lib/entitlements";
+import { accountPlanLabel, effectivePlan, isProductTrialActive, trialDaysLeft } from "@/lib/entitlements";
 import { BILLING_PLAN_LABELS, billingStatusSentence, paymentStatusLabel } from "@/lib/billing-status-sentence";
 
 export const metadata = { title: "Billing — Wazap", robots: { index: false, follow: false } };
@@ -104,7 +104,7 @@ export default async function BillingPage({
         <section className="rounded-2xl border border-slate-800 bg-[#111811] p-5 sm:p-6">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <h2 className="text-xl font-bold text-white">
-              {inTrial ? `${BILLING_PLAN_LABELS[plan] || plan} trial` : BILLING_PLAN_LABELS[plan] || plan}
+              {accountPlanLabel(user)}
             </h2>
             <span className="text-lg font-semibold text-slate-300">{plan === "free" || inTrial ? "$0/mo" : `$${planPrice}/mo`}</span>
           </div>
@@ -156,7 +156,7 @@ export default async function BillingPage({
               <p className="text-sm text-slate-300">
                 {inTrial
                   ? `You're on a free trial — there's nothing to bill yet. ${daysLeft} day${daysLeft !== 1 ? "s" : ""} left.`
-                  : "You're on the Free plan — there's no billing to manage."}
+                  : "Your free trial has ended — there's no billing to manage until you choose a plan."}
               </p>
               <Link href="/plans" className="mt-2 inline-block text-sm font-semibold text-[#25D366] hover:underline">
                 See plans →

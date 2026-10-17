@@ -137,7 +137,7 @@ export default function AboutPage() {
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#25D366]">Built to grow with you</p>
                 <h2 className="mt-3 text-3xl font-bold text-white">Start with free tools. Add structure when the volume arrives.</h2>
-                <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-400">Start with 25 routed handoffs free per account. Public paid plans are Solo ($9/month), Growth ($19/month) and Agency ($49/month). New accounts also get a 3-day free trial of Solo, which unlocks the Solo rotator, short-link and widget limits — it does not raise the 25 routed-lead allowance.</p>
+                <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-400">Every new account gets a 3-day free trial with everything in Solo — unlimited routed leads while the trial lasts. Public paid plans are Solo ($9/month), Growth ($19/month) and Agency ($49/month). After the trial, choose a plan to keep your links routing leads.</p>
               </div>
               <div className="flex flex-col gap-3 sm:flex-row lg:flex-col">
                 <Link href="/pricing" className="inline-flex items-center justify-center gap-2 rounded-full bg-[#25D366] px-6 py-3 text-sm font-bold text-black hover:bg-[#1fba58]">

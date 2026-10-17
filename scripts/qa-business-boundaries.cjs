@@ -11,8 +11,11 @@ check(()=>assert.equal(verifySupportToken('not-a-token'),null));
 const req=new Request('https://wazap.lt/api/support/chat',{headers:{cookie:SUPPORT_COOKIE+'='+a.token}});
 check(()=>assert(ownsSupport(req,a.visitorId)));check(()=>assert(!ownsSupport(req,b.visitorId)));check(()=>assert(!ownsSupport(new Request('https://wazap.lt'),a.visitorId)));
 const {routerQuota,EXISTING_ROUTER_GRACE_END}=require('../lib/router-entitlements.ts');
+// Free-trial restructure (FEAT-FREE-TRIAL): the free-plan lifetime lead cap
+// is gone — free/no-trial now blocks ALL routing (0 leads), regardless of
+// count, except during the (now-inert) legacy grace window below.
 const legacy={plan:'free',createdAt:new Date('2026-01-01')};const before=new Date(EXISTING_ROUTER_GRACE_END-1),at=EXISTING_ROUTER_GRACE_END;
-check(()=>assert(routerQuota(legacy,500,before).allowed));check(()=>assert(!routerQuota(legacy,25,at).allowed));check(()=>assert(routerQuota(legacy,24,at).allowed));
+check(()=>assert(routerQuota(legacy,500,before).allowed));check(()=>assert(!routerQuota(legacy,25,at).allowed));check(()=>assert(!routerQuota(legacy,0,at).allowed));
 check(()=>assert(routerQuota({plan:'pro',planExpiresAt:new Date(Date.now()+86400000)},500,at).allowed));
 check(()=>assert(!routerQuota({plan:'pro',planExpiresAt:new Date('2020-01-01')},25,at).allowed));
 const {outboundReferences,outboundMessageId}=require('../lib/support-threading.ts');

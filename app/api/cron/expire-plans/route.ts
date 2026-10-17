@@ -1,8 +1,7 @@
 import { queueBillingNotice } from "@/lib/billing-email";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { syncPlanLimits, isNewStyleTrial } from "@/lib/plan-limit-sync";
-import { PRODUCT_TRIAL_PLAN } from "@/lib/entitlements";
+import { syncPlanLimits } from "@/lib/plan-limit-sync";
 import { recordBillingAttention } from "@/lib/billing-attention";
 
 export const dynamic = "force-dynamic";
@@ -32,33 +31,40 @@ export async function GET(req: Request) {
     expired+=changed;
   }
 
-  // Trial end never otherwise runs the pause engine - a user whose product
-  // trial lapsed without upgrading can be sitting on trial-era extras over
-  // the free plan's real limits. Catch those within a lookback window (wider
-  // than the cron interval so a missed run never skips anyone), capped to a
-  // bounded batch per run. syncPlanLimits is itself a no-op while the flag
-  // is off, so this is safe to ship ahead of turning it on.
-  const trialLookback = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000);
+  // Owner rule (Free-trial restructure, FEAT-FREE-TRIAL): anyone on plan
+  // "free" with no active Free trial gets nothing - every rotator, short
+  // link and ad link must be plan-paused, no matter how they arrived there
+  // (trial just lapsed, an old trial, never trialled, or legacy
+  // grandfathered free limits from before this restructure). Sweep every
+  // such user who still has an un-paused link. syncPlanLimits treats a
+  // "free" link plan as always-pausable now (see lib/plan-limit-sync.ts), so
+  // no previousPlan needs to be resolved here. Self-draining: once paused,
+  // a user no longer matches this query, so a bounded batch per run (500)
+  // catches up over a few runs, including the one-time backfill of existing
+  // free users the first time this ships. syncPlanLimits is itself a no-op
+  // while PLAN_LIMIT_PAUSING_ENABLED is off, so this is safe to ship ahead
+  // of turning that flag on.
   const trialCandidates = await prisma.user.findMany({
-    where: { plan: "free", trialEndsAt: { not: null, lte: new Date(), gte: trialLookback } },
-    select: { id: true, trialPlan: true, trialStartedAt: true, trialEndsAt: true },
+    where: {
+      plan: "free",
+      OR: [{ trialEndsAt: null }, { trialEndsAt: { lte: new Date() } }],
+      AND: [
+        {
+          OR: [
+            { rotatorLinks: { some: { planPausedAt: null } } },
+            { shortLinks: { some: { planPausedAt: null } } },
+            { adLinks: { some: { planPausedAt: null } } },
+          ],
+        },
+      ],
+    },
+    select: { id: true },
     take: 500,
   });
   let trialSynced = 0;
   for (const user of trialCandidates) {
-    // These users' `plan` column was "free" before and stays "free" now, so
-    // there is no real plan-column change to read a previousPlan from - the
-    // whole point of this sweep. Only a NEW-style trial (<=4 days) ever had
-    // Growth-level rotator/short-link/ad-link limits to begin with
-    // (isNewStyleTrial grandfathers old 14-day trials out): for those, pass
-    // the trial plan itself as previousPlan so syncPlanLimits's downgrade
-    // check (via previousLinkPlanFor) can see the drop back to free and pause
-    // the extras. Anyone else gets no previousPlan - isLinkDowngrade's normal
-    // fail-safe (no pause) applies, exactly as before this feature.
-    // Automations/AI/channels/etc. are unaffected by this gate either way.
-    const previousPlan = isNewStyleTrial(user) ? (user.trialPlan || PRODUCT_TRIAL_PLAN) : undefined;
-    try { await syncPlanLimits(user.id, previousPlan); trialSynced++; }
-    catch (err) { console.error("[plan-limit-sync] failed after trial end", user.id, err instanceof Error ? err.message : String(err)); }
+    try { await syncPlanLimits(user.id); trialSynced++; }
+    catch (err) { console.error("[plan-limit-sync] failed for free/no-trial user", user.id, err instanceof Error ? err.message : String(err)); }
   }
 
   // A refund still 'requested' after 15 minutes means the server stopped

@@ -1,4 +1,5 @@
 import { isPlanExpired } from "./billing";
+import { normalizePlanKey, PLAN_DISPLAY_NAME } from "./plan-limits";
 
 export const PRODUCT_TRIAL_DAYS = 3;
 export const PRODUCT_TRIAL_PLAN = "basic";
@@ -14,10 +15,28 @@ export function isProductTrialActive(user: PlanEntitlementUser | null | undefine
   return new Date(user.trialEndsAt).getTime() > now.getTime();
 }
 
+// Owner rule (Free-trial restructure): the Free trial is EXACTLY Solo, so
+// the stored trialPlan is ignored here — accounts created before this
+// restructure can carry trialPlan: "pro" from the old Growth trial, and
+// should not get Growth limits for the rest of their trial.
 export function effectivePlan(user: PlanEntitlementUser | null | undefined, now = new Date()) {
   const paidPlan = (user?.plan ?? "free").toLowerCase();
   if (paidPlan !== "free") return paidPlan;
-  return isProductTrialActive(user, now) ? (user?.trialPlan ?? PRODUCT_TRIAL_PLAN).toLowerCase() : "free";
+  return isProductTrialActive(user, now) ? PRODUCT_TRIAL_PLAN : "free";
+}
+
+// Customer-facing plan name. Never returns the bare word "Free" and never
+// calls the trial "Solo trial" — it says "Free trial" (active) or
+// "Free trial ended" (lapsed or never trialled). Expiry-aware for paid
+// plans, like linkPlan in lib/router-entitlements.ts.
+export function accountPlanLabel(
+  user: (PlanEntitlementUser & { planExpiresAt?: Date | string | null }) | null | undefined,
+  now = new Date(),
+): string {
+  const plan = (user?.plan ?? "free").toLowerCase();
+  const expiresAt = user?.planExpiresAt ? new Date(user.planExpiresAt) : null;
+  if (plan !== "free" && !isPlanExpired(plan, expiresAt)) return PLAN_DISPLAY_NAME[normalizePlanKey(plan)];
+  return isProductTrialActive(user, now) ? "Free trial" : "Free trial ended";
 }
 
 export function trialDaysLeft(user: PlanEntitlementUser | null | undefined, now = new Date()) {

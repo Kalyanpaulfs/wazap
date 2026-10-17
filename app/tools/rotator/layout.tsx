@@ -3,7 +3,7 @@ import ToolSeo from "@/app/ToolSeo";
 import Link from "next/link";
 import { routingOfferText, workspaceTrialText, routerPrivacyText } from "@/lib/marketing-offer";
 
-const description = "Create one WhatsApp link for multiple team numbers. Rotate handoffs, add a predefined message and track destinations. Start with 25 free handoffs per account.";
+const description = "Create one WhatsApp link for multiple team numbers. Rotate handoffs, add a predefined message and track destinations. Start with a 3-day free trial — unlimited handoffs.";
 export const metadata: Metadata = {
   title: "WhatsApp Link Rotator — Round-Robin Lead Routing",
   description,
@@ -26,7 +26,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       <h2 className="mt-8 text-xl font-bold text-white">What round-robin routing measures</h2>
       <p className="mt-3">Sequential handoffs take turns across configured numbers. Wazap does not check who is online or guarantee exact ordering during simultaneous requests. Total handoffs and the last 30 days by destination help you review distribution; repeated clicks and abandoned chats can appear in those counts.</p>
       <p className="mt-3">A handoff does not confirm a sent message, a unique lead or a sale. Record received enquiries and qualified appointments separately.</p>
-      <h2 className="mt-8 text-xl font-bold text-white">Free allowance and paid routing plans</h2>
+      <h2 className="mt-8 text-xl font-bold text-white">Free trial and paid routing plans</h2>
       <p className="mt-3">{routingOfferText}</p><p className="mt-2">{workspaceTrialText}</p><p className="mt-2">{routerPrivacyText}</p>
       <aside className="mt-8 rounded-2xl border border-[#25D366]/25 bg-[#111811] p-5" aria-labelledby="router-workflow">
         <h2 id="router-workflow" className="text-lg font-semibold text-white">Build the workflow around your link</h2>

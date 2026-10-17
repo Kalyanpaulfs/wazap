@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { effectivePlan } from "@/lib/entitlements";
+import { linkPlan } from "@/lib/router-entitlements";
 import { widgetAvailable } from "@/lib/plan-limits";
 
 export const dynamic = "force-dynamic";
@@ -16,7 +16,7 @@ const FIELD_MAP: Record<MeterableTool, "widgetCopies"> = {
   widget: "widgetCopies",
 };
 
-const UPGRADE_MESSAGE = "The website widget is included in Solo, Growth and Agency. Upgrade to use it.";
+const UPGRADE_MESSAGE = "The website widget is included in your free trial and in Solo, Growth and Agency. Choose a plan to use it.";
 
 function today() { return new Date().toISOString().slice(0, 10); }
 
@@ -29,9 +29,11 @@ function cleanCount(value: unknown) {
 async function planFor(userId: string) {
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { plan: true, trialPlan: true, trialStartedAt: true, trialEndsAt: true },
+    select: { plan: true, planExpiresAt: true, trialPlan: true, trialStartedAt: true, trialEndsAt: true },
   });
-  return effectivePlan(user);
+  // Expiry-aware, same resolution as the link/count limits (lib/router-entitlements.ts),
+  // so the widget flips off at the same moment rotators/short links do.
+  return linkPlan(user);
 }
 
 // GET /api/tools/use?tool=widget - is the widget available on this plan?

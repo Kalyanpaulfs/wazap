@@ -1,13 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { linkPlan, routerPlan } from "@/lib/router-entitlements";
+import { linkPlan, routerPlan, canRouteLinks } from "@/lib/router-entitlements";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-// Owner decision (FEAT-AUDIT-HARDENING trial links): linkPlan gates how many
-// rotators/short links/ad links a user may HAVE (and numbers per rotator) -
-// a paid, non-expired plan always wins; otherwise an active product trial
-// boosts a free user up to the trial plan; otherwise free. routerPlan (lead
-// metering) must stay paid-only/no trial boost, unaffected by this feature.
+// Free-trial restructure (FEAT-FREE-TRIAL): the Free trial is EXACTLY Solo's
+// limits plus unlimited routed leads. linkPlan now governs BOTH how many
+// rotators/short links/ad links a user may HAVE and whether leads route at
+// all - routerPlan is just an alias for linkPlan (no more paid-only lead
+// metering split). The stored trialPlan is ignored: a trial always resolves
+// to "basic" (pre-restructure accounts can carry trialPlan: "pro" from the
+// old Growth trial, and must not get Growth limits).
 describe("linkPlan", () => {
   it("is free for no user / null", () => {
     expect(linkPlan(null)).toBe("free");
@@ -27,7 +29,7 @@ describe("linkPlan", () => {
     expect(linkPlan({ plan: "pro", planExpiresAt: new Date(Date.now() - 60_000) })).toBe("free");
   });
 
-  it("falls back to the trial plan when the paid plan is expired but a product trial is active", () => {
+  it("falls back to free when the paid plan is expired, even with a trial on record", () => {
     expect(linkPlan({
       plan: "pro",
       planExpiresAt: new Date(Date.now() - 60_000),
@@ -36,8 +38,8 @@ describe("linkPlan", () => {
     })).toBe("free"); // isProductTrialActive requires the stored plan to be "free" - an expired paid plan does not qualify
   });
 
-  it("boosts a free user up to the trial plan during an active product trial", () => {
-    expect(linkPlan({ plan: "free", trialPlan: "pro", trialEndsAt: new Date(Date.now() + DAY_MS) })).toBe("pro");
+  it("boosts a free user to Solo ('basic') during an active product trial, ignoring the stored trialPlan", () => {
+    expect(linkPlan({ plan: "free", trialPlan: "pro", trialEndsAt: new Date(Date.now() + DAY_MS) })).toBe("basic");
   });
 
   it("is free for a free user whose trial has ended", () => {
@@ -49,16 +51,25 @@ describe("linkPlan", () => {
   });
 });
 
-describe("linkPlan vs routerPlan (the trial-boost split)", () => {
-  it("diverge for a free user on an active trial: linkPlan boosts, routerPlan stays free", () => {
+describe("linkPlan vs routerPlan (no longer diverge - routerPlan is an alias)", () => {
+  it("agree for a free user on an active trial: both resolve to Solo ('basic')", () => {
     const user = { plan: "free", trialPlan: "pro", trialEndsAt: new Date(Date.now() + DAY_MS) };
-    expect(linkPlan(user)).toBe("pro");
-    expect(routerPlan(user)).toBe("free");
+    expect(linkPlan(user)).toBe("basic");
+    expect(routerPlan(user)).toBe("basic");
+    expect(canRouteLinks(user)).toBe(true);
   });
 
   it("agree once there is a real paid, unexpired plan", () => {
     const user = { plan: "ultimate", planExpiresAt: new Date(Date.now() + DAY_MS) };
     expect(linkPlan(user)).toBe("ultimate");
     expect(routerPlan(user)).toBe("ultimate");
+    expect(canRouteLinks(user)).toBe(true);
+  });
+
+  it("agree for free/no-trial: both free, and routing is blocked", () => {
+    const user = { plan: "free" };
+    expect(linkPlan(user)).toBe("free");
+    expect(routerPlan(user)).toBe("free");
+    expect(canRouteLinks(user)).toBe(false);
   });
 });

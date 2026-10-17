@@ -64,7 +64,7 @@ export function renderWelcomeEmail(name: string | null, base: string): string {
     <div style="padding:30px 28px;color:#cbd5e1;font-size:15px;line-height:1.65">
       <p style="margin:0 0 12px">${hi}</p>
       <h1 style="margin:0 0 12px;color:#fff;font-size:28px;line-height:1.2;letter-spacing:-.7px">Turn more WhatsApp clicks into conversations.</h1>
-      <p style="margin:0 0 20px;color:#9fb0a3">Your account is ready, with a 3-day free trial of Solo ($9 plan)—no card required, includes 100 routed leads. Create your first professional WhatsApp workflow in a few minutes.</p>
+      <p style="margin:0 0 20px;color:#9fb0a3">Your account is ready, with a 3-day free trial—everything in Solo ($9 plan), no card required, unlimited routed leads while it lasts. Create your first professional WhatsApp workflow in a few minutes.</p>
       <div style="background:#0f1b13;border:1px solid #1d3323;border-radius:14px;padding:17px 18px;margin:0 0 22px">
         <div style="color:#fff;font-weight:700;margin-bottom:7px">A good first workflow</div>
         <div style="color:#9fb0a3">Create a tracked link or QR code, add your message, then follow every click from your dashboard. Teams can also route leads automatically with the WhatsApp rotator.</div>
@@ -86,10 +86,29 @@ export function renderTrialReminderEmail(name: string | null, days: number, base
     <div style="background:#0d1710;padding:22px 28px;border-bottom:1px solid #1d3323"><span style="color:#25D366;font-weight:800;font-size:20px">Wazap</span></div>
     <div style="padding:30px 28px;color:#cbd5e1;font-size:15px;line-height:1.65">
       <p style="margin:0 0 12px">${hi}</p>
-      <h1 style="margin:0 0 12px;color:#fff;font-size:27px;line-height:1.2">Your Solo trial has ${days} day${days !== 1 ? "s" : ""} left.</h1>
-      <p style="margin:0 0 20px;color:#9fb0a3">Keep your tracked links, QR codes, WhatsApp rotator, and Growth limits active by choosing a plan before the trial ends.</p>
+      <h1 style="margin:0 0 12px;color:#fff;font-size:27px;line-height:1.2">Your free trial has ${days} day${days !== 1 ? "s" : ""} left.</h1>
+      <p style="margin:0 0 20px;color:#9fb0a3">Keep your tracked links, QR codes, and WhatsApp rotator active by choosing a plan before the trial ends.</p>
       <p style="margin:22px 0"><a href="${base}/pricing" style="display:inline-block;background:#25D366;color:#061008;text-decoration:none;font-weight:800;padding:13px 22px;border-radius:999px">Choose my plan →</a></p>
-      <p style="margin:18px 0 0;color:#718078;font-size:12px">No automatic charge will occur. If you do not upgrade, your account returns to Free limits and your saved data remains in your workspace.</p>
+      <p style="margin:18px 0 0;color:#718078;font-size:12px">No automatic charge will occur. If you do not choose a plan, your links and reports pause when the trial ends; your saved data remains in your workspace.</p>
+    </div>
+  </div>`;
+}
+
+// Sent once when the 3-day Free trial lapses with no paid plan chosen
+// (FEAT-FREE-TRIAL). Wired from app/api/cron/trial-lifecycle's "expired"
+// sweep - see trialEndedEmailSentAt on User, which also guards against
+// re-sending if the cron runs again before the next pause sync.
+export function renderTrialEndedEmail(name: string | null, base: string): string {
+  const hi = name ? `Hi ${escapeHtml(name)},` : "Hi,";
+  return `
+  <div style="font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif;max-width:600px;margin:0 auto;background:#0b120d;border-radius:20px;overflow:hidden;border:1px solid #1d3323">
+    <div style="background:#0d1710;padding:22px 28px;border-bottom:1px solid #1d3323"><span style="color:#25D366;font-weight:800;font-size:20px">Wazap</span></div>
+    <div style="padding:30px 28px;color:#cbd5e1;font-size:15px;line-height:1.65">
+      <p style="margin:0 0 12px">${hi}</p>
+      <h1 style="margin:0 0 12px;color:#fff;font-size:27px;line-height:1.2">Your free trial has ended.</h1>
+      <p style="margin:0 0 20px;color:#9fb0a3">Your rotators, short links, ad links and widget are now paused, and no new leads are being routed. Nothing was deleted — choose a plan to turn everything back on instantly.</p>
+      <p style="margin:22px 0"><a href="${base}/plans" style="display:inline-block;background:#25D366;color:#061008;text-decoration:none;font-weight:800;padding:13px 22px;border-radius:999px">Choose a plan →</a></p>
+      <p style="margin:18px 0 0;color:#718078;font-size:12px">Your saved data stays in your workspace. You can still sign in, see your Account, and use the free link builder and QR maker any time.</p>
     </div>
   </div>`;
 }
@@ -97,8 +116,8 @@ export function renderTrialReminderEmail(name: string | null, days: number, base
 export function renderTrialConversionEmail(name: string | null, days: number, base: string): string {
   const hi = name ? `Hi ${escapeHtml(name)},` : "Hi,";
   const timeLeft = days > 0
-    ? `${days} day${days !== 1 ? "s" : ""} left in your Solo trial`
-    : "your Solo trial ending today";
+    ? `${days} day${days !== 1 ? "s" : ""} left in your free trial`
+    : "your free trial ending today";
   return `
   <div style="font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif;max-width:600px;margin:0 auto;background:#0b120d;border-radius:20px;overflow:hidden;border:1px solid #1d3323">
     <div style="background:#0d1710;padding:22px 28px;border-bottom:1px solid #1d3323"><span style="color:#25D366;font-weight:800;font-size:20px">Wazap</span></div>

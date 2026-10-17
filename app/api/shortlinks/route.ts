@@ -3,8 +3,9 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { recordFunnelEvent } from "@/lib/funnel";
-import { shortLinkLimit, PLAN_DISPLAY_NAME, normalizePlanKey } from "@/lib/plan-limits";
+import { shortLinkLimit, PLAN_DISPLAY_NAME } from "@/lib/plan-limits";
 import { linkPlan } from "@/lib/router-entitlements";
+import { accountPlanLabel } from "@/lib/entitlements";
 
 export const dynamic = "force-dynamic";
 
@@ -26,7 +27,7 @@ export async function GET() {
   const entitlementUser = await prisma.user.findUnique({ where: { id: userId }, select: { plan: true, planExpiresAt: true, trialPlan: true, trialEndsAt: true } });
   const plan = linkPlan(entitlementUser);
   const links = await prisma.shortLink.findMany({ where: { userId }, orderBy: { createdAt: "desc" } });
-  return NextResponse.json({ links, limit: getLimit(plan), plan, planLabel: PLAN_DISPLAY_NAME[normalizePlanKey(plan)] });
+  return NextResponse.json({ links, limit: getLimit(plan), plan, planLabel: accountPlanLabel(entitlementUser) });
 }
 
 export async function POST(req: Request) {
@@ -38,11 +39,11 @@ export async function POST(req: Request) {
   const limit = getLimit(plan);
 
   if (limit === 0) {
-    return NextResponse.json({ error: "Branded short links are a paid feature. Upgrade to create trackable links.", upgrade: true }, { status: 403 });
+    return NextResponse.json({ error: "Choose a plan to create short links.", upgrade: true }, { status: 403 });
   }
   const count = await prisma.shortLink.count({ where: { userId, planPausedAt: null } });
   if (count >= limit) {
-    return NextResponse.json({ error: `Plan limit reached — your ${PLAN_DISPLAY_NAME[normalizePlanKey(plan)]} plan allows ${limit} short link${limit !== 1 ? "s" : ""}. Upgrade for more.`, upgrade: true }, { status: 403 });
+    return NextResponse.json({ error: `Plan limit reached — your ${accountPlanLabel(entitlementUser)} plan allows ${limit} short link${limit !== 1 ? "s" : ""}. Upgrade for more.`, upgrade: true }, { status: 403 });
   }
 
   const { name, phone, message, slug } = await req.json();

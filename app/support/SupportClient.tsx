@@ -20,15 +20,14 @@ const quickAnswers: { q: string; a: React.ReactNode }[] = [
   },
   {
     q: "Why is my link paused?",
-    a: "Either you've used your free 25 lifetime leads (a new 3-day trial gives 100), or you moved to a lower plan and went over its rotator, number, or short-link limit. Upgrade or trim items on the plan to resume — anything paused keeps its data.",
+    a: "Either your 3-day free trial has ended and your links are paused, or you moved to a lower plan and went over its rotator, number, or short-link limit. Choose a plan (or trim items) to resume — anything paused keeps its data.",
   },
   {
     q: "What does each plan include?",
     a: (
       <>
-        <strong className="text-white">Free:</strong> 1 rotator, 2 numbers per rotator, 25 lifetime routed leads.{" "}
-        <strong className="text-white">Solo ($9/mo):</strong> 3 rotators, 3 numbers each, unlimited leads, 2 short links,
-        website widget, basic reports.{" "}
+        <strong className="text-white">Free trial (3 days):</strong> everything in Solo — 3 rotators, 3 numbers each, unlimited leads, 2 short links, widget, basic reports. After the trial, links pause until you choose a plan.{" "}
+        <strong className="text-white">Solo ($9/mo):</strong> same, ongoing — no 3-day limit.{" "}
         <strong className="text-white">Growth ($19/mo):</strong> 10 rotators, 10 numbers each, 5 short links, 5 ad
         links, full reports.{" "}
         <strong className="text-white">Agency ($49/mo):</strong> 25 rotators, 20 numbers each, 15 short links, 15 ad

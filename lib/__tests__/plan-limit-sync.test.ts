@@ -110,8 +110,8 @@ describe("selectPauseResume", () => {
 });
 
 describe("linkLimitValue (lib/plan-limits.ts numbers, not the stale TOOL_LIMITS ones)", () => {
-  it("reads the new 2026 rotator/short-link/ad-link caps per plan", () => {
-    expect(linkLimitValue(ROTATOR_LIMITS, "free")).toBe(1);
+  it("reads the new 2026 rotator/short-link/ad-link caps per plan (Free-trial restructure: free is 0)", () => {
+    expect(linkLimitValue(ROTATOR_LIMITS, "free")).toBe(0);
     expect(linkLimitValue(ROTATOR_LIMITS, "basic")).toBe(3);
     expect(linkLimitValue(ROTATOR_LIMITS, "pro")).toBe(10);
     expect(linkLimitValue(ROTATOR_LIMITS, "ultimate")).toBe(25);
@@ -171,12 +171,13 @@ describe("isLinkDowngrade", () => {
   });
 });
 
-// Owner decision (FEAT-AUDIT-HARDENING trial links): the 3-day Growth trial
-// grants Growth-level rotator/short-link/ad-link limits, so the previous-plan
-// comparison isLinkDowngrade runs must be boosted to see that - but ONLY for
-// a genuinely new-style (<=4 day) trial, never the old 14-day one.
+// Owner decision (FEAT-AUDIT-HARDENING trial links, updated for the
+// Free-trial restructure): the 3-day Free trial grants exactly Solo-level
+// rotator/short-link/ad-link limits, so the previous-plan comparison
+// isLinkDowngrade runs must be boosted to see that - but ONLY for a
+// genuinely new-style (<=4 day) trial, never the old 14-day one.
 describe("isNewStyleTrial", () => {
-  it("is true for the current 3-day Growth trial", () => {
+  it("is true for the current 3-day Free trial", () => {
     const start = new Date("2026-10-10T00:00:00.000Z");
     expect(isNewStyleTrial({ trialStartedAt: start, trialEndsAt: new Date(start.getTime() + 3 * DAY_MS) })).toBe(true);
   });
@@ -187,7 +188,7 @@ describe("isNewStyleTrial", () => {
     expect(isNewStyleTrial({ trialStartedAt: start, trialEndsAt: new Date(start.getTime() + 4 * DAY_MS + 1) })).toBe(false);
   });
 
-  it("is false for an old 14-day trial (grandfathered - never had Growth link limits)", () => {
+  it("is false for an old 14-day trial (grandfathered - never had Solo-level link limits)", () => {
     const start = new Date("2026-01-01T00:00:00.000Z");
     expect(isNewStyleTrial({ trialStartedAt: start, trialEndsAt: new Date(start.getTime() + 14 * DAY_MS) })).toBe(false);
   });
@@ -203,6 +204,10 @@ describe("isNewStyleTrial", () => {
   });
 });
 
+// Free-trial restructure (FEAT-FREE-TRIAL): the trial is EXACTLY Solo
+// ("basic"). previousLinkPlanFor now ignores the stored trialPlan (fixtures
+// below keep trialPlan: "pro" on purpose, to prove a legacy value from the
+// old Growth trial is ignored) and only ever boosts up to "basic".
 describe("previousLinkPlanFor", () => {
   const newTrialActive = { trialPlan: "pro", trialStartedAt: new Date(Date.now() - 1 * DAY_MS), trialEndsAt: new Date(Date.now() + 2 * DAY_MS) };
   const newTrialEndedYesterday = { trialPlan: "pro", trialStartedAt: new Date(Date.now() - 4 * DAY_MS), trialEndsAt: new Date(Date.now() - 1 * DAY_MS) };
@@ -215,12 +220,12 @@ describe("previousLinkPlanFor", () => {
     expect(previousLinkPlanFor("", newTrialActive)).toBe("");
   });
 
-  it("boosts free up to the trial plan while a new-style trial is still active (purchase made during the trial)", () => {
-    expect(previousLinkPlanFor("free", newTrialActive)).toBe("pro");
+  it("boosts free up to Solo ('basic') while a new-style trial is still active (purchase made during the trial), ignoring the legacy trialPlan", () => {
+    expect(previousLinkPlanFor("free", newTrialActive)).toBe("basic");
   });
 
-  it("boosts free up to the trial plan when the new-style trial ended within the last 2 days (cron lookback)", () => {
-    expect(previousLinkPlanFor("free", newTrialEndedYesterday)).toBe("pro");
+  it("boosts free up to Solo ('basic') when the new-style trial ended within the last 2 days (cron lookback)", () => {
+    expect(previousLinkPlanFor("free", newTrialEndedYesterday)).toBe("basic");
   });
 
   it("does not boost once the new-style trial ended more than 2 days ago", () => {
@@ -231,11 +236,8 @@ describe("previousLinkPlanFor", () => {
     expect(previousLinkPlanFor("free", oldStyleTrial)).toBe("free");
   });
 
-  it("boosts a low paid previousPlan (basic) up to the higher trial plan", () => {
-    expect(previousLinkPlanFor("basic", newTrialActive)).toBe("pro");
-  });
-
-  it("leaves previousPlan untouched once it already reaches pro or above", () => {
+  it("does not boost a previousPlan already at Solo ('basic') or above - the trial never outranks Solo any more", () => {
+    expect(previousLinkPlanFor("basic", newTrialActive)).toBe("basic");
     expect(previousLinkPlanFor("pro", newTrialActive)).toBe("pro");
     expect(previousLinkPlanFor("ultimate", newTrialActive)).toBe("ultimate");
   });

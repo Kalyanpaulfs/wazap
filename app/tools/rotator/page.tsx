@@ -124,14 +124,14 @@ export default function RotatorPage() {
             <div className={`rounded-2xl border p-5 ${quota.allowed ? "border-[#25D366]/30 bg-[#25D366]/10" : "border-amber-400/30 bg-amber-400/10"}`}>
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div>
-                  <p className="font-semibold text-white">{quota.grace ? "Existing links remain live during your transition period" : `${quota.remaining ?? 0} free routed leads remaining`}</p>
+                  <p className="font-semibold text-white">{quota.grace ? "Existing links remain live during your transition period" : "Your free trial has ended — links paused"}</p>
                   <p className="mt-1 text-sm text-slate-400">
                     {quota.grace && quota.graceEndsAt
-                      ? `Free routing ends ${new Date(quota.graceEndsAt).toLocaleDateString()}. Upgrade before then to keep every link live.`
-                      : `${quota.limit === 100 ? "Your trial includes" : "Free includes"} ${quota.limit ?? 25} routed leads total. Solo gives unlimited leads for $9/month.`}
+                      ? `Free routing ends ${new Date(quota.graceEndsAt).toLocaleDateString()}. Choose a plan before then to keep every link live.`
+                      : "Choose a plan to resume routing. Solo gives unlimited leads for $9/month."}
                   </p>
                 </div>
-                <Link href="/pricing?source=rotator_quota" className="rounded-full bg-[#25D366] px-5 py-2.5 text-sm font-bold text-black hover:bg-[#1fba58]">Upgrade to keep routing</Link>
+                <Link href="/pricing?source=rotator_quota" className="rounded-full bg-[#25D366] px-5 py-2.5 text-sm font-bold text-black hover:bg-[#1fba58]">Choose a plan</Link>
               </div>
             </div>
           )}
@@ -141,7 +141,7 @@ export default function RotatorPage() {
             {authRequired && (
               <div className="rounded-xl border border-[#25D366]/30 bg-[#25D366]/10 p-4 text-sm">
                 <p className="font-semibold text-white">Create a free account to save your rotator</p>
-                <p className="mt-1 text-slate-400">Your first rotator is free. Sign up, then return here to create and track it.</p>
+                <p className="mt-1 text-slate-400">Start a 3-day free trial with everything in Solo — no card needed. Sign up, then return here to create and track it.</p>
                 <div className="mt-3 flex flex-wrap gap-3">
                   <Link href="/signup?redirect=/tools/rotator" className="rounded-full bg-[#25D366] px-4 py-2 text-xs font-bold text-black hover:bg-[#1fba58]">Sign Up Free</Link>
                   <Link href="/login?redirect=/tools/rotator" className="rounded-full border border-slate-700 px-4 py-2 text-xs font-semibold text-white hover:border-[#25D366]">Log In</Link>

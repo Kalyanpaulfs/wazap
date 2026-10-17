@@ -42,18 +42,25 @@ function planPrice(plan: PlanKey): string {
   return `$${PLAN_PRICES[plan]}`;
 }
 
+// The "free" column represents the 3-day Free trial every new account gets,
+// not a standing free plan (owner rule: never show "Free" as a plan name).
+// The trial is exactly Solo's limits plus unlimited routed leads, so it
+// borrows Solo's numbers here rather than reading the free=0 entitlement
+// columns (which describe the POST-trial/no-trial "everything stopped"
+// state, not what a prospect sees when they sign up).
 function planRow(plan: PlanKey) {
-  const reportsTier = REPORTS_TIER[plan];
+  const limitsPlan = plan === "free" ? "basic" : plan;
+  const reportsTier = REPORTS_TIER[limitsPlan];
   const reportsLabel = reportsTier === "none" ? "No reports" : reportsTier === "basic" ? "Basic reports" : "Full reports";
   return {
     plan,
-    name: PLAN_DISPLAY_NAME[plan],
+    name: plan === "free" ? "Free trial" : PLAN_DISPLAY_NAME[plan],
     price: planPrice(plan),
-    rotators: ROTATOR_LIMITS[plan],
-    numbersPerRotator: NUMBERS_PER_ROTATOR_LIMITS[plan],
-    shortLinks: SHORT_LINK_LIMITS[plan],
-    adLinks: AD_LINK_LIMITS[plan],
-    widget: WIDGET_AVAILABLE[plan],
+    rotators: ROTATOR_LIMITS[limitsPlan],
+    numbersPerRotator: NUMBERS_PER_ROTATOR_LIMITS[limitsPlan],
+    shortLinks: SHORT_LINK_LIMITS[limitsPlan],
+    adLinks: AD_LINK_LIMITS[limitsPlan],
+    widget: WIDGET_AVAILABLE[limitsPlan],
     reports: reportsLabel,
   };
 }
@@ -146,7 +153,7 @@ export default function ProductLandingPage({ content }: { content: ProductLandin
           <div className="mx-auto mb-10 max-w-2xl text-center">
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#25D366]">Which plan includes it</p>
             <h2 className="mt-3 text-3xl font-bold text-white">Plan limits at a glance</h2>
-            <p className="mt-3 text-sm text-slate-400">New accounts get a 3-day free trial of Solo ($9/month), including 100 routed leads, with no card required.</p>
+            <p className="mt-3 text-sm text-slate-400">New accounts get a 3-day free trial with everything in Solo ($9/month), including unlimited routed leads, with no card required.</p>
           </div>
           <div className="overflow-x-auto rounded-2xl border border-slate-800">
             <table className="w-full min-w-[640px] text-left text-sm">
@@ -178,7 +185,7 @@ export default function ProductLandingPage({ content }: { content: ProductLandin
               </tbody>
             </table>
           </div>
-          <p className="mt-4 text-xs text-slate-500">Free includes 25 routed leads lifetime. Paid plans include unlimited routed leads. Location and device tracking is coming soon on Growth and Agency.</p>
+          <p className="mt-4 text-xs text-slate-500">New accounts get a 3-day free trial with unlimited routed leads. After the trial, a paid plan is required to keep routing. Location and device tracking is coming soon on Growth and Agency.</p>
         </div>
       </section>
 
@@ -216,7 +223,7 @@ export default function ProductLandingPage({ content }: { content: ProductLandin
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#25D366]">Ready to try it?</p>
               <h2 className="mt-3 text-3xl font-bold text-white">Start free. Add structure when the volume arrives.</h2>
-              <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-400">No card required for the 3-day Solo trial. Wazap does not read WhatsApp messages and is not affiliated with WhatsApp or Meta.</p>
+              <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-400">No card required for the 3-day free trial. Wazap does not read WhatsApp messages and is not affiliated with WhatsApp or Meta.</p>
             </div>
             <div className="flex flex-col gap-3 sm:flex-row lg:flex-col">
               <Link href={signupHref} className="inline-flex items-center justify-center gap-2 rounded-full bg-[#25D366] px-6 py-3 text-sm font-bold text-black hover:bg-[#1fba58]">

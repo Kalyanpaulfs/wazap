@@ -15,7 +15,7 @@ const REASONS = [
   ["other", "Other"],
 ] as const;
 
-const PLAN_LABELS: Record<string, string> = { free: "Free", basic: "Solo", pro: "Growth", ultimate: "Agency", business: "Business" };
+const PLAN_LABELS: Record<string, string> = { free: "Free trial ended", basic: "Solo", pro: "Growth", ultimate: "Agency", business: "Business" };
 
 type PendingPlanChange = { kind: string; toPlan: string; effectiveAt: string | null };
 

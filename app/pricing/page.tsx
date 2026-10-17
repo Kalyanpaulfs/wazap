@@ -14,7 +14,7 @@ export const metadata: Metadata = {
   alternates: { canonical: "https://wazap.lt/pricing" },
   openGraph: {
     title: "Wazap Pricing — WhatsApp Lead Routing Plans",
-    description: "Route 25 WhatsApp leads free, then scale routing across campaigns and teams from $9/month.",
+    description: "Start a 3-day free trial with unlimited WhatsApp lead routing, then scale across campaigns and teams from $9/month.",
     url: "https://wazap.lt/pricing",
   },
 };
@@ -65,13 +65,10 @@ export default async function PricingPage({
         <div className="mx-auto max-w-7xl">
           <div className="text-center mb-14">
             <h1 className="text-4xl font-bold text-white mb-3">Route Every WhatsApp Lead to the Right Team Member</h1>
-            <p className="text-slate-400 text-lg">Route 25 leads free. Upgrade from $9/month to keep your public routing links active with unlimited routed leads.</p>
+            <p className="text-slate-400 text-lg">Start a 3-day free trial with unlimited routed leads. Choose a plan from $9/month to keep your public routing links active after the trial.</p>
             <div className="mt-3 flex items-center justify-center gap-3 flex-wrap">
               <div className="inline-flex items-center gap-2 rounded-full bg-[#25D366]/10 border border-[#25D366]/30 px-4 py-1.5 text-sm text-[#25D366]">
-                25 routed handoffs free per account · lifetime allowance · no card required
-              </div>
-              <div className="inline-flex items-center gap-2 rounded-full bg-[#25D366]/10 border border-[#25D366]/30 px-4 py-1.5 text-sm text-[#25D366]">
-                New accounts: 3-day free trial of Solo ($9 plan) · includes 100 routed leads
+                3-day free trial · everything in Solo · unlimited leads · no card required
               </div>
               <div className="inline-flex items-center gap-2 rounded-full bg-green-500/10 border border-green-500/30 px-4 py-1.5 text-sm text-green-300">
                 Secure monthly checkout
@@ -108,7 +105,7 @@ export default async function PricingPage({
           />
 
           <div className="mt-10 rounded-2xl border border-slate-800 bg-[#111811] p-6 text-center">
-            <h2 className="text-xl font-semibold text-white">Paid plans keep your routing links active beyond the free allowance</h2>
+            <h2 className="text-xl font-semibold text-white">Paid plans keep your routing links active after the free trial</h2>
             <p className="mx-auto mt-2 max-w-2xl text-sm text-slate-400">Wazap does not read message content or require access to your WhatsApp account. Visitors are sent directly to the selected WhatsApp number.</p>
           </div>
 

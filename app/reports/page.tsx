@@ -118,9 +118,9 @@ export default async function ReportsPage({
           <header className="text-center">
             <p className="text-xs font-bold uppercase tracking-[.2em] text-[#25D366]">Reports</p>
             <h1 className="mt-2 flex items-center justify-center gap-2 text-2xl font-bold text-white sm:text-3xl">
-              <Lock className="h-6 w-6 text-slate-500" /> Reports start on Solo
+              <Lock className="h-6 w-6 text-slate-500" /> Your free trial has ended — reports are locked
             </h1>
-            <p className="mt-2 text-slate-400">See chats per day, per link and per salesperson, with CSV export.</p>
+            <p className="mt-2 text-slate-400">Choose a plan to unlock chats per day, per link and per salesperson, with CSV export.</p>
           </header>
 
           <div className="grid gap-4 sm:grid-cols-2">
@@ -345,6 +345,7 @@ export default async function ReportsPage({
                 From
                 <input
                   type="date"
+                  suppressHydrationWarning
                   name="from"
                   defaultValue={selection.fromValue}
                   min={earliestCustomDate}
@@ -356,6 +357,7 @@ export default async function ReportsPage({
                 To
                 <input
                   type="date"
+                  suppressHydrationWarning
                   name="to"
                   defaultValue={selection.toValue}
                   min={earliestCustomDate}

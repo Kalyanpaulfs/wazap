@@ -40,7 +40,7 @@ function today() {
 }
 
 const PLAN_LABELS: Record<string, string> = {
-  free: "Free",
+  free: "Free trial ended",
   basic: "Solo",
   pro: "Growth",
   ultimate: "Agency",
@@ -147,14 +147,14 @@ export default async function DashboardPage({
   }
 
   const daysLeft = getPlanDaysLeft(user?.planExpiresAt);
-  const expiryWarning = plan !== "free" && daysLeft !== null && daysLeft <= 7;
+  // Auto-renewing plans don't need a stop warning; manual / auto-pay-off ones do.
+  const expiryWarning = plan !== "free" && daysLeft !== null && daysLeft <= 7 && billingSummary?.autoRenew !== true;
   const inTrial = isProductTrialActive(user);
   const productTrialDaysLeft = trialDaysLeft(user);
+  const trialEnded = plan === "free" && !inTrial;
   const rotatorMax = rotatorLimit(plan);
   const shortLinkMax = shortLinkLimit(plan);
   const adLinkMax = adLinkLimit(plan);
-  const atFreeLimit = plan === "free" && rotatorCount >= rotatorMax;
-  const overFreeLimit = plan === "free" && rotatorCount > rotatorMax;
   const savedWorkflowCount =
     adLinkCount +
     rotatorCount +
@@ -233,26 +233,46 @@ export default async function DashboardPage({
           {plan === "free" && (
             <Link
               href="/pricing"
-              className={`block rounded-2xl border p-4 transition-colors ${atFreeLimit ? "border-red-500/40 bg-red-500/10 hover:bg-red-500/15" : "border-[#25D366]/30 bg-[#25D366]/10 hover:bg-[#25D366]/15"}`}
+              className="block rounded-2xl border border-red-500/40 bg-red-500/10 p-4 transition-colors hover:bg-red-500/15"
             >
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <p className="font-semibold text-white">
-                    {atFreeLimit
-                      ? overFreeLimit ? "You're over the Free plan limit" : "You've used your free rotator"
-                      : "Free plan active"}
-                  </p>
-                  <p className="mt-0.5 text-sm text-slate-400">
-                    {atFreeLimit
-                      ? "Upgrade to add more rotators, salespeople and unlimited leads."
-                      : "Paid plans unlock more rotators, unlimited leads, short links and reports."}
-                  </p>
+                  <p className="font-semibold text-white">Your free trial has ended — links paused</p>
+                  <p className="mt-0.5 text-sm text-slate-400">Choose a plan to resume routing, add rotators and salespeople.</p>
                 </div>
                 <span className="shrink-0 rounded-full bg-[#25D366] px-5 py-2 text-sm font-semibold text-black">
                   See plans
                 </span>
               </div>
             </Link>
+          )}
+
+          {(inTrial || trialEnded) && (
+            <div
+              className={`rounded-2xl border p-4 ${trialEnded ? "border-red-500/40 bg-red-500/10" : "border-yellow-500/30 bg-yellow-500/5"}`}
+            >
+              <div className="flex flex-wrap items-center gap-3">
+                <AlertTriangle className={`h-5 w-5 shrink-0 ${trialEnded ? "text-red-400" : "text-yellow-400"}`} />
+                <div className="flex-1">
+                  <p className={`text-sm font-semibold ${trialEnded ? "text-red-300" : "text-yellow-300"}`}>
+                    {trialEnded
+                      ? "Your free trial has ended — your links are paused"
+                      : `Your free trial ends in ${productTrialDaysLeft} day${productTrialDaysLeft !== 1 ? "s" : ""}`}
+                  </p>
+                  <p className="mt-0.5 text-xs text-slate-400">
+                    {trialEnded
+                      ? "Choose a plan and your rotators, short links and ad links start working again."
+                      : "After that, your rotators, short links and ad links stop working until you choose a plan."}
+                  </p>
+                </div>
+                <Link
+                  href="/plans"
+                  className="rounded-full bg-[#25D366] px-4 py-1.5 text-xs font-semibold text-black transition-colors hover:bg-[#1fba58]"
+                >
+                  Choose a plan
+                </Link>
+              </div>
+            </div>
           )}
 
           {expiryWarning && (
@@ -272,7 +292,7 @@ export default async function DashboardPage({
                       : `Your ${PLAN_LABELS[plan]} plan expires in ${daysLeft} day${daysLeft !== 1 ? "s" : ""}`}
                   </p>
                   <p className="mt-0.5 text-xs text-slate-400">
-                    Renew now to keep full access without interruption.
+                    When it ends, your rotators, short links and ad links stop working. Renew to keep them running.
                   </p>
                 </div>
                 <Link
@@ -332,7 +352,7 @@ export default async function DashboardPage({
               <div className="mt-3 flex items-center gap-3">
                 <Crown className="h-5 w-5 text-[#25d366]" />
                 <span className="text-2xl font-bold text-white">
-                  {inTrial ? `${PLAN_LABELS[plan]} trial` : PLAN_LABELS[plan]}
+                  {inTrial ? "Free trial" : PLAN_LABELS[plan]}
                 </span>
                 {inTrial && (
                   <span className="rounded-full border border-[#25D366]/30 bg-[#25D366]/10 px-2.5 py-1 text-xs font-semibold text-[#25D366]">

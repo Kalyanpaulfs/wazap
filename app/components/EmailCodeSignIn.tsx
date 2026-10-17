@@ -81,7 +81,7 @@ export default function EmailCodeSignIn({ mode, redirect }: { mode: "login" | "s
       </div>}
       <div>
         <label htmlFor="auth-email" className="block text-xs text-slate-400 mb-1.5">Email</label>
-        <input id="auth-email" name="email" autoComplete="email" type="email" required maxLength={320} value={email} onChange={e => setEmail(e.target.value)} className={input} placeholder="you@example.com" />
+        <input suppressHydrationWarning id="auth-email" name="email" autoComplete="email" type="email" required maxLength={320} value={email} onChange={e => setEmail(e.target.value)} className={input} placeholder="you@example.com" />
       </div>
       <p className="text-xs leading-5 text-slate-500">No password needed. We&apos;ll email you a 6-digit code.</p>
       {mode === "signup" && (

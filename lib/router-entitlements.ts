@@ -2,36 +2,38 @@ import type { PlanEntitlementUser } from "./entitlements";
 import { isProductTrialActive, PRODUCT_TRIAL_PLAN } from "./entitlements";
 import { isPlanExpired } from "./billing";
 
-export const FREE_ROUTED_LEADS_LIFETIME = 25;
-// Owner decision (16 Oct): while a product trial is active, the lifetime
-// routed-lead cap is raised to 100 (instead of the free 25). After the trial
-// the free 25 applies again, counted over the same lifetime total.
-export const TRIAL_ROUTED_LEADS_LIFETIME = 100;
+// Owner rule (Free-trial restructure, FEAT-FREE-TRIAL): routed leads are
+// UNLIMITED on every paid plan and during an active Free trial, and ZERO
+// (blocked, no routing at all) for anyone on plan "free" with no active
+// trial. The old 25-lifetime-lead free allowance and the 100-lead trial cap
+// are gone — there is no lead count to meter any more, just a plan check.
 export const ROUTER_METERING_LAUNCHED_AT = new Date("2026-10-05T20:00:00.000Z");
+// In the past as of this restructure — hasLegacyRouterGrace is always false
+// now and is effectively inert. Kept (harmless) rather than deleted.
 export const EXISTING_ROUTER_GRACE_END = new Date("2026-10-12T20:00:00.000Z");
+
+// Columns every click-time check needs to decide whether a public link
+// (rotator /r/, short link /w/, ad link /a/) may route — see app/r/[code],
+// app/w/[code] and app/a/[id].
+export const OWNER_ENTITLEMENT_SELECT = {
+  plan: true,
+  planExpiresAt: true,
+  trialPlan: true,
+  trialEndsAt: true,
+  createdAt: true,
+} as const;
 
 type RouterEntitlementUser = PlanEntitlementUser & {
   createdAt?: Date | string | null;
   planExpiresAt?: Date | string | null;
 };
 
-export function routerPlan(user: RouterEntitlementUser | null | undefined) {
-  if (!user) return "free";
-  const expiry = user.planExpiresAt ? new Date(user.planExpiresAt) : null;
-  // Lead routing is Wazap's paid core. Product trials can unlock supporting
-  // tools, but do not turn a public routing link into an unlimited free link.
-  const plan = isPlanExpired(user.plan ?? "free", expiry) ? "free" : (user.plan ?? "free").toLowerCase();
-  return plan === "business" ? "ultimate" : plan;
-}
-
-// Owner decision (FEAT-AUDIT-HARDENING trial links): unlike routerPlan (paid
-// only, no trial boost - lead-routing stays metered through a trial), the
-// rotator/short-link/ad-link COUNT limits (how many of each a user may have,
-// and numbers-per-rotator) give a free user the full Growth (pro) link
-// limits for the duration of an active product trial. Same expiry-aware
-// paid-plan check as routerPlan; falls back to the trial plan only when the
-// stored plan is free (or expired back to free) and the trial is active,
-// otherwise free.
+// Plan used for EVERYTHING link-related: how many rotators/short links/ad
+// links a user may have, numbers per rotator, and whether public links
+// route at all. Expiry-aware paid plan wins; otherwise Solo ("basic")
+// during an active Free trial (the trial is exactly Solo's features — the
+// stored trialPlan is ignored, same as lib/entitlements.ts effectivePlan);
+// otherwise "free" (no paid plan, no active trial — everything stopped).
 export function linkPlan(user: RouterEntitlementUser | null | undefined, now = new Date()): string {
   if (!user) return "free";
   const expiry = user.planExpiresAt ? new Date(user.planExpiresAt) : null;
@@ -39,7 +41,23 @@ export function linkPlan(user: RouterEntitlementUser | null | undefined, now = n
   if (!isPlanExpired(rawPlan, expiry) && rawPlan !== "free") {
     return rawPlan === "business" ? "ultimate" : rawPlan;
   }
-  return isProductTrialActive(user, now) ? (user.trialPlan ?? PRODUCT_TRIAL_PLAN).toLowerCase() : "free";
+  return isProductTrialActive(user, now) ? PRODUCT_TRIAL_PLAN : "free";
+}
+
+// Owner rule (Free-trial restructure): lead routing now honours the Free
+// trial exactly like the link/count limits do — an active trial routes
+// leads just like Solo (unlimited), and free/no-trial routes none at all.
+export function routerPlan(user: RouterEntitlementUser | null | undefined, now = new Date()): string {
+  return linkPlan(user, now);
+}
+
+// True when the owner's public links (rotator, short link, ad link) may
+// route at all. Use this at CLICK TIME in the public routes (app/r,
+// app/w, app/a) — it reflects live plan/trial state, not just the cached
+// planPausedAt flag, so a free/no-trial user's link stops routing
+// immediately even before a pause-sync cron has run.
+export function canRouteLinks(user: RouterEntitlementUser | null | undefined, now = new Date()): boolean {
+  return linkPlan(user, now) !== "free";
 }
 
 export function hasLegacyRouterGrace(user: RouterEntitlementUser | null | undefined, now = new Date()) {
@@ -48,16 +66,16 @@ export function hasLegacyRouterGrace(user: RouterEntitlementUser | null | undefi
 }
 
 export function routerQuota(user: RouterEntitlementUser | null | undefined, used: number, now = new Date()) {
-  const plan = routerPlan(user);
-  const paid = plan !== "free";
-  const grace = !paid && hasLegacyRouterGrace(user, now);
-  const cap = !paid && isProductTrialActive(user, now) ? TRIAL_ROUTED_LEADS_LIFETIME : FREE_ROUTED_LEADS_LIFETIME;
+  const plan = routerPlan(user, now);
+  const entitled = plan !== "free";
+  const grace = !entitled && hasLegacyRouterGrace(user, now);
+  const allowed = entitled || grace;
   return {
     plan,
-    limit: paid || grace ? null : cap,
+    limit: allowed ? null : 0,
     used,
-    remaining: paid || grace ? null : Math.max(0, cap - used),
-    allowed: paid || grace || used < cap,
+    remaining: allowed ? null : 0,
+    allowed,
     grace,
     graceEndsAt: grace ? EXISTING_ROUTER_GRACE_END.toISOString() : null,
   };

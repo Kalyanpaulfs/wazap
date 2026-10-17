@@ -5,8 +5,9 @@ import { ArrowRight, Link2, MessageCircle, Users, Zap } from "lucide-react";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getPerformanceSnapshot } from "@/lib/performance";
-import { PLAN_DISPLAY_NAME, normalizePlanKey, reportsTier } from "@/lib/plan-limits";
-import { routerQuota, TRIAL_ROUTED_LEADS_LIFETIME } from "@/lib/router-entitlements";
+import { reportsTier } from "@/lib/plan-limits";
+import { routerQuota } from "@/lib/router-entitlements";
+import { accountPlanLabel, isProductTrialActive, trialDaysLeft } from "@/lib/entitlements";
 import CopyLinkButton from "./CopyLinkButton";
 
 export const metadata = { title: "Performance — Wazap", robots: { index: false, follow: false } };
@@ -29,8 +30,6 @@ export default async function PerformancePage() {
 
   const userId = (session.user as { id: string }).id;
   const plan = (session.user as { plan?: string }).plan ?? "free";
-  const planKey = normalizePlanKey(plan);
-  const planName = PLAN_DISPLAY_NAME[planKey];
   const tier = reportsTier(plan);
 
   const [data, routerUser, rotatorLeadsUsed] = await Promise.all([
@@ -48,11 +47,10 @@ export default async function PerformancePage() {
   const hasLinks = totals.linksLive > 0;
   const now = new Date();
 
+  const planName = accountPlanLabel(routerUser, now);
   const quota = routerQuota(routerUser, rotatorLeadsUsed, now);
-  const showLeadsMeter = quota.limit !== null;
-  const leadsPct = quota.limit ? Math.min(100, Math.round((quota.used / quota.limit) * 100)) : 0;
-  const leadsAtLimit = leadsPct >= 100;
-  const leadsBarColor = leadsAtLimit ? "bg-red-500" : leadsPct >= 80 ? "bg-amber-400" : "bg-[#25D366]";
+  const onActiveTrial = isProductTrialActive(routerUser, now);
+  const routingBlocked = !quota.allowed;
 
   const statCards = [
     { label: "Chats today", value: totals.chatsToday, icon: Zap, detail: "Since midnight UTC" },
@@ -79,22 +77,22 @@ export default async function PerformancePage() {
           )}
         </header>
 
-        {showLeadsMeter && (
-          <section className="rounded-2xl border border-slate-800 bg-[#111811] p-5" aria-label="Free leads used">
+        {onActiveTrial && (
+          <section className="rounded-2xl border border-slate-800 bg-[#111811] p-5" aria-label="Trial status">
+            <p className="text-sm font-semibold text-white">
+              Free trial · {trialDaysLeft(routerUser, now)} day{trialDaysLeft(routerUser, now) !== 1 ? "s" : ""} left · unlimited leads
+            </p>
+          </section>
+        )}
+
+        {routingBlocked && (
+          <section className="rounded-2xl border border-amber-400/30 bg-amber-400/10 p-5" aria-label="Links paused">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
-              <p className="text-sm font-semibold text-white">
-                {quota.used} of {quota.limit} {quota.limit === TRIAL_ROUTED_LEADS_LIFETIME ? "trial" : "free"} leads used
-              </p>
+              <p className="text-sm font-semibold text-white">Your free trial has ended — links paused. Choose a plan to resume.</p>
               <Link href="/plans" className="text-sm font-semibold text-[#25D366] hover:underline">
-                Get unlimited leads with Solo →
+                Choose a plan →
               </Link>
             </div>
-            <div className="mt-3 h-2 rounded-full bg-slate-900">
-              <div className={`h-2 rounded-full ${leadsBarColor}`} style={{ width: `${Math.max(leadsPct ? 4 : 0, leadsPct)}%` }} />
-            </div>
-            {leadsAtLimit && (
-              <p className="mt-2 text-xs font-semibold text-red-400">Your rotator links are paused until you upgrade.</p>
-            )}
           </section>
         )}
 
@@ -229,7 +227,7 @@ export default async function PerformancePage() {
         <section className="rounded-2xl border border-slate-800 bg-[#111811] p-5 text-sm">
           {tier === "none" ? (
             <p className="text-slate-300">
-              Want chats per day, per link and per salesperson? Reports start on Solo.{" "}
+              Want chats per day, per link and per salesperson? Reports are included in your free trial and on every paid plan.{" "}
               <Link href="/plans" className="font-semibold text-[#25D366] hover:underline">See plans →</Link>
             </p>
           ) : (

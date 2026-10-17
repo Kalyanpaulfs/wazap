@@ -15,16 +15,16 @@ export default function LinkPausedPage() {
           <AlertTriangle className="h-7 w-7 text-amber-300" />
         </div>
         <h1 className="mt-5 text-3xl font-bold text-white">This link is paused</h1>
-        <p className="mt-3 text-slate-400">The owner&apos;s plan limit was reached, so this link was paused automatically. If you manage it, upgrade Wazap to resume it instantly.</p>
+        <p className="mt-3 text-slate-400">This link was paused because the owner&apos;s free trial ended, or their plan doesn&apos;t include it. If you manage it, choose a plan to turn it back on instantly.</p>
         <div className="mt-7 flex flex-col justify-center gap-3 sm:flex-row">
           <Link href="/pricing?source=plan_limit_pause" className="inline-flex items-center justify-center gap-2 rounded-full bg-[#25D366] px-6 py-3 text-sm font-bold text-black hover:bg-[#1fba58]">
-            View plans <ArrowRight className="h-4 w-4" />
+            Choose a plan <ArrowRight className="h-4 w-4" />
           </Link>
           <Link href="/login" className="inline-flex items-center justify-center gap-2 rounded-full border border-slate-700 px-6 py-3 text-sm font-semibold text-white hover:border-[#25D366]">
             Owner login
           </Link>
         </div>
-        <p className="mt-6 text-xs text-slate-600">Nothing was deleted. Upgrading turns this back on automatically.</p>
+        <p className="mt-6 text-xs text-slate-600">Nothing was deleted. Choosing a plan turns this back on automatically.</p>
       </section>
     </main>
   );

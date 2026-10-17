@@ -5,6 +5,7 @@ import {
   NUMBERS_PER_ROTATOR_LIMITS,
   SHORT_LINK_LIMITS,
   AD_LINK_LIMITS,
+  PLAN_DISPLAY_NAME,
   rotatorLimit,
   numbersPerRotatorLimit,
   shortLinkLimit,
@@ -34,11 +35,11 @@ describe("normalizePlanKey", () => {
 });
 
 describe("owner-approved plan table", () => {
-  it("matches the signed-off rotator link limits", () => {
-    expect(ROTATOR_LIMITS).toEqual({ free: 1, basic: 3, pro: 10, ultimate: 25 });
+  it("matches the signed-off rotator link limits (Free-trial restructure: free is 0, nothing grandfathered)", () => {
+    expect(ROTATOR_LIMITS).toEqual({ free: 0, basic: 3, pro: 10, ultimate: 25 });
   });
-  it("matches the signed-off numbers-per-rotator limits", () => {
-    expect(NUMBERS_PER_ROTATOR_LIMITS).toEqual({ free: 2, basic: 3, pro: 10, ultimate: 20 });
+  it("matches the signed-off numbers-per-rotator limits (Free-trial restructure: free is 0)", () => {
+    expect(NUMBERS_PER_ROTATOR_LIMITS).toEqual({ free: 0, basic: 3, pro: 10, ultimate: 20 });
   });
   it("matches the signed-off short link limits", () => {
     expect(SHORT_LINK_LIMITS).toEqual({ free: 0, basic: 2, pro: 5, ultimate: 15 });
@@ -72,6 +73,11 @@ describe("owner-approved plan table", () => {
     expect(supportLabel("basic")).toBe("Basic");
     expect(supportLabel("pro")).toBe("Standard");
     expect(supportLabel("ultimate")).toBe("Priority");
+  });
+  it("never displays the bare word 'Free' as a plan name (owner rule)", () => {
+    expect(PLAN_DISPLAY_NAME.free).not.toBe("Free");
+    expect(PLAN_DISPLAY_NAME.free.toLowerCase()).toContain("trial");
+    expect(PLAN_DISPLAY_NAME).toMatchObject({ basic: "Solo", pro: "Growth", ultimate: "Agency" });
   });
 });
 
