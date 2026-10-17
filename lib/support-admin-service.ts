@@ -10,15 +10,36 @@ import { activeCrmContacts } from "./crm-trash";
 
 export type ReplyToConversationResult = { conversationId: string; outboundEmailId: string | null } | null;
 
-export async function replyToConversation(conversationId: string, message: string): Promise<ReplyToConversationResult> {
+export type AdminReplyAttachment = { mimeType: string; size: number; data: Buffer };
+
+/**
+ * Chat-message body and customer-email text for an admin reply. A reply
+ * with text uses it for both. A reply that is just a screenshot (no text)
+ * falls back to the same "📎 Screenshot" chat-history convention the
+ * customer-side upload uses (see recordAttachmentTurn in
+ * support-chat-service.ts), but a friendlier line for the email, since
+ * "📎 Screenshot" alone would be an odd thing to email.
+ */
+export function adminReplyContent(message: string, hasAttachment: boolean): { body: string; emailText: string } {
+  const trimmed = message.trim();
+  if (trimmed) return { body: trimmed, emailText: trimmed };
+  if (hasAttachment) return { body: "📎 Screenshot", emailText: "Our team sent you a screenshot." };
+  return { body: "", emailText: "" };
+}
+
+export async function replyToConversation(conversationId: string, message: string, attachment?: AdminReplyAttachment): Promise<ReplyToConversationResult> {
   const conversation = await prisma.supportConversation.findUnique({ where: { id: conversationId } });
   if (!conversation) return null;
   const base = process.env.NEXTAUTH_URL || "https://wazap.lt";
+  const { body, emailText } = adminReplyContent(message, Boolean(attachment));
 
   return prisma.$transaction(async tx => {
-    await tx.supportChatMessage.create({ data: { conversationId, sender: "admin", body: message, readByAdmin: true } });
+    const created = await tx.supportChatMessage.create({ data: { conversationId, sender: "admin", body, readByAdmin: true } });
+    if (attachment) {
+      await tx.supportAttachment.create({ data: { conversationId, messageId: created.id, mimeType: attachment.mimeType, size: attachment.size, data: attachment.data } });
+    }
     await tx.supportConversation.update({ where: { id: conversationId }, data: { status: "open", lastMessageAt: new Date() } });
-    if (conversation.crmLeadId) await tx.crmActivity.create({ data: { leadId: conversation.crmLeadId, kind: "support_reply", body: `Support reply: ${message}` } });
+    if (conversation.crmLeadId) await tx.crmActivity.create({ data: { leadId: conversation.crmLeadId, kind: "support_reply", body: `Support reply: ${body}` } });
 
     let outboundEmailId: string | null = null;
     if (conversation.email) {
@@ -29,7 +50,7 @@ export async function replyToConversation(conversationId: string, message: strin
           recipient: conversation.email.toLowerCase(),
           type: "support_chat_reply",
           subject: "Wazap support replied to your chat",
-          html: renderSupportChatContinueEmail({ name: conversation.name, reply: message, continueUrl }),
+          html: renderSupportChatContinueEmail({ name: conversation.name, reply: emailText, continueUrl }),
         },
       });
       outboundEmailId = outbound.id;

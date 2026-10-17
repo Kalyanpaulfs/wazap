@@ -1,6 +1,8 @@
 'use client';
-import {useCallback,useEffect,useState} from 'react';
+import {useCallback,useEffect,useRef,useState} from 'react';
 import Link from 'next/link';
+import {Paperclip,X} from 'lucide-react';
+import {shrinkImage,MAX_ATTACHMENT_BYTES} from '@/lib/client-image-shrink';
 import './support-readability.css';
 type ResponseState={awaitingReply:boolean;waitingSince:string|null;dueAt:string|null;overdue:boolean;state:'ok'|'soon'|'late';targetMinutes:number};
 type Message={id:string;sender:string;body:string;createdAt:string;readByVisitor:boolean;attachments?:{id:string;mimeType:string}[]};
@@ -21,12 +23,37 @@ type Health={checkedAt:string;mailboxes:{mailbox:string;ok:boolean}[];deliveryFa
 export default function SupportWorkspace(){
  const [health,setHealth]=useState<Health|null>(null);
  const [chats,setChats]=useState<Chat[]>([]),[tickets,setTickets]=useState<Ticket[]>([]),[selected,setSelected]=useState(''),[tab,setTab]=useState('chat'),[filter,setFilter]=useState('all'),[query,setQuery]=useState(''),[drafts,setDrafts]=useState<Record<string,string>>({}),[notice,setNotice]=useState(''),[busy,setBusy]=useState(false),[loading,setLoading]=useState(true);
+ const [pending,setPending]=useState<{blob:Blob;name:string;previewUrl:string}|null>(null);const [uploading,setUploading]=useState(false);const fileInputRef=useRef<HTMLInputElement>(null);
  const load=useCallback(async()=>{const data=await api('/api/admin/support');setHealth(data.health||null);setChats(data.conversations);setTickets(data.requests||[]);setLoading(false);},[]);
  useEffect(()=>{const id=new URLSearchParams(window.location.search).get('chat');if(id)setSelected(id);load().catch(e=>{setNotice(e.message);setLoading(false);});const timer=setInterval(()=>{if(document.visibilityState==='visible')load().catch(e=>setNotice(e.message));},15000);return()=>clearInterval(timer);},[load]);
  const chat=chats.find(c=>c.id===selected),ticket=tickets.find(t=>t.id===selected);const draft=drafts[selected]||'';
+ function clearPending(){if(pending)URL.revokeObjectURL(pending.previewUrl);setPending(null);if(fileInputRef.current)fileInputRef.current.value='';}
+ async function onPickFile(event:React.ChangeEvent<HTMLInputElement>){
+  const file=event.target.files?.[0];event.target.value='';
+  if(!file)return;
+  if(file.size>MAX_ATTACHMENT_BYTES){setNotice('Screenshot is too big. Max 5 MB.');return;}
+  setNotice('');
+  const blob=await shrinkImage(file);
+  if(pending)URL.revokeObjectURL(pending.previewUrl);
+  setPending({blob,name:file.name,previewUrl:URL.createObjectURL(blob)});
+ }
  async function action(fn:()=>Promise<unknown>){setBusy(true);setNotice('');try{await fn();await load();}catch(e){setNotice(e instanceof Error?e.message:'Unable to save. Your draft is retained.');}finally{setBusy(false);}}
  async function setRead(row:Chat|Ticket,read:boolean){if('messages' in row){const seen=row.messages.filter(m=>m.sender==='visitor').at(-1)?.createdAt;await api('/api/admin/support',{conversationId:row.id,read,...(seen?{readThroughAt:seen}:{})},'PATCH');}else await api('/api/admin/contact-messages',{messageId:row.id,read},'PATCH');}
- function open(row:Chat|Ticket){setSelected(row.id);setNotice('');if(unread(row))action(()=>setRead(row,true));}
+ function open(row:Chat|Ticket){setSelected(row.id);setNotice('');clearPending();if(unread(row))action(()=>setRead(row,true));}
+ async function sendChatReply(conversationId:string,message:string){
+  if(!pending){await api('/api/admin/support',{conversationId,message});return;}
+  setUploading(true);
+  try{
+   const form=new FormData();
+   form.append('conversationId',conversationId);
+   if(message)form.append('message',message);
+   form.append('file',pending.blob,pending.name||'screenshot');
+   const response=await fetch('/api/admin/support',{method:'POST',body:form});
+   const json=await response.json();
+   if(!response.ok)throw new Error(json.error||'Your screenshot could not be sent.');
+   clearPending();
+  }finally{setUploading(false);}
+ }
  const pool: Array<Chat|Ticket> = tab==='chat'?chats:tickets;
  const items=pool.filter(row=>(filter==='all'||(filter==='needs_you'?needsYou(row):filter==='unread'?unread(row):filter==='waiting'?row.awaitingReply:filter==='overdue'?row.overdue:'status' in row&&row.status===filter))&&`${row.name} ${row.email} ${row.subject} ${'phone' in row?row.phone:''}`.toLowerCase().includes(query.toLowerCase())).sort((a,b)=>Number(needsYou(b))-Number(needsYou(a))||Number(b.overdue)-Number(a.overdue)||Number(unread(b))-Number(unread(a))||Number(b.awaitingReply)-Number(a.awaitingReply));
  const needsYouCount=pool.filter(needsYou).length;
@@ -43,5 +70,7 @@ export default function SupportWorkspace(){
  <div className="flex gap-2 flex-wrap"><button className="wp-crm-secondary" disabled={busy} onClick={()=>action(()=>setRead(activeRow,!unread(activeRow)))}>{unread(activeRow)?'Mark read':'Mark unread'}</button>{tab==='chat'&&chat&&<button className="wp-crm-secondary" disabled={busy} onClick={()=>action(()=>api('/api/admin/support',{conversationId:chat.id,status:chat.status==='closed'?'open':'closed'},'PATCH'))}>{chat.status==='closed'?'Reopen conversation':'Mark as solved'}</button>}</div>
  {tab==='chat'&&chat?<div className="wp-support-history space-y-4" aria-label="Conversation history">{chat.messages.map(m=><article key={m.id} className={`wp-crm-chat wp-support-message is-${m.sender}`}><small className="wp-support-message-author">{m.sender==='visitor'?'Customer':m.sender==='bot'?'AI assistant':m.sender==='admin'?'Your team':m.sender} <span>· {new Date(m.createdAt).toLocaleString('en-GB',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',timeZone:'UTC'})}</span></small><p className="whitespace-pre-wrap break-words text-sm mt-2">{m.body}</p>{m.attachments?.map(a=><a key={a.id} href={`/api/support/attachment/${a.id}`} target="_blank" rel="noopener noreferrer" className="block mt-1.5"><img src={`/api/support/attachment/${a.id}`} alt="Screenshot" className="max-w-[200px] rounded-lg border border-slate-700"/></a>)}{m.sender==='admin'&&<small className="text-[#25d366]">{m.readByVisitor?'Seen by visitor':'Saved to visitor chat · not yet seen'}</small>}</article>)}</div>:ticket&&<>{ticket.parentRequest&&<article className="wp-crm-chat"><small>Reply to request {ticket.parentRequest.id}</small><strong>{ticket.parentRequest.subject}</strong><p className="whitespace-pre-wrap text-sm">{ticket.parentRequest.message}</p>{ticket.parentRequest.adminReply&&<p className="whitespace-pre-wrap text-sm mt-2">Previous team reply: {ticket.parentRequest.adminReply}</p>}</article>}<article className="wp-crm-chat"><strong>{ticket.subject}</strong><p className="whitespace-pre-wrap break-words text-sm mt-2">{ticket.message}</p></article>{ticket.adminReply&&<article className="wp-crm-chat"><small>Latest support reply · {ticket.adminReplySeenAt?'Seen in customer dashboard':'Not yet seen in customer dashboard'}</small><p className="whitespace-pre-wrap break-words mt-2">{ticket.adminReply}</p></article>}</>}
  {ticket&&<button className="wp-crm-secondary my-2" disabled={busy} onClick={()=>action(()=>api('/api/admin/contact-messages',{messageId:ticket.id,testOnly:!ticket.isQa},'PATCH'))}>{ticket.isQa?'Restore customer SLA tracking':'Mark verified QA/test request'}</button>}
- <form onSubmit={e=>{e.preventDefault();action(async()=>{if(tab==='chat'&&chat){await api('/api/admin/support',{conversationId:chat.id,message:draft});setNotice('Reply saved in the visitor’s chat.');}else if(ticket){const result=await api('/api/admin/contact-reply',{messageId:ticket.id,reply:draft});setNotice(result.message.emailSent?'Reply saved; email accepted by provider.':'Reply saved; email awaiting retry. Provider delivery is not confirmed.');}setDrafts(d=>({...d,[selected]:''}));});}}><label className="text-sm" htmlFor="support-reply">{tab==='chat'?'Your reply to the customer':'Your reply to this request'}</label><textarea placeholder="Write your reply here…" id="support-reply" className="wp-crm-input w-full mt-2" rows={4} maxLength={4000} required value={draft} onChange={e=>setDrafts(d=>({...d,[selected]:e.target.value}))}/><p className="text-xs text-slate-400 my-3">{tab==='chat'?'Replies appear in the same website chat.':'Replies are saved and emailed to the original contact address. Provider acceptance does not confirm delivery.'}</p><button disabled={busy||!draft.trim()} className="wp-primary">{busy?'Saving…':'Send reply'}</button></form></div></section>}{!selected&&<aside className="wp-support-empty"><h2>Read a conversation</h2><p>Select a name from the list to see the full messages and write a reply.</p></aside>}</div><p className="text-xs text-slate-500 mt-4">Showing the latest 50 conversations and 100 requests. Overdue monitoring checks all open requests. Inbox refreshes every 15 seconds while visible.</p></main>;
+ <form onSubmit={e=>{e.preventDefault();action(async()=>{if(tab==='chat'&&chat){await sendChatReply(chat.id,draft);setNotice(pending?'Screenshot sent in the visitor’s chat.':'Reply saved in the visitor’s chat.');}else if(ticket){const result=await api('/api/admin/contact-reply',{messageId:ticket.id,reply:draft});setNotice(result.message.emailSent?'Reply saved; email accepted by provider.':'Reply saved; email awaiting retry. Provider delivery is not confirmed.');}setDrafts(d=>({...d,[selected]:''}));});}}><label className="text-sm" htmlFor="support-reply">{tab==='chat'?'Your reply to the customer':'Your reply to this request'}</label><textarea placeholder="Write your reply here…" id="support-reply" className="wp-crm-input w-full mt-2" rows={4} maxLength={4000} required={tab!=='chat'} value={draft} onChange={e=>setDrafts(d=>({...d,[selected]:e.target.value}))}/>
+ {tab==='chat'&&<div className="flex items-center gap-2 mt-2"><input ref={fileInputRef} type="file" accept="image/png,image/jpeg,image/webp" onChange={onPickFile} className="hidden" id="support-reply-file"/><button type="button" className="wp-crm-secondary" disabled={busy||uploading} onClick={()=>fileInputRef.current?.click()}><Paperclip size={14}/> Attach screenshot</button>{pending&&<span className="flex items-center gap-2 text-xs text-slate-400"><img src={pending.previewUrl} alt="Screenshot preview" className="w-8 h-8 rounded-lg object-cover border border-slate-700"/><span className="max-w-[160px] truncate">{pending.name}</span><button type="button" aria-label="Remove screenshot" onClick={clearPending} disabled={uploading} className="text-slate-400 hover:text-white disabled:opacity-40"><X size={14}/></button></span>}</div>}
+ <p className="text-xs text-slate-400 my-3">{tab==='chat'?'Replies appear in the same website chat.':'Replies are saved and emailed to the original contact address. Provider acceptance does not confirm delivery.'}</p><button disabled={busy||uploading||(tab==='chat'?!draft.trim()&&!pending:!draft.trim())} className="wp-primary">{uploading?'Sending…':busy?'Saving…':'Send reply'}</button></form></div></section>}{!selected&&<aside className="wp-support-empty"><h2>Read a conversation</h2><p>Select a name from the list to see the full messages and write a reply.</p></aside>}</div><p className="text-xs text-slate-500 mt-4">Showing the latest 50 conversations and 100 requests. Overdue monitoring checks all open requests. Inbox refreshes every 15 seconds while visible.</p></main>;
 }

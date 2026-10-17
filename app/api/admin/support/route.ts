@@ -6,8 +6,9 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { sameSiteRequest } from "@/lib/crm";
 import { prisma } from "@/lib/prisma";
-import { flaggedConversationCount, replyToConversation, setConversationStatus } from "@/lib/support-admin-service";
+import { flaggedConversationCount, replyToConversation, setConversationStatus, type AdminReplyAttachment } from "@/lib/support-admin-service";
 import { supportReference } from "@/lib/support-handoff";
+import { checkAttachment } from "@/lib/support-attachment";
 
 async function requireAdmin() {
   const session = await getServerSession(authOptions);
@@ -70,17 +71,42 @@ export async function GET() {
   return NextResponse.json({ health:await supportMonitorHealth(), conversations: await getConversations(), requests: await getRequests(), flaggedCount: await flaggedConversationCount() }, {headers:{"Cache-Control":"no-store"}});
 }
 
+// A reply is either a plain JSON {conversationId,message} (text-only, the
+// original shape) or, for a reply that attaches a screenshot, multipart form
+// data: conversationId, an optional message/caption, and the file. Same
+// admin check and same sameSiteRequest check either way; only the body
+// parsing differs.
 export async function POST(req: Request) {
   if (!(await requireAdmin())) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   if(!sameSiteRequest(req))return NextResponse.json({error:"Invalid request origin."},{status:403});
-  const { conversationId, message } = await req.json().catch(()=>({}));
-  const cleanMessage = cleanText(message);
-  if (!conversationId || !cleanMessage) {
+
+  let conversationId: unknown;
+  let cleanMessage = "";
+  let attachment: AdminReplyAttachment | undefined;
+
+  if ((req.headers.get("content-type") || "").includes("multipart/form-data")) {
+    const form = await req.formData().catch(() => null);
+    if (!form) return NextResponse.json({ error: "Invalid upload." }, { status: 400 });
+    conversationId = form.get("conversationId");
+    cleanMessage = cleanText(form.get("message"));
+    const file = form.get("file");
+    if (!(file instanceof Blob)) return NextResponse.json({ error: "A screenshot is required." }, { status: 400 });
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    const check = checkAttachment(bytes.byteLength, bytes);
+    if (!check.ok) return NextResponse.json({ error: check.error }, { status: check.status });
+    attachment = { mimeType: check.mimeType, size: bytes.byteLength, data: Buffer.from(bytes) };
+  } else {
+    const json = await req.json().catch(() => ({}));
+    conversationId = json.conversationId;
+    cleanMessage = cleanText(json.message);
+  }
+
+  if (!conversationId || (!cleanMessage && !attachment)) {
     return NextResponse.json({ error: "Missing conversation or message." }, { status: 400 });
   }
 
-  const result = await replyToConversation(String(conversationId), cleanMessage);
+  const result = await replyToConversation(String(conversationId), cleanMessage, attachment);
   if (!result) return NextResponse.json({ error: "Conversation not found." }, { status: 404 });
   return NextResponse.json({ health:await supportMonitorHealth(), conversations: await getConversations(), requests: await getRequests(), flaggedCount: await flaggedConversationCount() }, {headers:{"Cache-Control":"no-store"}});
 }

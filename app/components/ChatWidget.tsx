@@ -4,29 +4,11 @@ import { useSiteLocale } from "../localization/SiteLocale";
 import { useSession } from "next-auth/react";
 import { MessageCircle, X, Send, Bot, ArrowRight, Clock, Paperclip } from "lucide-react";
 import Link from "next/link";
+import { shrinkImage, MAX_ATTACHMENT_BYTES } from "@/lib/client-image-shrink";
 interface Attachment { id:string;mimeType:string }
 interface Msg { role:"user"|"bot"|"admin";text:string;id?:string;handoff?:{reference:string;replyWithinHours:number;message:string};attachments?:Attachment[] }
 interface Conversation {id:string;status:string;messages:{id:string;sender:string;body:string;createdAt:string;attachments?:Attachment[]}[]}
 function renderText(text:string){return text.split(/(\*\*[^*]+\*\*|\[[^\]]+\]\([^)]+\))/g).map((part,i)=>{const bold=part.match(/^\*\*([^*]+)\*\*$/);if(bold)return <strong key={i}>{bold[1]}</strong>;const link=part.match(/^\[([^\]]+)\]\(([^)]+)\)$/);if(link&&(/^(\/[^/]|https:\/\/wazap\.lt\/)/.test(link[2])))return <a key={i} href={link[2]} className="text-[#25D366] underline">{link[1]}</a>;return <span key={i}>{part}</span>;});}
-const MAX_ATTACHMENT_BYTES=5*1024*1024;
-/** Shrinks an image client-side before upload (max side 2000px, webp 0.85, jpeg fallback) - live nginx rejects bodies above ~5MB, so staying well under that matters more than the exact 5MB cap. Falls back to the original file if shrinking fails or does not help and the original is already small enough. */
-async function shrinkImage(file:File):Promise<Blob>{
- try{
-  const bitmap=await createImageBitmap(file);
-  const scale=Math.min(1,2000/Math.max(bitmap.width,bitmap.height));
-  const canvas=document.createElement("canvas");
-  canvas.width=Math.max(1,Math.round(bitmap.width*scale));
-  canvas.height=Math.max(1,Math.round(bitmap.height*scale));
-  const ctx=canvas.getContext("2d");
-  if(!ctx)return file;
-  ctx.drawImage(bitmap,0,0,canvas.width,canvas.height);
-  const toBlob=(type:string)=>new Promise<Blob|null>(resolve=>canvas.toBlob(resolve,type,0.85));
-  const resized=(await toBlob("image/webp"))||(await toBlob("image/jpeg"));
-  if(!resized)return file;
-  if(resized.size>file.size&&file.size<=MAX_ATTACHMENT_BYTES)return file;
-  return resized;
- }catch{return file;}
-}
 export default function ChatWidget(){
  const {data:session}=useSession();
  const {t}=useSiteLocale();
