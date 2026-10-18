@@ -237,22 +237,6 @@ export default async function DashboardPage({
           <section className="wp-overview-summary" aria-label="Workspace summary">{[["Chats · 30 days",chatStarts30d,"/performance","Chat starts across your links and rotators"],["Saved workflows",savedWorkflowCount,"/tools","Links, pages and saved work"],["Links live",linksLiveCount,"/performance","Rotators, short links and ad links"]].map(([label,count,href,description])=><Link prefetch={false} href={String(href)} key={String(label)}><span>{String(label)}<ArrowRight size={14}/></span><strong>{String(count)}</strong><small>{String(description)}</small></Link>)}</section>
           <section className="wp-overview-actions" aria-label="Next actions">{quickActions.map(({href,icon:Icon,title,desc})=><Link prefetch={false} key={href} href={href}><span className="wp-tool-icon"><Icon size={21}/></span><span><strong>{title}</strong><small>{desc}</small></span><ArrowRight size={17}/></Link>)}</section>
 
-          {plan === "free" && (
-            <Link
-              href="/pricing"
-              className="block rounded-2xl border border-red-500/40 bg-red-500/10 p-4 transition-colors hover:bg-red-500/15"
-            >
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <p className="font-semibold text-white">Your free trial has ended — links paused</p>
-                  <p className="mt-0.5 text-sm text-slate-400">Choose a plan to resume routing, add rotators and salespeople.</p>
-                </div>
-                <span className="shrink-0 rounded-full bg-[#25D366] px-5 py-2 text-sm font-semibold text-black">
-                  See plans
-                </span>
-              </div>
-            </Link>
-          )}
 
           {(inTrial || trialEnded) && (
             <div

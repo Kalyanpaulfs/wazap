@@ -1,5 +1,26 @@
 import { describe, expect, it } from "vitest";
 import { PLAN_RANK, REFUND_WINDOW_HOURS, canRefund, classifyIncomingCharge, decideAccessAfterRefund, decidePlanChange } from "@/lib/billing-rules";
+import { PLAN_NAMES, planDisplayName } from "@/lib/billing";
+
+describe("PLAN_NAMES & planDisplayName", () => {
+  it("maps plans to their canonical display names per rule 7", () => {
+    expect(PLAN_NAMES.free).toBe("Free trial");
+    expect(PLAN_NAMES.basic).toBe("Solo");
+    expect(PLAN_NAMES.pro).toBe("Growth");
+    expect(PLAN_NAMES.ultimate).toBe("Agency");
+    expect(PLAN_NAMES.business).toBe("Business (old plan)");
+  });
+
+  it("planDisplayName formats known and unknown plans properly", () => {
+    expect(planDisplayName("free")).toBe("Free trial");
+    expect(planDisplayName("basic")).toBe("Solo");
+    expect(planDisplayName("pro")).toBe("Growth");
+    expect(planDisplayName("ultimate")).toBe("Agency");
+    expect(planDisplayName("business")).toBe("Business (old plan)");
+    expect(planDisplayName(null)).toBe("Free trial");
+    expect(planDisplayName("custom_plan")).toBe("Custom_plan");
+  });
+});
 
 describe("PLAN_RANK", () => {
   it("orders plans free < basic < pro < ultimate < business", () => {

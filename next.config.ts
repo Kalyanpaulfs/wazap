@@ -206,6 +206,16 @@ const nextConfig: NextConfig = {
         destination: "/dashboard",
         permanent: false,
       },
+      {
+        source: "/admin/business",
+        destination: "/admin/crm",
+        permanent: false,
+      },
+      {
+        source: "/admin/marketplace",
+        destination: "/admin/crm",
+        permanent: false,
+      },
     ];
   },
   async headers() {

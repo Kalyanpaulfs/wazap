@@ -24,6 +24,21 @@ export const PLAN_PRICES: Record<string, number> = {
 // and is mapped onto "ultimate" everywhere access/limits are computed).
 export const PURCHASABLE_PLANS = ["basic", "pro", "ultimate"] as const;
 
+export const PLAN_NAMES: Record<string, string> = {
+  free: "Free trial",
+  basic: "Solo",
+  pro: "Growth",
+  ultimate: "Agency",
+  business: "Business (old plan)",
+};
+
+export function planDisplayName(plan: string | null | undefined): string {
+  if (!plan) return PLAN_NAMES.free;
+  const p = plan.toLowerCase();
+  return PLAN_NAMES[p] ?? p.charAt(0).toUpperCase() + p.slice(1);
+}
+
+
 export function planExpiry(plan: string) {
   if (!["basic", "pro", "ultimate", "business"].includes(plan)) return null;
   const expiry = new Date();

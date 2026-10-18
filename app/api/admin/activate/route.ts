@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { planExpiry } from "@/lib/billing";
+import { planExpiry, PURCHASABLE_PLANS } from "@/lib/billing";
 import { auditBilling } from "@/lib/billing-actions";
 import { syncPlanLimits } from "@/lib/plan-limit-sync";
 import { sameSiteRequest } from "@/lib/crm";
@@ -15,7 +15,7 @@ async function syncPlanLimitsSafely(userId: string, previousPlan?: string | null
   }
 }
 
-const ACTIVATABLE_PLANS = new Set(["basic", "pro", "ultimate", "business"]);
+const ACTIVATABLE_PLANS = new Set<string>(PURCHASABLE_PLANS);
 
 // BUG-8: an admin "change plan" used to be silently undone by the next
 // provider renewal (the subscription was never told about it). We cannot fix

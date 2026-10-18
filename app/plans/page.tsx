@@ -60,12 +60,14 @@ export default async function PlansPage({
           <PricingPlans
             isLoggedIn
             freePlan={
-              <FreePlanStrip
-                isCurrent={storedPlan === "free" && !inTrial}
-                trialDaysLeft={inTrial ? daysLeft : null}
-                ctaHref={null}
-                note={storedPlan === "free" ? "You're on your 3-day free trial now. Your links pause when it ends unless you choose a plan." : "Turn off auto-pay in Billing — your links pause when your current paid period ends."}
-              />
+              inTrial ? (
+                <FreePlanStrip
+                  isCurrent={false}
+                  trialDaysLeft={daysLeft}
+                  ctaHref={null}
+                  note="You're on your 3-day free trial now. Your links pause when it ends unless you choose a plan."
+                />
+              ) : null
             }
             userEmail={session.user.email ?? null}
             cardCheckoutEnabled={cardCheckoutEnabled}
