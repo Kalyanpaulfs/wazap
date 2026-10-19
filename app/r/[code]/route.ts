@@ -17,7 +17,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ code: st
   const normalizedCode = code.toUpperCase();
   const ip = requestIp(req.headers);
   const withinSpeedLimit = rateLimit(`redirect:r:${normalizedCode}:${ip}`, 10, 60_000);
-  let rotator: { id?: string; userId?: string; name?: string; code: string; numbers: string[]; fallbackNumber?: string | null; message?: string | null; currentIdx: number; planPausedAt?: Date | null } | null = null;
+  let rotator: { id?: string; userId?: string; name?: string; code: string; numbers: string[]; fallbackNumber?: string | null; message?: string | null; currentIdx: number; planPausedAt?: Date | null; pausedAt?: Date | null } | null = null;
   let ownerBlocked = false;
   try {
     const row = await Promise.race([
@@ -32,8 +32,11 @@ export async function GET(req: Request, { params }: { params: Promise<{ code: st
       // pause-sync cron has run and regardless of the speed limit/metering
       // availability below.
       ownerBlocked = !canRouteLinks(owner);
-      // Never leave a paused/blocked rotator cached for the outage fallback.
-      if (link.planPausedAt || ownerBlocked) await removeCachedRoute(link.code);
+      // Never leave a paused/blocked rotator cached for the outage fallback
+      // - this covers BOTH the plan pause and the customer's own manual
+      // pause (pausedAt), so the degraded-cache path can never serve a
+      // paused link either.
+      if (link.planPausedAt || link.pausedAt || ownerBlocked) await removeCachedRoute(link.code);
       else await cacheRoute({ code: link.code, numbers: link.numbers, fallbackNumber: link.fallbackNumber, message: link.message, currentIdx: link.currentIdx }).catch(() => {});
     }
   } catch {
@@ -43,6 +46,10 @@ export async function GET(req: Request, { params }: { params: Promise<{ code: st
   // Only checked on the live DB path (not the degraded-cache fallback, which
   // intentionally fails open for availability - see the catch above).
   if (rotator.planPausedAt) redirect("/link-paused?type=rotator");
+  // Manual pause (owner feature): the customer paused this link themselves.
+  // Never record a click for a paused link - we redirect before any
+  // metering/counting below.
+  if (rotator.pausedAt) redirect("/link-paused?type=rotator&reason=owner");
   if (ownerBlocked) redirect(`/router-limit?code=${encodeURIComponent(normalizedCode)}`);
 
   const validNumbers = rotator.numbers.map(number => number.replace(/\D/g, "")).filter(number => number.length >= 8);

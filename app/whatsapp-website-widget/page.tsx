@@ -55,7 +55,7 @@ const content: ProductLandingContent = {
     "No app for visitors to install — it opens a normal WhatsApp chat.",
   ],
   qa: [
-    { q: "Which plans include the widget?", a: "The widget is included from the Solo plan ($9) upward — Solo, Growth and Agency all include it. Free doesn't include the widget." },
+    { q: "Which plans include the widget?", a: "The widget is included during your 3-day free trial and on every paid plan — Solo ($9), Growth ($19) and Agency ($49). It isn't available if your trial has ended and you haven't chosen a plan." },
     { q: "Will the widget slow down my site?", a: "The embed snippet is a small piece of code — it doesn't require installing a separate app." },
     { q: "Can I change the colour and position later?", a: "Yes — update the settings and copy the new embed snippet into your site." },
     { q: "Does the button work on mobile?", a: "Yes — tapping it opens a WhatsApp chat on mobile just as clicking it does on desktop." },

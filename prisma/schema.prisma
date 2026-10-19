@@ -1260,6 +1260,13 @@ model RotatorLink {
   totalClicks    Int       @default(0)
   createdAt      DateTime  @default(now())
   planPausedAt   DateTime?
+  // Manual pause (owner feature request, distinct from planPausedAt): set
+  // when the CUSTOMER pauses their own link from My links. Never written or
+  // cleared by lib/plan-limit-sync.ts - that engine only ever touches
+  // planPausedAt. A manually-paused link still counts toward the link pool
+  // (lib/link-pool.ts countLiveLinks only looks at planPausedAt), so pausing
+  // can't be used to dodge the plan limit.
+  pausedAt       DateTime?
   user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
@@ -1275,6 +1282,9 @@ model AdLink {
   clicks       Int           @default(0)
   createdAt    DateTime      @default(now())
   planPausedAt DateTime?
+  // Manual pause (owner feature request) - see RotatorLink.pausedAt above
+  // for the full rationale; identical rule here.
+  pausedAt     DateTime?
   user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   clickEvents  AdLinkClick[]
 }
@@ -1410,6 +1420,9 @@ model ShortLink {
   clicks       Int       @default(0)
   createdAt    DateTime  @default(now())
   planPausedAt DateTime?
+  // Manual pause (owner feature request) - see RotatorLink.pausedAt above
+  // for the full rationale; identical rule here.
+  pausedAt     DateTime?
   user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])

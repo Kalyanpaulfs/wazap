@@ -55,10 +55,10 @@ const content: ProductLandingContent = {
     "No extra app for the customer — it still opens a normal WhatsApp chat.",
   ],
   qa: [
-    { q: "How many short links can I create?", a: "Free doesn't include short links. Solo ($9) includes 2, Growth ($19) includes 5, and Agency ($49) includes 15." },
+    { q: "How many short links can I create?", a: "Short links share one link total with rotators and ad links. Your 3-day free trial includes 5 links — the same as Solo. Solo ($9) keeps that ongoing, Growth ($19) includes 20 links, and Agency ($49) includes 55 links." },
     { q: "Can I choose my own slug?", a: "Yes — you pick the custom slug when you create the short link." },
     { q: "Does a short link expire?", a: "No, it keeps working as long as the link exists on your account and the destination number is set." },
-    { q: "Is this different from the free link builder?", a: "Yes — the free WhatsApp link builder at /tools/link makes a plain wa.me link for anyone to use. Short links add a custom slug and click counts, and are included from the Solo plan." },
+    { q: "Is this different from the free link builder?", a: "Yes. The WhatsApp link builder at /tools/link is for a trial or active plan, and gives you a tracked WhatsApp link; only the QR maker at /qr stays free once a trial ends. Short links add a custom slug and click counts, and are included from the Solo plan." },
   ],
   crossLinks: [
     { href: "/whatsapp-lead-routing", title: "WhatsApp lead routing", text: "Share incoming chats across your team in turn." },

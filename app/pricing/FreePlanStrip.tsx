@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { NUMBERS_PER_ROTATOR_LIMITS, ROTATOR_LIMITS, SHORT_LINK_LIMITS } from "@/lib/plan-limits";
+import { NUMBERS_PER_ROTATOR_LIMITS, LINK_LIMITS } from "@/lib/plan-limits";
 
 // Shared between /pricing and /plans so the Free-trial card's facts are
 // written once (FEAT-BILLING-PLANS-PAGES; updated for the 100-lead trial
@@ -9,11 +9,10 @@ import { NUMBERS_PER_ROTATOR_LIMITS, ROTATOR_LIMITS, SHORT_LINK_LIMITS } from "@
 // is no standing free tier to show here. Rendered as the first card in the
 // PricingPlans grid so it sits next to the paid plans.
 const FREE_FEATURES = [
-  `${ROTATOR_LIMITS.basic} WhatsApp rotator links`,
+  `${LINK_LIMITS.basic} links (lead rotators or brand links)`,
   `Up to ${NUMBERS_PER_ROTATOR_LIMITS.basic} numbers per rotator`,
   "100 routed leads",
-  `${SHORT_LINK_LIMITS.basic} branded short links`,
-  "Website widget",
+  "Website button",
   "Basic reports (last 30 days)",
   "Round-robin distribution",
   "Basic support",

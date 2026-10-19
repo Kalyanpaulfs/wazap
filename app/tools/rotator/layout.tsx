@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
+import { getServerSession } from "next-auth";
+import { redirect } from "next/navigation";
 import ToolSeo from "@/app/ToolSeo";
 import Link from "next/link";
+import { authOptions } from "@/lib/auth";
 import { routingOfferText, workspaceTrialText, routerPrivacyText } from "@/lib/marketing-offer";
 
 const description = "Create one WhatsApp link for multiple team numbers. Rotate handoffs, add a predefined message and track destinations. Start with a 3-day free trial — 100 handoffs.";
@@ -12,7 +15,13 @@ export const metadata: Metadata = {
   openGraph: { title: "WhatsApp Link Rotator for Sales Teams | Wazap", description, url: "https://wazap.lt/tools/rotator" },
 };
 
-export default function Layout({ children }: { children: React.ReactNode }) {
+// UX-1 step 4: /tools/rotator is both the public SEO page (below) and, for a
+// logged-in user, the old app page. Logged-in users now get the new in-app
+// create flow instead - logged-out visitors still get this page unchanged
+// (same metadata/JSON-LD, via ToolSeo).
+export default async function Layout({ children }: { children: React.ReactNode }) {
+  const session = await getServerSession(authOptions);
+  if (session?.user) redirect("/links/new/rotator");
   return <>{children}<ToolSeo k="rotator">
     <section className="mb-12 text-sm leading-7 text-slate-300" aria-labelledby="router-setup-guide">
       <h2 id="router-setup-guide" className="text-2xl font-bold text-white">One WhatsApp link for multiple team numbers</h2>

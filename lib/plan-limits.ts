@@ -8,31 +8,40 @@
 // "free" is NOT a sellable plan. It is the internal key for "no paid plan
 // and no active Free trial" (trial ended, never trialled, refunded, or paid
 // plan expired). In that state EVERY limit below is 0 and nothing is
-// grandfathered: 0 rotators, 0 numbers per rotator, 0 short links, 0 ad
-// links, no widget, no reports, and no routed leads at all (see
+// grandfathered: 0 links (of any type), 0 numbers per rotator, no widget,
+// no reports, and no routed leads at all (see
 // lib/router-entitlements.ts routerQuota). Every new sign-up instead gets a
 // one-time 3-day Free trial with exactly Solo's limits (resolved to "basic"
 // by lib/entitlements.ts effectivePlan / lib/router-entitlements.ts
 // linkPlan) plus 100 routed leads (TRIAL_ROUTED_LEADS) while it lasts — it
 // never reads the free column below.
 //
-// lib/plan-limit-sync.ts (the billing pause engine) reads ROTATOR_LIMITS/
-// SHORT_LINK_LIMITS/AD_LINK_LIMITS from here directly (FEAT-AUDIT-HARDENING).
-// It is triggered not only on real downgrades but also on plain renewal
-// charges and admin re-activation of the SAME plan (see
+// UX-1 step 1 (shared link pool): rotators, short links and ad links used
+// to each have their own separate quota. They now share ONE pool -
+// LINK_LIMITS - counted as any mix of RotatorLink + ShortLink + AdLink rows
+// the user has (planPausedAt: null). Ad links are additionally gated by
+// AD_LINKS_AVAILABLE: only on plans where that's true (Growth/Agency) do
+// they count toward, or can be created into, the pool at all - on Solo
+// they're simply not offered, pool room or not. See lib/link-pool.ts for
+// the shared count + create-check used by the three create APIs.
+//
+// lib/plan-limit-sync.ts (the billing pause engine) reads LINK_LIMITS/
+// AD_LINKS_AVAILABLE from here directly (FEAT-AUDIT-HARDENING, extended by
+// UX-1). It is triggered not only on real downgrades but also on plain
+// renewal charges and admin re-activation of the SAME plan (see
 // lib/payment-integrity.ts recordVerifiedCharge, and app/api/admin/activate),
 // so feeding it these numbers unconditionally would risk retroactively
-// pausing rotators/short links/ad links an existing paying customer already
-// had, with no plan change at all. That risk is closed at the trigger level
-// instead: the engine only ever PAUSES these three when it can verify, from
-// the previous plan passed in by the caller, that the user's plan rank
-// (free < basic < pro < ultimate) actually went down, OR that the user now
-// resolves to free (no paid plan, no active trial) — in that state pausing
-// is always allowed, since every free limit is 0 and nothing is
-// grandfathered, regardless of how the user arrived there. A renewal, an
-// upgrade, a same-plan admin re-activation, or an unresolvable previous plan
-// (while still on a paid/trial plan) all skip pausing (resume still runs
-// normally) — see lib/plan-limit-sync.ts.
+// pausing links an existing paying customer already had, with no plan
+// change at all. That risk is closed at the trigger level instead: the
+// engine only ever PAUSES pool links when it can verify, from the previous
+// plan passed in by the caller, that the user's plan rank (free < basic <
+// pro < ultimate) actually went down, OR that the user now resolves to free
+// (no paid plan, no active trial) — in that state pausing is always
+// allowed, since every free limit is 0 and nothing is grandfathered,
+// regardless of how the user arrived there. A renewal, an upgrade, a
+// same-plan admin re-activation, or an unresolvable previous plan (while
+// still on a paid/trial plan) all skip pausing (resume still runs normally)
+// — see lib/plan-limit-sync.ts.
 
 export type PlanKey = "free" | "basic" | "pro" | "ultimate";
 const PLAN_KEYS: PlanKey[] = ["free", "basic", "pro", "ultimate"];
@@ -56,8 +65,9 @@ export const PLAN_DISPLAY_NAME: Record<PlanKey, string> = {
   ultimate: "Agency",
 };
 
-// Rotator links (lead-routing pages) a user may have active at once.
-export const ROTATOR_LIMITS: Record<PlanKey, number> = { free: 0, basic: 3, pro: 10, ultimate: 25 };
+// Shared pool: lead rotators + brand (short) links + ad links, any mix, per
+// user. See lib/link-pool.ts countLiveLinks.
+export const LINK_LIMITS: Record<PlanKey, number> = { free: 0, basic: 5, pro: 20, ultimate: 55 };
 
 // Numbers (salespeople) allowed per rotator.
 export const NUMBERS_PER_ROTATOR_LIMITS: Record<PlanKey, number> = { free: 0, basic: 3, pro: 10, ultimate: 20 };
@@ -67,11 +77,9 @@ export const NUMBERS_PER_ROTATOR_LIMITS: Record<PlanKey, number> = { free: 0, ba
 // free/no-trial — see lib/router-entitlements.ts routerQuota. Not
 // duplicated here.
 
-// Branded short links.
-export const SHORT_LINK_LIMITS: Record<PlanKey, number> = { free: 0, basic: 2, pro: 5, ultimate: 15 };
-
-// Ad-builder tracked links.
-export const AD_LINK_LIMITS: Record<PlanKey, number> = { free: 0, basic: 0, pro: 5, ultimate: 15 };
+// Ad links: only offered on Growth/Agency. Where false, ad links neither
+// count toward LINK_LIMITS nor can be created, regardless of pool room.
+export const AD_LINKS_AVAILABLE: Record<PlanKey, boolean> = { free: false, basic: false, pro: true, ultimate: true };
 
 export const WIDGET_AVAILABLE: Record<PlanKey, boolean> = { free: false, basic: true, pro: true, ultimate: true };
 
@@ -88,17 +96,14 @@ export const LOCATION_DEVICE_TRACKING: Record<PlanKey, TrackingAvailability> = {
 
 export const SUPPORT_LABEL: Record<PlanKey, string> = { free: "Basic", basic: "Basic", pro: "Standard", ultimate: "Priority" };
 
-export function rotatorLimit(plan: string | null | undefined): number {
-  return ROTATOR_LIMITS[normalizePlanKey(plan)];
+export function linkLimit(plan: string | null | undefined): number {
+  return LINK_LIMITS[normalizePlanKey(plan)];
 }
 export function numbersPerRotatorLimit(plan: string | null | undefined): number {
   return NUMBERS_PER_ROTATOR_LIMITS[normalizePlanKey(plan)];
 }
-export function shortLinkLimit(plan: string | null | undefined): number {
-  return SHORT_LINK_LIMITS[normalizePlanKey(plan)];
-}
-export function adLinkLimit(plan: string | null | undefined): number {
-  return AD_LINK_LIMITS[normalizePlanKey(plan)];
+export function adLinksAvailable(plan: string | null | undefined): boolean {
+  return AD_LINKS_AVAILABLE[normalizePlanKey(plan)];
 }
 export function widgetAvailable(plan: string | null | undefined): boolean {
   return WIDGET_AVAILABLE[normalizePlanKey(plan)];
@@ -110,9 +115,10 @@ export function supportLabel(plan: string | null | undefined): string {
   return SUPPORT_LABEL[normalizePlanKey(plan)];
 }
 
-// Grandfathering rule #1 (counts: rotators / short links / ad links): only
-// blocks CREATING a new item once the current count is already at/over the
-// limit. Existing items over the limit are never touched here.
+// Grandfathering rule #1 (counts: the shared link pool, or any other
+// per-plan count): only blocks CREATING a new item once the current count
+// is already at/over the limit. Existing items over the limit are never
+// touched here.
 export function canCreateMore(currentCount: number, limit: number): boolean {
   return currentCount < limit;
 }
@@ -125,6 +131,28 @@ export function canCreateMore(currentCount: number, limit: number): boolean {
 export function numbersPatchAllowed(previousCount: number, nextCount: number, limit: number): boolean {
   if (nextCount <= previousCount) return true;
   return nextCount <= limit;
+}
+
+// Next plan's name + its link pool total, e.g. "Growth for 20" / "Agency for
+// 55" - "" on Agency (nothing higher) or free (upgradeHint/the free-specific
+// copy covers that case instead). Shared by lib/link-pool.ts's create-check
+// message and app/links/new (UX-1 step 2) so the two never drift.
+export function nextPlanPoolHint(plan: string | null | undefined): string {
+  const key = normalizePlanKey(plan);
+  if (key === "basic") return `Growth for ${linkLimit("pro")}`;
+  if (key === "pro") return `Agency for ${linkLimit("ultimate")}`;
+  return "";
+}
+
+// Next plan's name + its numbers-per-rotator total, e.g. "Growth allows 10" /
+// "Agency allows 20" - "" on Agency (nothing higher) or free. Mirrors
+// nextPlanPoolHint's shape but for the numbers-per-rotator limit. Used by the
+// in-app rotator create form's salespeople counter (UX-1 step 3).
+export function nextPlanNumbersHint(plan: string | null | undefined): string {
+  const key = normalizePlanKey(plan);
+  if (key === "basic") return `Growth allows ${numbersPerRotatorLimit("pro")}`;
+  if (key === "pro") return `Agency allows ${numbersPerRotatorLimit("ultimate")}`;
+  return "";
 }
 
 export function upgradeHint(plan: string | null | undefined): string {

@@ -69,15 +69,15 @@ export default function RotatorPage() {
     } else {
       const data = await res.json().catch(() => ({}));
       if (res.status === 401) setAuthRequired(true);
-      setError(data.error || "Could not create the rotator. Please try again.");
+      setError(data.error || "Could not create the lead rotator. Please try again.");
     }
     setCreating(false);
   }
 
   async function del(id: string) {
-    if (!window.confirm("Delete this rotator? Its public link will stop working. This cannot be undone.")) return;
+    if (!window.confirm("Delete this lead rotator? Its public link will stop working. This cannot be undone.")) return;
     const res = await fetch("/api/rotator", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) });
-    if (!res.ok) { setError("Could not delete the rotator. Please try again."); return; }
+    if (!res.ok) { setError("Could not delete the lead rotator. Please try again."); return; }
     setRotators(r => r.filter(x => x.id !== id));
   }
 
@@ -86,9 +86,9 @@ export default function RotatorPage() {
     setError("");
     try {
       const res = await fetch("/api/rotator", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, ...payload }) });
-      if (!res.ok) { const data = await res.json().catch(() => ({})); throw new Error(data.error || "Could not save the rotator."); }
+      if (!res.ok) { const data = await res.json().catch(() => ({})); throw new Error(data.error || "Could not save the lead rotator."); }
       await fetchRotators();
-    } catch (err) { setError(err instanceof Error ? err.message : "Could not save the rotator."); }
+    } catch (err) { setError(err instanceof Error ? err.message : "Could not save the lead rotator."); }
     finally { setSaving(null); }
   }
 
@@ -219,7 +219,7 @@ export default function RotatorPage() {
             {error && !authRequired && <p role="alert" className="text-sm text-red-400">{error}</p>}
             {limits && !authRequired && (
               <p className="text-xs text-slate-500">
-                {rotators.length} of {limits.rotators} rotators on your {limits.planLabel} plan
+                {rotators.length} rotator{rotators.length === 1 ? "" : "s"} · {limits.planLabel} plan link total: {limits.rotators} (shared with WhatsApp and ad links)
                 {rotators.length >= limits.rotators && <> · <Link href="/pricing" className="text-[#25D366] underline">Upgrade for more</Link></>}
               </p>
             )}

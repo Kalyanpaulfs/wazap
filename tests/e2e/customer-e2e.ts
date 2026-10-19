@@ -16,6 +16,7 @@ const cleanHtml = (s: string) => s.replace(/<!--.*?-->/g, "");
 
 const BASE = process.env.E2E_BASE_URL || "http://localhost:3000";
 const DEV_LOG =
+  process.env.DEV_LOG ||
   "C:/Users/paulk/AppData/Local/Temp/claude/D--wazap-wazap-business/c825a569-c362-4afd-b477-5147ec943014/scratchpad/dev.log";
 const RUN = Date.now();
 const DOMAIN = "wazap-qa.test";
@@ -264,6 +265,13 @@ function sleep(ms: number) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
+/** "yyyy-mm-dd" for `daysAgo` days before now - used for custom date-range
+ * checks so they stay valid (and, where data must fall inside the range,
+ * actually include "now") regardless of what today's real date is. */
+function dateDaysAgo(daysAgo: number): string {
+  return new Date(Date.now() - daysAgo * 86_400_000).toISOString().slice(0, 10);
+}
+
 // ===========================================================================
 // MAIN
 // ===========================================================================
@@ -304,7 +312,13 @@ async function main() {
     });
   }
 
-  const PRIVATE_PAGES = ["/dashboard", "/performance", "/reports", "/plans", "/billing", "/account"];
+  // UX-1 step 5: /performance, /reports, /plans are gone as real app pages -
+  // they're now plain redirects (unconditional, no auth check) to their new
+  // home (/results, /results?tab=link, /billing#plans). Only /results,
+  // /billing etc. themselves still gate on login. So a logged-out hit on one
+  // of these old URLs is a two-hop redirect: old path -> new path -> /login
+  // (the second hop only happens once you actually request the new path).
+  const PRIVATE_PAGES = ["/dashboard", "/results", "/billing", "/account", "/links", "/links/new"];
   for (const path of PRIVATE_PAGES) {
     await check("A", `private page redirects to login when logged out: ${path}`, async () => {
       const r = await http(null, path);
@@ -314,6 +328,22 @@ async function main() {
       if (isHttpRedirect) {
         assertTrue((r.location || "").includes("/login"), `GET ${path} -> Location "${r.location}" should go to /login`);
       }
+    });
+  }
+
+  const MERGED_PAGE_REDIRECTS: Array<[string, string]> = [
+    ["/performance", "/results"],
+    ["/reports", "/results"],
+    ["/plans", "/billing"],
+  ];
+  for (const [oldPath, newPath] of MERGED_PAGE_REDIRECTS) {
+    await check("A", `merged page ${oldPath} redirects to ${newPath}, which then redirects to login when logged out`, async () => {
+      const first = await http(null, oldPath);
+      assertTrue(first.status === 307 || first.status === 308, `GET ${oldPath} should redirect, got ${first.status}`);
+      assertTrue((first.location || "").includes(newPath), `GET ${oldPath} -> Location "${first.location}" should include "${newPath}"`);
+      const second = await http(null, first.location!.replace(/^https?:\/\/[^/]+/, ""));
+      assertTrue(second.status === 307 || second.status === 308, `following ${oldPath} -> ${first.location} should redirect to login, got ${second.status}`);
+      assertTrue((second.location || "").includes("/login"), `second hop Location "${second.location}" should go to /login`);
     });
   }
 
@@ -363,19 +393,26 @@ async function main() {
   // -------------------------------------------------------------------------
   // C + D + E. Per-plan logged-in pages, limits, grandfathering, salesperson names
   // -------------------------------------------------------------------------
+  // UX-1 step 4/5: logged-in users get redirected off the old app/tools/*
+  // create pages into the new /links/new/* in-app flow (tested separately,
+  // once, right after this loop) - /tools/widget and /qr stay as themselves
+  // for logged-in users too (free tools, never redirected).
   const PLAN_LOGGED_IN_PAGES = [
-    "/dashboard", "/tools/rotator", "/tools/shortlink", "/tools/ad-builder", "/tools/widget",
-    "/qr", "/performance", "/reports", "/plans", "/billing", "/account", "/support",
+    "/dashboard", "/links", "/links/new", "/tools/widget",
+    "/qr", "/results", "/billing", "/account", "/support",
   ];
 
-  type PlanCfg = { key: "free" | "basic" | "pro" | "ultimate"; rotatorLimit: number; numbersLimit: number; shortLimit: number; adLimit: number; widget: boolean };
+  // UX-1 step 1: rotators/short links/ad links now share ONE pool
+  // (linkLimit), and ad links are additionally gated by whether the plan
+  // offers them at all (adAvailable) - see lib/plan-limits.ts.
+  type PlanCfg = { key: "free" | "basic" | "pro" | "ultimate"; linkLimit: number; numbersLimit: number; adAvailable: boolean; widget: boolean };
   const PLANS: PlanCfg[] = [
     // Free-trial restructure: "free" (no paid plan, no active trial) is 0 of
     // everything - nothing is grandfathered any more.
-    { key: "free", rotatorLimit: 0, numbersLimit: 0, shortLimit: 0, adLimit: 0, widget: false },
-    { key: "basic", rotatorLimit: 3, numbersLimit: 3, shortLimit: 2, adLimit: 0, widget: true },
-    { key: "pro", rotatorLimit: 10, numbersLimit: 10, shortLimit: 5, adLimit: 5, widget: true },
-    { key: "ultimate", rotatorLimit: 25, numbersLimit: 20, shortLimit: 15, adLimit: 15, widget: true },
+    { key: "free", linkLimit: 0, numbersLimit: 0, adAvailable: false, widget: false },
+    { key: "basic", linkLimit: 5, numbersLimit: 3, adAvailable: false, widget: true },
+    { key: "pro", linkLimit: 20, numbersLimit: 10, adAvailable: true, widget: true },
+    { key: "ultimate", linkLimit: 55, numbersLimit: 20, adAvailable: true, widget: true },
   ];
 
   const planJars = new Map<string, Jar>();
@@ -408,26 +445,40 @@ async function main() {
       });
     }
 
-    // --- D. Rotator count limit ---
-    await check("D", `${plan.key}: rotator count limit is ${plan.rotatorLimit}`, async () => {
-      // Pre-fill to the limit directly (setup), then confirm the API itself
-      // refuses one more - exercising the real count>=limit check.
-      for (let i = 0; i < plan.rotatorLimit; i++) {
+    // --- D. Shared link pool limit (UX-1 step 1) ---
+    await check("D", `${plan.key}: link pool limit is ${plan.linkLimit}, shared across rotators and short links`, async () => {
+      // Pre-fill `linkLimit` rotators directly (setup), then confirm the API
+      // itself refuses one more rotator AND a short link - the pool is
+      // shared, so filling it with one type blocks the other too.
+      for (let i = 0; i < plan.linkLimit; i++) {
         await prisma.rotatorLink.create({
           data: { userId: user.id, code: `E2ER${RUN}${plan.key}${i}`, name: `prefill ${i}`, numbers: ["919800000001"], fallbackNumber: "919800000001" },
         });
       }
-      const r = await http(jar, "/api/rotator", {
+      const rotatorResult = await http(jar, "/api/rotator", {
         method: "POST",
         headers: await getOrigin(jar),
         body: JSON.stringify({ name: "one too many", numbers: ["919800000099"] }),
       });
-      if (plan.rotatorLimit === 0) {
-        assertEqual(r.status, 403, "rotator creation on a 0-limit plan");
-      } else {
-        assertEqual(r.status, 403, `creating rotator #${plan.rotatorLimit + 1} should be refused`);
-        assertTrue(r.body?.upgrade === true, "refusal should carry upgrade:true");
+      assertEqual(rotatorResult.status, 403, `creating rotator #${plan.linkLimit + 1} should be refused once the pool is full`);
+      if (plan.linkLimit > 0) assertTrue(rotatorResult.body?.upgrade === true, "refusal should carry upgrade:true");
+
+      const shortLinkResult = await http(jar, "/api/shortlinks", {
+        method: "POST",
+        headers: await getOrigin(jar),
+        body: JSON.stringify({ name: "one too many", phone: "919800000098" }),
+      });
+      assertEqual(shortLinkResult.status, 403, "a short link should also be refused - the pool is shared, not per-type");
+
+      // While the pool is full of real rotator rows, confirm the link
+      // details page for one of them still renders (UX-1 step 4 page).
+      if (plan.linkLimit > 0) {
+        const anyRotator = await prisma.rotatorLink.findFirst({ where: { userId: user.id, code: { startsWith: `E2ER${RUN}${plan.key}` } } });
+        assertTrue(!!anyRotator, "expected at least one prefilled rotator");
+        const detailsResult = await http(jar, `/links/rotator/${anyRotator!.id}`);
+        assertEqual(detailsResult.status, 200, `GET /links/rotator/${anyRotator!.id} as ${plan.key}`);
       }
+
       // Clean up the count-limit pre-fills so later tests on this plan user aren't blocked by count limit
       await prisma.rotatorLink.deleteMany({ where: { userId: user.id, code: { startsWith: `E2ER${RUN}${plan.key}` } } });
     });
@@ -453,13 +504,16 @@ async function main() {
         headers: await getOrigin(jar),
         body: JSON.stringify({ name: "numbers ok", numbers: okNumbers }),
       });
-      // May itself be refused by the count limit (already at/over it from the
-      // previous check) - that's fine, we only care about the numbers-limit
-      // branch when the count limit doesn't get in the way first.
-      if (okResult.status === 403 && okResult.body?.error && /plan allows .* rotator/i.test(okResult.body.error)) {
-        // count limit reached first; still verify the too-many-numbers case alone
+      // May itself be refused by the shared link pool (already at/over it
+      // from the previous check) - that's fine, we only care about the
+      // numbers-limit branch when the pool limit doesn't get in the way first.
+      if (okResult.status === 403 && okResult.body?.error && /used .* of .* links/i.test(okResult.body.error)) {
+        // pool limit reached first; still verify the too-many-numbers case alone
       } else {
         assertEqual(okResult.status, 200, `rotator with exactly ${plan.numbersLimit} numbers should be accepted`);
+        // Clean up the created rotator so it doesn't permanently occupy one
+        // of this plan user's pool slots for every later check on them.
+        await prisma.rotatorLink.deleteMany({ where: { id: okResult.body.id, userId: user.id } });
       }
       const tooManyResult = await http(jar, "/api/rotator", {
         method: "POST",
@@ -469,30 +523,33 @@ async function main() {
       assertEqual(tooManyResult.status, 403, `rotator with ${plan.numbersLimit + 1} numbers should be refused`);
     });
 
-    // --- D. Short link limit ---
-    await check("D", `${plan.key}: short link limit is ${plan.shortLimit}`, async () => {
-      for (let i = 0; i < plan.shortLimit; i++) {
+    // --- D. The pool is shared the other way too: short links alone can fill it ---
+    await check("D", `${plan.key}: filling the pool with short links alone also blocks a new rotator`, async () => {
+      for (let i = 0; i < plan.linkLimit; i++) {
         await prisma.shortLink.create({ data: { userId: user.id, code: `e2esl${RUN}${plan.key}${i}`, name: `sl${i}`, phone: "919800000001" } });
       }
-      const r = await http(jar, "/api/shortlinks", {
+      const r = await http(jar, "/api/rotator", {
         method: "POST",
         headers: await getOrigin(jar),
-        body: JSON.stringify({ name: "one too many", phone: "919800000099" }),
+        body: JSON.stringify({ name: "blocked by short links", numbers: ["919800000098"] }),
       });
-      assertEqual(r.status, 403, `short link #${plan.shortLimit + 1} should be refused`);
+      assertEqual(r.status, 403, `rotator should be refused once ${plan.linkLimit} short links fill the pool`);
+      await prisma.shortLink.deleteMany({ where: { userId: user.id, code: { startsWith: `e2esl${RUN}${plan.key}` } } });
     });
 
-    // --- D. Ad link limit ---
-    await check("D", `${plan.key}: ad link limit is ${plan.adLimit}`, async () => {
-      for (let i = 0; i < plan.adLimit; i++) {
-        await prisma.adLink.create({ data: { userId: user.id, name: `ad${i}`, number: "919800000001" } });
-      }
+    // --- D. Ad links availability (not a count - a plan gate) ---
+    await check("D", `${plan.key}: ad links available = ${plan.adAvailable}`, async () => {
       const r = await http(jar, "/api/adlinks", {
         method: "POST",
         headers: await getOrigin(jar),
-        body: JSON.stringify({ name: "one too many", number: "919800000099" }),
+        body: JSON.stringify({ name: "ad link", number: "919800000099" }),
       });
-      assertEqual(r.status, 403, `ad link #${plan.adLimit + 1} should be refused`);
+      if (!plan.adAvailable) {
+        assertEqual(r.status, 403, `ad link creation should be refused - not available on ${plan.key}`);
+      } else {
+        assertEqual(r.status, 200, `ad link creation should succeed on ${plan.key} with room in the pool`);
+        await prisma.adLink.deleteMany({ where: { userId: user.id, name: "ad link" } });
+      }
     });
 
     // --- D. Widget availability ---
@@ -509,6 +566,248 @@ async function main() {
       else assertEqual(postResult.status, 403, "widget usage POST should be refused on free");
     });
   }
+
+  // --- C. UX-1 step 4: logged-in users hitting the old app/tools/* create
+  // pages get redirected straight into the new in-app create flow instead of
+  // the old page (logged-out visitors still get the public SEO page - see
+  // the "logged-out /tools/rotator loads 200" check in section A above).
+  await check("C", "logged-in /tools/* create pages redirect into /links/new/*", async () => {
+    const jar = planJars.get("pro");
+    assertTrue(!!jar, "need a logged-in pro user");
+    const cases: Array<[string, string]> = [
+      ["/tools/rotator", "/links/new/rotator"],
+      ["/tools/shortlink", "/links/new/brand"],
+      ["/tools/ad-builder", "/links/new/ad"],
+      ["/tools/link", "/links/new/brand?simple=1"],
+    ];
+    for (const [oldPath, newPath] of cases) {
+      const r = await http(jar!, oldPath);
+      assertTrue(r.status === 307 || r.status === 308, `GET ${oldPath} (logged in) should redirect, got ${r.status}`);
+      assertTrue((r.location || "").includes(newPath), `GET ${oldPath} -> Location "${r.location}" should include "${newPath}"`);
+    }
+  });
+
+  // --- C. UX-1 step 4: logged-in /tools (hub) and logged-in /qr behaviour -
+  // /tools redirects to /links/new; /qr stays itself (free tool) but shows
+  // the logged-in "Create a link" back-link instead of the logged-out hero.
+  await check("C", "logged-in /tools redirects to /links/new; /qr stays 200 with a logged-in back-link", async () => {
+    const jar = planJars.get("pro");
+    assertTrue(!!jar, "need a logged-in pro user");
+    const toolsResult = await http(jar!, "/tools");
+    assertTrue(toolsResult.status === 307 || toolsResult.status === 308, `GET /tools (logged in) should redirect, got ${toolsResult.status}`);
+    assertTrue((toolsResult.location || "").includes("/links/new"), `GET /tools -> Location "${toolsResult.location}" should include "/links/new"`);
+    const qrResult = await http(jar!, "/qr");
+    assertEqual(qrResult.status, 200, "GET /qr (logged in) should stay 200");
+    assertTrue(qrResult.text.includes("/links/new"), "logged-in /qr should show the 'Create a link' back-link");
+  });
+
+  // --- D. Solo: create 5 mixed links through the real POST APIs (not direct
+  // DB inserts), confirm all 5 succeed, then the 6th of either type is
+  // refused - and ad links are refused outright on Solo regardless of room.
+  await check("D", "solo: creating 5 mixed links (rotators + short links) via the real APIs fills the pool, 6th of either type refused", async () => {
+    const jar = planJars.get("basic");
+    const user = planUsers.get("basic")!;
+    assertTrue(!!jar, "need a logged-in solo user");
+    const createdIds: Array<{ model: "rotatorLink" | "shortLink"; id: string }> = [];
+    try {
+      for (let i = 0; i < 3; i++) {
+        const r = await http(jar!, "/api/rotator", {
+          method: "POST",
+          headers: await getOrigin(jar),
+          body: JSON.stringify({ name: `mix rotator ${i}`, numbers: [`91980010${String(i).padStart(4, "0")}`] }),
+        });
+        assertEqual(r.status, 200, `rotator ${i}/5 should be created: ${JSON.stringify(r.body)}`);
+        createdIds.push({ model: "rotatorLink", id: r.body.id });
+      }
+      for (let i = 0; i < 2; i++) {
+        const r = await http(jar!, "/api/shortlinks", {
+          method: "POST",
+          headers: await getOrigin(jar),
+          body: JSON.stringify({ name: `mix shortlink ${i}`, phone: `91980011${String(i).padStart(4, "0")}` }),
+        });
+        assertEqual(r.status, 200, `short link ${i}/5 should be created: ${JSON.stringify(r.body)}`);
+        createdIds.push({ model: "shortLink", id: r.body.id });
+      }
+      assertEqual(createdIds.length, 5, "5 mixed links should now exist, filling Solo's pool of 5");
+
+      const sixthRotator = await http(jar!, "/api/rotator", {
+        method: "POST",
+        headers: await getOrigin(jar),
+        body: JSON.stringify({ name: "6th", numbers: ["919800129999"] }),
+      });
+      assertEqual(sixthRotator.status, 403, "6th link (rotator) should be refused once the pool of 5 is full");
+
+      const sixthShortlink = await http(jar!, "/api/shortlinks", {
+        method: "POST",
+        headers: await getOrigin(jar),
+        body: JSON.stringify({ name: "6th", phone: "919800139999" }),
+      });
+      assertEqual(sixthShortlink.status, 403, "6th link (short link) should be refused once the pool of 5 is full");
+
+      const adAttempt = await http(jar!, "/api/adlinks", {
+        method: "POST",
+        headers: await getOrigin(jar),
+        body: JSON.stringify({ name: "ad on solo", number: "919800149999" }),
+      });
+      assertEqual(adAttempt.status, 403, "ad links are refused outright on Solo, even with pool room");
+    } finally {
+      await prisma.rotatorLink.deleteMany({ where: { id: { in: createdIds.filter((c) => c.model === "rotatorLink").map((c) => c.id) }, userId: user.id } });
+      await prisma.shortLink.deleteMany({ where: { id: { in: createdIds.filter((c) => c.model === "shortLink").map((c) => c.id) }, userId: user.id } });
+    }
+  });
+
+  // --- D. Brand slug availability check endpoint (UX-1 step 3) ---
+  await check("D", "GET /api/shortlinks/check: available / taken / invalid", async () => {
+    const jar = planJars.get("pro");
+    const user = planUsers.get("pro")!;
+    assertTrue(!!jar, "need a logged-in pro user");
+    const takenSlug = `e2etaken${RUN}`;
+    const taken = await prisma.shortLink.create({ data: { userId: user.id, code: takenSlug, name: "taken slug probe", phone: "919800159999" } });
+    try {
+      const invalidResult = await http(jar!, "/api/shortlinks/check?slug=A!");
+      assertEqual(invalidResult.status, 200, "GET /api/shortlinks/check (invalid slug)");
+      assertEqual(invalidResult.body.valid, false, "a slug with invalid characters should be valid:false");
+
+      const takenResult = await http(jar!, `/api/shortlinks/check?slug=${takenSlug}`);
+      assertEqual(takenResult.status, 200, "GET /api/shortlinks/check (taken slug)");
+      assertEqual(takenResult.body.valid, true, "an existing, otherwise-valid slug should still be valid:true");
+      assertEqual(takenResult.body.available, false, "an existing slug should be available:false");
+
+      const availableSlug = `e2efree${RUN}`;
+      const availableResult = await http(jar!, `/api/shortlinks/check?slug=${availableSlug}`);
+      assertEqual(availableResult.status, 200, "GET /api/shortlinks/check (available slug)");
+      assertEqual(availableResult.body.valid, true, "a fresh valid slug should be valid:true");
+      assertEqual(availableResult.body.available, true, "a fresh slug nobody has used should be available:true");
+
+      const loggedOutResult = await http(null, `/api/shortlinks/check?slug=${availableSlug}`);
+      assertEqual(loggedOutResult.status, 401, "GET /api/shortlinks/check should require login");
+    } finally {
+      await prisma.shortLink.deleteMany({ where: { id: taken.id } });
+    }
+  });
+
+  // --- D. Salespeople (numbers-per-rotator) limit enforced on PATCH too, on a freshly-created (not legacy/grandfathered) rotator ---
+  await check("D", "growth: PATCH adding a salesperson past the plan's numbers-per-rotator limit is refused; same-count reorder is allowed", async () => {
+    const jar = planJars.get("pro");
+    assertTrue(!!jar, "need a logged-in pro user");
+    const numbers = Array.from({ length: 10 }, (_, i) => `9198017${String(i).padStart(4, "0")}`); // pro's limit is 10
+    const createResult = await http(jar!, "/api/rotator", {
+      method: "POST",
+      headers: await getOrigin(jar),
+      body: JSON.stringify({ name: "salespeople limit probe", numbers }),
+    });
+    assertEqual(createResult.status, 200, `create with exactly 10 numbers should succeed: ${JSON.stringify(createResult.body)}`);
+    const id = createResult.body.id as string;
+    try {
+      const reorderPatch = await http(jar!, "/api/rotator", {
+        method: "PATCH",
+        headers: await getOrigin(jar),
+        body: JSON.stringify({ id, numbers: numbers.slice().reverse() }),
+      });
+      assertEqual(reorderPatch.status, 200, "PATCH keeping the same count (reordered) should be allowed");
+
+      const overLimitPatch = await http(jar!, "/api/rotator", {
+        method: "PATCH",
+        headers: await getOrigin(jar),
+        body: JSON.stringify({ id, numbers: [...numbers, "919801799999"] }),
+      });
+      assertEqual(overLimitPatch.status, 403, "PATCH adding an 11th number past Growth's limit of 10 should be refused");
+    } finally {
+      await prisma.rotatorLink.deleteMany({ where: { id } });
+    }
+  });
+
+  // --- D. Phone validation (server-side, lib/phone.ts isPlausibleE164Digits): bad numbers -> 400 on all 3 create APIs ---
+  await check("D", "phone validation: implausible numbers are refused (400) on rotator, short link and ad link create", async () => {
+    const jar = planJars.get("pro");
+    assertTrue(!!jar, "need a logged-in pro user");
+    const rotatorResult = await http(jar!, "/api/rotator", {
+      method: "POST",
+      headers: await getOrigin(jar),
+      body: JSON.stringify({ name: "bad number rotator", numbers: ["12345"] }), // too short
+    });
+    assertEqual(rotatorResult.status, 400, `rotator with an implausible number should be 400: ${JSON.stringify(rotatorResult.body)}`);
+
+    const shortLinkResult = await http(jar!, "/api/shortlinks", {
+      method: "POST",
+      headers: await getOrigin(jar),
+      body: JSON.stringify({ name: "bad number short link", phone: "123" }), // far too short
+    });
+    assertEqual(shortLinkResult.status, 400, `short link with an implausible number should be 400: ${JSON.stringify(shortLinkResult.body)}`);
+
+    const adLinkResult = await http(jar!, "/api/adlinks", {
+      method: "POST",
+      headers: await getOrigin(jar),
+      body: JSON.stringify({ name: "bad number ad link", number: "0000000000000000" }), // 16 digits, over the 15-digit E.164 bound
+    });
+    assertEqual(adLinkResult.status, 400, `ad link with an implausible number should be 400: ${JSON.stringify(adLinkResult.body)}`);
+  });
+
+  // --- D. Manual pause (owner feature, UX-1): pause -> /r|/w|/a redirects to
+  // /link-paused?...reason=owner, click count unchanged; resume -> wa.me,
+  // click count increments again. Uses realistic UAE numbers per the task.
+  await check("D", "manual pause: pausing a rotator/short link/ad link stops routing (reason=owner, no click counted) and resuming restores it", async () => {
+    const jar = planJars.get("pro");
+    const user = planUsers.get("pro")!;
+    assertTrue(!!jar, "need a logged-in pro user");
+
+    const rotator = await prisma.rotatorLink.create({
+      data: { userId: user.id, code: `E2EPAUSER${RUN}`, name: "pause probe rotator", numbers: ["971501110001"], fallbackNumber: "971501110001" },
+    });
+    const shortLink = await prisma.shortLink.create({ data: { userId: user.id, code: `e2epausesl${RUN}`, name: "pause probe short link", phone: "971501110002" } });
+    const adLink = await prisma.adLink.create({ data: { userId: user.id, name: "pause probe ad link", number: "971501110003" } });
+    try {
+      // Pause all 3 via PATCH {paused:true}.
+      const pauseRotator = await http(jar!, "/api/rotator", { method: "PATCH", headers: await getOrigin(jar), body: JSON.stringify({ id: rotator.id, paused: true }) });
+      assertEqual(pauseRotator.status, 200, "PATCH pause rotator");
+      const pauseShortLink = await http(jar!, "/api/shortlinks", { method: "PATCH", headers: await getOrigin(jar), body: JSON.stringify({ id: shortLink.id, paused: true }) });
+      assertEqual(pauseShortLink.status, 200, "PATCH pause short link");
+      const pauseAdLink = await http(jar!, "/api/adlinks", { method: "PATCH", headers: await getOrigin(jar), body: JSON.stringify({ id: adLink.id, paused: true }) });
+      assertEqual(pauseAdLink.status, 200, "PATCH pause ad link");
+
+      const rotatorClicksBefore = (await prisma.rotatorLink.findUnique({ where: { id: rotator.id } }))!.totalClicks;
+      const shortLinkClicksBefore = (await prisma.shortLink.findUnique({ where: { id: shortLink.id } }))!.clicks;
+      const adLinkClicksBefore = (await prisma.adLink.findUnique({ where: { id: adLink.id } }))!.clicks;
+
+      const rRotator = await http(null, `/r/${rotator.code}`, { ip: "10.77.9.1" });
+      assertTrue(rRotator.status === 307 || rRotator.status === 308, `paused rotator should still redirect, got ${rRotator.status}`);
+      assertTrue((rRotator.location || "").includes("/link-paused") && (rRotator.location || "").includes("reason=owner"), `paused rotator should land on link-paused?reason=owner, got ${rRotator.location}`);
+
+      const rShortLink = await http(null, `/w/${shortLink.code}`, { ip: "10.77.9.2" });
+      assertTrue(rShortLink.status === 307 || rShortLink.status === 308, `paused short link should still redirect, got ${rShortLink.status}`);
+      assertTrue((rShortLink.location || "").includes("/link-paused") && (rShortLink.location || "").includes("reason=owner"), `paused short link should land on link-paused?reason=owner, got ${rShortLink.location}`);
+
+      const rAdLink = await http(null, `/a/${adLink.id}`, { ip: "10.77.9.3" });
+      assertTrue(rAdLink.status === 307 || rAdLink.status === 308, `paused ad link should still redirect, got ${rAdLink.status}`);
+      assertTrue((rAdLink.location || "").includes("/link-paused") && (rAdLink.location || "").includes("reason=owner"), `paused ad link should land on link-paused?reason=owner, got ${rAdLink.location}`);
+
+      const rotatorClicksAfterPause = (await prisma.rotatorLink.findUnique({ where: { id: rotator.id } }))!.totalClicks;
+      const shortLinkClicksAfterPause = (await prisma.shortLink.findUnique({ where: { id: shortLink.id } }))!.clicks;
+      const adLinkClicksAfterPause = (await prisma.adLink.findUnique({ where: { id: adLink.id } }))!.clicks;
+      assertEqual(rotatorClicksAfterPause, rotatorClicksBefore, "a paused rotator's click count must not change");
+      assertEqual(shortLinkClicksAfterPause, shortLinkClicksBefore, "a paused short link's click count must not change");
+      assertEqual(adLinkClicksAfterPause, adLinkClicksBefore, "a paused ad link's click count must not change");
+
+      // Resume all 3 and confirm they route to wa.me again.
+      const resumeRotator = await http(jar!, "/api/rotator", { method: "PATCH", headers: await getOrigin(jar), body: JSON.stringify({ id: rotator.id, paused: false }) });
+      assertEqual(resumeRotator.status, 200, "PATCH resume rotator");
+      const resumeShortLink = await http(jar!, "/api/shortlinks", { method: "PATCH", headers: await getOrigin(jar), body: JSON.stringify({ id: shortLink.id, paused: false }) });
+      assertEqual(resumeShortLink.status, 200, "PATCH resume short link");
+      const resumeAdLink = await http(jar!, "/api/adlinks", { method: "PATCH", headers: await getOrigin(jar), body: JSON.stringify({ id: adLink.id, paused: false }) });
+      assertEqual(resumeAdLink.status, 200, "PATCH resume ad link");
+
+      const rRotator2 = await http(null, `/r/${rotator.code}`, { ip: "10.77.9.4" });
+      assertTrue((rRotator2.location || "").includes("wa.me"), `resumed rotator should route to wa.me, got ${rRotator2.location}`);
+      const rShortLink2 = await http(null, `/w/${shortLink.code}`, { ip: "10.77.9.5" });
+      assertTrue((rShortLink2.location || "").includes("wa.me"), `resumed short link should route to wa.me, got ${rShortLink2.location}`);
+      const rAdLink2 = await http(null, `/a/${adLink.id}`, { ip: "10.77.9.6" });
+      assertTrue((rAdLink2.location || "").includes("wa.me"), `resumed ad link should route to wa.me, got ${rAdLink2.location}`);
+    } finally {
+      await prisma.rotatorLink.deleteMany({ where: { id: rotator.id } });
+      await prisma.shortLink.deleteMany({ where: { id: shortLink.id } });
+      await prisma.adLink.deleteMany({ where: { id: adLink.id } });
+    }
+  });
 
   // --- D. Grandfathering: over-limit existing item still works; PATCH that doesn't increase numbers is allowed ---
   await check("D", "grandfathering: over-limit rotator still routes, non-increasing PATCH allowed, increasing PATCH blocked", async () => {
@@ -655,32 +954,56 @@ async function main() {
   });
 
   // -------------------------------------------------------------------------
-  // G. Reports
+  // G. Results (UX-1 step 5: Reports + Performance merged into /results)
   // -------------------------------------------------------------------------
-  await check("G", "free: reports page shows the locked/upgrade state", async () => {
+  await check("G", "free: /results shows the locked/choose-a-plan state (tier 'none')", async () => {
     const freeJar = planJars.get("free");
-    const r = await http(freeJar!, "/reports");
-    assertEqual(r.status, 200, "GET /reports as free");
-    assertTrue(r.text.includes("Your free trial has ended"), "free/no-trial user should see the locked reports teaser");
+    const r = await http(freeJar!, "/results");
+    assertEqual(r.status, 200, "GET /results as free");
+    assertTrue(cleanHtml(r.text).includes("Choose a plan to see your results"), "free/no-trial user should see the locked results teaser");
   });
 
-  await check("G", "solo: 'Basic reports' badge, no date picker", async () => {
+  await check("G", "solo: 'Basic · Solo' badge, no date picker, period chips present", async () => {
     const basicJar = planJars.get("basic");
-    const r = await http(basicJar!, "/reports");
-    assertEqual(r.status, 200, "GET /reports as basic");
-    assertTrue(cleanHtml(r.text).includes("Basic reports"), "basic user should see the 'Basic reports' badge");
+    const r = await http(basicJar!, "/results");
+    assertEqual(r.status, 200, "GET /results as basic");
+    assertTrue(cleanHtml(r.text).includes("Basic · Solo"), "basic user should see the 'Basic · Solo' tier badge");
     assertTrue(!r.text.includes('type="date"'), "basic user should not see a custom date picker");
+    assertTrue(r.text.includes("Today") && r.text.includes("7 days") && r.text.includes("30 days"), "basic user should still see the period chips");
   });
 
-  await check("G", "growth: 'Full reports', custom from/to works", async () => {
+  await check("G", "growth: 'Full · Growth' badge, custom from/to works, tabs render", async () => {
     const proJar = planJars.get("pro");
-    const r = await http(proJar!, "/reports");
-    assertEqual(r.status, 200, "GET /reports as pro");
-    assertTrue(cleanHtml(r.text).includes("Full reports"), "pro user should see the 'Full reports' badge");
+    const r = await http(proJar!, "/results");
+    assertEqual(r.status, 200, "GET /results as pro");
+    assertTrue(cleanHtml(r.text).includes("Full · Growth"), "pro user should see the 'Full · Growth' tier badge");
     assertTrue(r.text.includes('type="date"'), "pro user should see a custom date picker");
-    const customResult = await http(proJar!, "/reports?from=2026-10-01&to=2026-10-16");
+    const fromDate = dateDaysAgo(16);
+    const toDate = dateDaysAgo(1);
+    const customResult = await http(proJar!, `/results?from=${fromDate}&to=${toDate}`);
     assertEqual(customResult.status, 200, "custom from/to range should load for a Growth user");
-    assertTrue(customResult.text.includes("2026-10-01"), "custom range should echo the chosen from date");
+    assertTrue(customResult.text.includes(fromDate), "custom range should echo the chosen from date");
+
+    for (const tab of ["overview", "salesperson", "source", "link"]) {
+      const tabResult = await http(proJar!, `/results?tab=${tab}`);
+      assertEqual(tabResult.status, 200, `GET /results?tab=${tab} as pro`);
+    }
+  });
+
+  await check("G", "agency: /results?link= filter narrows to one link", async () => {
+    const ultimateJar = planJars.get("ultimate");
+    const ultimateUser = planUsers.get("ultimate")!;
+    assertTrue(!!ultimateJar, "need a logged-in ultimate user");
+    const filterRotator = await prisma.rotatorLink.create({
+      data: { userId: ultimateUser.id, code: `E2EFILTER${RUN}`, name: "link filter probe", numbers: ["919800169999"], fallbackNumber: "919800169999" },
+    });
+    try {
+      const r = await http(ultimateJar!, `/results?tab=link&link=rotator:${filterRotator.id}`);
+      assertEqual(r.status, 200, "GET /results?tab=link&link=rotator:<id> as ultimate");
+      assertTrue(r.text.includes("link filter probe"), "the filtered link's name should still appear on the By-link tab");
+    } finally {
+      await prisma.rotatorLink.deleteMany({ where: { id: filterRotator.id } });
+    }
   });
 
   await check("G", "CSV export: free 403, solo works, growth with from/to works and includes the salesperson column", async () => {
@@ -707,26 +1030,28 @@ async function main() {
     await prisma.conversationStart.create({
       data: { userId: proUser.id, workspaceId: proWorkspace.workspaceId, assetType: "rotator", assetId: named.id, assetName: named.name, destination: "919866600001" },
     });
-    const proResult = await http(planJars.get("pro")!, "/api/reports/export?from=2026-10-01&to=2026-10-17");
+    const proResult = await http(planJars.get("pro")!, `/api/reports/export?from=${dateDaysAgo(16)}&to=${dateDaysAgo(0)}`);
     assertEqual(proResult.status, 200, "CSV export should work for growth with from/to");
     assertTrue(proResult.text.toLowerCase().includes("salesperson"), "CSV header should include the salesperson column");
     assertTrue(proResult.text.includes("Priya"), "CSV should include the salesperson's name for the routed chat");
   });
 
   // -------------------------------------------------------------------------
-  // H. Performance
+  // H. Performance -> merged into /results (Overview tab); the free-trial-
+  // ended paused state itself now shows on /dashboard, not on /results
+  // (which just shows the generic "choose a plan" lock, covered in G above).
   // -------------------------------------------------------------------------
-  await check("H", "free (no-trial) user: performance page shows the paused/choose-a-plan banner", async () => {
-    const r = await http(planJars.get("free")!, "/performance");
-    assertEqual(r.status, 200, "GET /performance as free");
-    assertTrue(/free trial has ended/i.test(cleanHtml(r.text)), "free/no-trial user should see the trial-ended paused banner");
+  await check("H", "free (no-trial) user: /dashboard shows 'your free trial has ended — your links are paused'", async () => {
+    const r = await http(planJars.get("free")!, "/dashboard");
+    assertEqual(r.status, 200, "GET /dashboard as free");
+    assertTrue(/free trial has ended/i.test(cleanHtml(r.text)), "free/no-trial user should see the trial-ended paused banner on /dashboard");
   });
 
-  await check("H", "trial user: performance page shows 'Free trial · N days left · X of 100 trial leads used'", async () => {
+  await check("H", "trial user: /results (Overview tab) shows 'X of 100 trial leads used · N day(s) left'", async () => {
     const trialJar = await loggedInJar(emailFor("trial-cap"));
-    const r = await http(trialJar, "/performance");
-    assertEqual(r.status, 200, "GET /performance as trial user");
-    assertTrue(/free trial.*\d+ of 100 trial leads used/i.test(cleanHtml(r.text)), "trial user should see the trial leads-used meter");
+    const r = await http(trialJar, "/results");
+    assertEqual(r.status, 200, "GET /results as trial user");
+    assertTrue(/\d+ of 100 trial leads used\s*·\s*\d+ days? left/i.test(cleanHtml(r.text)), "trial user should see the trial leads-used meter on the Overview tab");
   });
 
   // -------------------------------------------------------------------------
@@ -814,7 +1139,7 @@ async function main() {
       // an un-paused link, however long ago their trial ended.
       const trialEndedUser = await createDbUser("trial-ended-pause", {
         plan: "free",
-        trialPlan: "basic", // Solo-level link limits (rotatorLimit 3) while the trial ran
+        trialPlan: "basic", // Solo-level link pool (5) while the trial ran
         trialStartedAt: new Date(Date.now() - 4 * 86_400_000),
         trialEndsAt: new Date(Date.now() - 1 * 86_400_000),
       });
@@ -887,8 +1212,10 @@ async function main() {
     await sleep(500);
     const billingPage = await http(freeJar, "/billing");
     assertEqual(billingPage.status, 200, "GET /billing");
+    // UX-1 step 5: /plans is now a redirect to /billing#plans, not a page of its own.
     const plansPage = await http(freeJar, "/plans");
-    assertEqual(plansPage.status, 200, "GET /plans");
+    assertTrue(plansPage.status === 307 || plansPage.status === 308, `GET /plans should redirect, got ${plansPage.status}`);
+    assertTrue((plansPage.location || "").includes("/billing"), `GET /plans -> Location "${plansPage.location}" should include "/billing"`);
     const dodoResult = await http(freeJar, "/api/payment/dodo/create", {
       method: "POST",
       headers: await getOrigin(freeJar),

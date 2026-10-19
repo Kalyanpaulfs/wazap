@@ -40,32 +40,30 @@ describe("admin-customer helpers", () => {
     });
   });
 
-  describe("computeUsageVsLimits", () => {
-    it("compares usage against Solo limits", () => {
+  describe("computeUsageVsLimits (UX-1 step 1: shared link pool)", () => {
+    it("compares pool usage against Solo limits; ad links not available", () => {
       const res = computeUsageVsLimits("basic", {
         rotators: 2,
         maxSalespeople: 3,
         shortLinks: 1,
         adLinks: 0,
       });
-      expect(res.rotators).toEqual({ current: 2, limit: 3, label: "2 of 3" });
+      expect(res.links).toEqual({ current: 3, limit: 5, label: "3 of 5" });
       expect(res.maxSalespeoplePerRotator).toEqual({ current: 3, limit: 3, label: "3 of 3" });
-      expect(res.shortLinks).toEqual({ current: 1, limit: 2, label: "1 of 2" });
-      expect(res.adLinks).toEqual({ current: 0, limit: 0, label: "0 of 0" });
+      expect(res.adLinksAvailable).toEqual({ available: false, label: "Not available on this plan" });
       expect(res.widget.available).toBe(true);
     });
 
-    it("compares usage against Agency limits", () => {
+    it("compares pool usage against Agency limits; ad links available", () => {
       const res = computeUsageVsLimits("ultimate", {
         rotators: 5,
         maxSalespeople: 12,
         shortLinks: 8,
         adLinks: 3,
       });
-      expect(res.rotators).toEqual({ current: 5, limit: 25, label: "5 of 25" });
+      expect(res.links).toEqual({ current: 16, limit: 55, label: "16 of 55" });
       expect(res.maxSalespeoplePerRotator).toEqual({ current: 12, limit: 20, label: "12 of 20" });
-      expect(res.shortLinks).toEqual({ current: 8, limit: 15, label: "8 of 15" });
-      expect(res.adLinks).toEqual({ current: 3, limit: 15, label: "3 of 15" });
+      expect(res.adLinksAvailable).toEqual({ available: true, label: "Available" });
       expect(res.widget.available).toBe(true);
     });
 
@@ -76,7 +74,8 @@ describe("admin-customer helpers", () => {
         shortLinks: 1,
         adLinks: 0,
       });
-      expect(res.rotators.limit).toBe(0);
+      expect(res.links.limit).toBe(0);
+      expect(res.adLinksAvailable.available).toBe(false);
       expect(res.widget.available).toBe(false);
     });
   });

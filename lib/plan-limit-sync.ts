@@ -8,16 +8,17 @@
 // is not exactly "true" this is a no-op that returns all-zero counts, so it
 // is safe to deploy ahead of turning the flag on (see scripts/plan-limit-dry-run.ts).
 //
-// Pausing rotators/short links/ad links additionally requires proof of a
-// real downgrade: callers pass `previousPlan` (the plan read BEFORE the
-// change being reported), and pausing those three is skipped whenever the
-// new plan's rank isn't strictly lower (renewal of the same plan, an
-// upgrade, a same-plan admin re-activation, or an unresolvable previous
-// plan all skip it) - see isLinkDowngrade. The one exception (Free-trial
-// restructure, FEAT-FREE-TRIAL): whenever the user now resolves to "free"
-// (no paid plan, no active Free trial), pausing is ALWAYS allowed, because
-// every free limit is 0 and nothing is grandfathered there, no matter how
-// the user arrived (trial lapse, an old trial, never trialled, or an
+// Pausing the shared link pool (rotators + short links + ad links,
+// UX-1 step 1) additionally requires proof of a real downgrade: callers
+// pass `previousPlan` (the plan read BEFORE the change being reported), and
+// pausing the pool is skipped whenever the new plan's rank isn't strictly
+// lower (renewal of the same plan, an upgrade, a same-plan admin
+// re-activation, or an unresolvable previous plan all skip it) - see
+// isLinkDowngrade. The one exception (Free-trial restructure,
+// FEAT-FREE-TRIAL): whenever the user now resolves to "free" (no paid
+// plan, no active Free trial), pausing is ALWAYS allowed, because every
+// free limit is 0 and nothing is grandfathered there, no matter how the
+// user arrived (trial lapse, an old trial, never trialled, or an
 // unresolvable previous plan). Resuming is never gated by this: it always
 // runs. Automations/AI/channels/API keys/webhooks/marketplace installs are
 // unaffected by this gate and keep their existing behaviour.
@@ -25,7 +26,7 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "./prisma";
 import { effectivePlan, PRODUCT_TRIAL_PLAN } from "./entitlements";
 import { linkPlan } from "./router-entitlements";
-import { normalizePlanKey, ROTATOR_LIMITS, SHORT_LINK_LIMITS, AD_LINK_LIMITS, type PlanKey } from "./plan-limits";
+import { normalizePlanKey, LINK_LIMITS, AD_LINKS_AVAILABLE, type PlanKey } from "./plan-limits";
 import { CHANNEL_LIMITS } from "./channels";
 import { AUTOMATION_LIMITS } from "./automations";
 import { AI_AGENT_LIMITS, AI_KNOWLEDGE_LIMITS } from "./ai-agents";
@@ -202,22 +203,6 @@ type UpdateMany = (where: Record<string, unknown>, data: Record<string, unknown>
 // never drift from what a real sync would actually do.
 export type SyncOutcome = SyncCounts & { pauseIds: string[]; resumeIds: string[] };
 
-// Models with no `status` field at all (the 5 link/page tools + members):
-// planPausedAt is the only on/off switch, so pause/resume is a plain write.
-async function syncNoStatusModel(updateMany: UpdateMany, rows: RankCandidate[], limit: number, apply: boolean, allowPause = true): Promise<SyncOutcome> {
-  const selected = selectPauseResume(rows, limit);
-  // Resume always runs; pausing is skipped entirely when the caller has
-  // determined this isn't a real downgrade (see isLinkDowngrade above).
-  const pauseIds = allowPause ? selected.pauseIds : [];
-  const { resumeIds } = selected;
-  let paused = pauseIds.length, resumed = resumeIds.length;
-  if (apply) {
-    paused = pauseIds.length ? (await updateMany({ id: { in: pauseIds } }, { planPausedAt: new Date() })).count : 0;
-    resumed = resumeIds.length ? (await updateMany({ id: { in: resumeIds } }, { planPausedAt: null })).count : 0;
-  }
-  return { paused, resumed, pauseIds, resumeIds };
-}
-
 function groupByFromStatus(rows: Array<{ id: string; planPausedFromStatus?: string | null }>, ids: string[]): Map<string, string[]> {
   const idSet = new Set(ids);
   const map = new Map<string, string[]>();
@@ -278,12 +263,91 @@ type LinkToolDelegate = {
   updateMany: (args: { where: Record<string, unknown>; data: Record<string, unknown> }) => Promise<{ count: number }>;
 };
 
-async function syncLinkTool(tx: Tx, model: "rotatorLink" | "shortLink" | "adLink", userId: string, limit: number, scoreField: "totalClicks" | "clicks" | null, apply: boolean, allowPause = true): Promise<SyncOutcome> {
+// --- UX-1 step 1: shared link pool (rotator + short link + ad link) ---
+// Rotators, short links and ad links used to each have their own
+// per-type limit (ROTATOR_LIMITS/SHORT_LINK_LIMITS/AD_LINK_LIMITS). They now
+// share ONE pool - LINK_LIMITS - and selectPauseResume has to rank
+// candidates from all three tables TOGETHER. Ids from different tables are
+// never guaranteed distinct from each other, so every candidate is tagged
+// "<model>:<id>" before ranking and untagged again after - this is the only
+// thing selectLinkPoolPauseResume does beyond selectPauseResume itself, and
+// is covered directly by the id-collision test in
+// lib/__tests__/plan-limit-sync.test.ts.
+export type LinkPoolModel = "rotatorLink" | "shortLink" | "adLink";
+export type LinkPoolCandidate = RankCandidate & { model: LinkPoolModel };
+export type LinkPoolSelection = Record<LinkPoolModel, { pauseIds: string[]; resumeIds: string[] }>;
+
+function emptyPoolSelection(): LinkPoolSelection {
+  return { rotatorLink: { pauseIds: [], resumeIds: [] }, shortLink: { pauseIds: [], resumeIds: [] }, adLink: { pauseIds: [], resumeIds: [] } };
+}
+
+export function selectLinkPoolPauseResume(candidates: LinkPoolCandidate[], limit: number): LinkPoolSelection {
+  const tagged: RankCandidate[] = candidates.map((c) => ({ ...c, id: `${c.model}:${c.id}` }));
+  const { pauseIds, resumeIds } = selectPauseResume(tagged, limit);
+  const result = emptyPoolSelection();
+  for (const id of pauseIds) {
+    const sep = id.indexOf(":");
+    result[id.slice(0, sep) as LinkPoolModel].pauseIds.push(id.slice(sep + 1));
+  }
+  for (const id of resumeIds) {
+    const sep = id.indexOf(":");
+    result[id.slice(0, sep) as LinkPoolModel].resumeIds.push(id.slice(sep + 1));
+  }
+  return result;
+}
+
+const LINK_POOL_SCORE_FIELD: Record<LinkPoolModel, "totalClicks" | "clicks"> = { rotatorLink: "totalClicks", shortLink: "clicks", adLink: "clicks" };
+
+async function fetchLinkPoolRows(tx: Tx, model: LinkPoolModel, userId: string): Promise<RankCandidate[]> {
   const delegate = tx[model] as unknown as LinkToolDelegate;
-  const rows = await delegate.findMany({ where: { userId }, select: { id: true, createdAt: true, planPausedAt: true, ...(scoreField ? { [scoreField]: true } : {}) } });
-  const candidates: RankCandidate[] = rows.map((r) => ({ id: r.id, score: scoreField ? Number(r[scoreField] ?? 0) : 0, createdAt: r.createdAt, planPausedAt: r.planPausedAt }));
-  const updateMany: UpdateMany = (where, data) => delegate.updateMany({ where: { ...where, userId }, data });
-  return syncNoStatusModel(updateMany, candidates, limit, apply, allowPause);
+  const scoreField = LINK_POOL_SCORE_FIELD[model];
+  const rows = await delegate.findMany({ where: { userId }, select: { id: true, createdAt: true, planPausedAt: true, [scoreField]: true } });
+  return rows.map((r) => ({ id: r.id, score: Number(r[scoreField] ?? 0), createdAt: r.createdAt, planPausedAt: r.planPausedAt }));
+}
+
+async function applyLinkPoolSelection(tx: Tx, model: LinkPoolModel, userId: string, selection: { pauseIds: string[]; resumeIds: string[] }, allowPause: boolean, apply: boolean): Promise<SyncOutcome> {
+  const delegate = tx[model] as unknown as LinkToolDelegate;
+  const pauseIds = allowPause ? selection.pauseIds : [];
+  const { resumeIds } = selection;
+  let paused = pauseIds.length, resumed = resumeIds.length;
+  if (apply) {
+    paused = pauseIds.length ? (await delegate.updateMany({ where: { id: { in: pauseIds }, userId }, data: { planPausedAt: new Date() } })).count : 0;
+    resumed = resumeIds.length ? (await delegate.updateMany({ where: { id: { in: resumeIds }, userId }, data: { planPausedAt: null } })).count : 0;
+  }
+  return { paused, resumed, pauseIds, resumeIds };
+}
+
+// Resolves the pool for one user: fetches all three tables, ranks rotators +
+// short links + (ad links only where AD_LINKS_AVAILABLE for the plan) as ONE
+// pool against LINK_LIMITS, and - when ad links aren't offered on the plan
+// at all - syncs them separately with a flat 0 limit (same allowPause gate)
+// so they're paused too, but never occupy pool room they can't use anyway.
+async function syncLinkPool(tx: Tx, userId: string, currentLinkPlan: string, allowPause: boolean, apply: boolean): Promise<{ rotators: SyncOutcome; shortLinks: SyncOutcome; adLinks: SyncOutcome; limit: number }> {
+  const [rotatorRows, shortLinkRows, adLinkRows] = await Promise.all([
+    fetchLinkPoolRows(tx, "rotatorLink", userId),
+    fetchLinkPoolRows(tx, "shortLink", userId),
+    fetchLinkPoolRows(tx, "adLink", userId),
+  ]);
+  const limit = linkLimitValue(LINK_LIMITS, currentLinkPlan);
+  const adAvailable = AD_LINKS_AVAILABLE[normalizePlanKey(currentLinkPlan)];
+
+  const poolCandidates: LinkPoolCandidate[] = [
+    ...rotatorRows.map((r) => ({ ...r, model: "rotatorLink" as const })),
+    ...shortLinkRows.map((r) => ({ ...r, model: "shortLink" as const })),
+    ...(adAvailable ? adLinkRows.map((r) => ({ ...r, model: "adLink" as const })) : []),
+  ];
+  const selection = selectLinkPoolPauseResume(poolCandidates, limit);
+  if (!adAvailable) {
+    // Not part of the pool on this plan - pause/resume on their own, limit 0.
+    selection.adLink = selectPauseResume(adLinkRows, 0);
+  }
+
+  const [rotators, shortLinks, adLinks] = await Promise.all([
+    applyLinkPoolSelection(tx, "rotatorLink", userId, selection.rotatorLink, allowPause, apply),
+    applyLinkPoolSelection(tx, "shortLink", userId, selection.shortLink, allowPause, apply),
+    applyLinkPoolSelection(tx, "adLink", userId, selection.adLink, allowPause, apply),
+  ]);
+  return { rotators, shortLinks, adLinks, limit };
 }
 
 async function syncAutomations(tx: Tx, workspaceId: string, plan: string, apply: boolean): Promise<SyncOutcome> {
@@ -396,25 +460,27 @@ export async function syncPlanLimits(userId: string, previousPlan?: string | nul
       if (!user) return emptyResult();
       const result = emptyResult();
 
-      // Per-user link tools: all three now use the SAME plan resolution -
-      // lib/router-entitlements.ts linkPlan (expiry-aware paid plan, else the
-      // trial plan during an active product trial, else free). Limits
-      // themselves come from lib/plan-limits.ts (the 2026 numbers); whether
-      // pausing is even allowed is gated separately below, with the previous
-      // plan boosted for an active/just-ended new-style trial (previousLinkPlanFor)
-      // so a trial ending, or a purchase made during one, is recognised as the
-      // real downgrade it is - see previousLinkPlanFor's own comment.
+      // Per-user link pool (rotator + short link + ad link): all three use
+      // the SAME plan resolution - lib/router-entitlements.ts linkPlan
+      // (expiry-aware paid plan, else the trial plan during an active
+      // product trial, else free). The pool limit comes from
+      // lib/plan-limits.ts LINK_LIMITS; whether pausing is even allowed is
+      // gated separately below, with the previous plan boosted for an
+      // active/just-ended new-style trial (previousLinkPlanFor) so a trial
+      // ending, or a purchase made during one, is recognised as the real
+      // downgrade it is - see previousLinkPlanFor's own comment.
       const currentLinkPlan = linkPlan(user);
       // Owner rule (Free-trial restructure): "free" (no paid plan, no active
-      // Free trial) has a 0 limit for every link type and nothing is
-      // grandfathered, so pausing is always allowed there regardless of how
-      // the user arrived (trial lapse, old trial, never trialled, unknown
-      // previous plan). For any paid/trial plan the verified-downgrade gate
-      // still applies as before.
+      // Free trial) has a 0 limit for the pool and nothing is grandfathered,
+      // so pausing is always allowed there regardless of how the user
+      // arrived (trial lapse, old trial, never trialled, unknown previous
+      // plan). For any paid/trial plan the verified-downgrade gate still
+      // applies as before.
       const allowLinkPause = currentLinkPlan === "free" || isLinkDowngrade(previousLinkPlanFor(previousPlan, user), currentLinkPlan, userId);
-      result.rotators = await syncLinkTool(tx, "rotatorLink", userId, linkLimitValue(ROTATOR_LIMITS, currentLinkPlan), "totalClicks", true, allowLinkPause);
-      result.shortLinks = await syncLinkTool(tx, "shortLink", userId, linkLimitValue(SHORT_LINK_LIMITS, currentLinkPlan), "clicks", true, allowLinkPause);
-      result.adLinks = await syncLinkTool(tx, "adLink", userId, linkLimitValue(AD_LINK_LIMITS, currentLinkPlan), "clicks", true, allowLinkPause);
+      const linkPool = await syncLinkPool(tx, userId, currentLinkPlan, allowLinkPause, true);
+      result.rotators = { paused: linkPool.rotators.paused, resumed: linkPool.rotators.resumed };
+      result.shortLinks = { paused: linkPool.shortLinks.paused, resumed: linkPool.shortLinks.resumed };
+      result.adLinks = { paused: linkPool.adLinks.paused, resumed: linkPool.adLinks.resumed };
 
       // Workspace-scoped types: limit is the OWNER's effectivePlan (trial-aware),
       // matching currentAiContext/marketplaceContext/workspaceOwnerPlan. A user
@@ -443,18 +509,19 @@ export async function syncPlanLimits(userId: string, previousPlan?: string | nul
 // NOT check PLAN_LIMIT_PAUSING_ENABLED (the whole point is to see what WOULD
 // happen before that flag is turned on), does not open a transaction or take
 // the advisory lock (no write ever happens), and reuses the exact same
-// per-type query + selectPauseResume logic as the real sync via apply=false,
-// so the report can never drift from what syncPlanLimits would actually do -
-// with one deliberate exception: there is no "previous plan" at rest to
-// inspect, so this always previews rotators/short links/ad links as if the
-// current plan were reached by a downgrade (allowPause defaults to true).
-// syncPlanLimits itself only actually pauses those three when the caller can
-// show the user's plan rank really did go down - see isLinkDowngrade.
+// shared-pool selection logic as the real sync via apply=false, so the
+// report can never drift from what syncPlanLimits would actually do - with
+// one deliberate exception: there is no "previous plan" at rest to inspect,
+// so this always previews the pool as if the current plan were reached by a
+// downgrade (allowPause defaults to true). syncPlanLimits itself only
+// actually pauses the pool when the caller can show the user's plan rank
+// really did go down - see isLinkDowngrade.
 // ---------------------------------------------------------------------------
 export type InspectTypeResult = SyncOutcome & { limit: number };
 export type InspectResult = {
   userId: string;
   plan: string;
+  linkPoolLimit: number;
   rotators: InspectTypeResult;
   shortLinks: InspectTypeResult;
   adLinks: InspectTypeResult;
@@ -472,19 +539,15 @@ export async function inspectPlanLimitsForUser(userId: string): Promise<InspectR
   const user = await tx.user.findUnique({ where: { id: userId }, select: { id: true, plan: true, planExpiresAt: true, trialPlan: true, trialStartedAt: true, trialEndsAt: true, createdAt: true } });
   if (!user) return null;
   const currentLinkPlan = linkPlan(user);
-  const rotatorLimit = linkLimitValue(ROTATOR_LIMITS, currentLinkPlan);
-  const shortLinkLimit = linkLimitValue(SHORT_LINK_LIMITS, currentLinkPlan);
-  const adLinkLimit = linkLimitValue(AD_LINK_LIMITS, currentLinkPlan);
   const ownerPlan = effectivePlan(user);
 
   const ownedWorkspaces = await tx.workspace.findMany({ where: { ownerId: userId }, select: { id: true } });
-  const withLimit = (limit: number) => async (outcome: SyncOutcome): Promise<InspectTypeResult> => ({ ...outcome, limit });
 
-  const [rotators, shortLinks, adLinks] = await Promise.all([
-    syncLinkTool(tx, "rotatorLink", userId, rotatorLimit, "totalClicks", false).then(withLimit(rotatorLimit)),
-    syncLinkTool(tx, "shortLink", userId, shortLinkLimit, "clicks", false).then(withLimit(shortLinkLimit)),
-    syncLinkTool(tx, "adLink", userId, adLinkLimit, "clicks", false).then(withLimit(adLinkLimit)),
-  ]);
+  const linkPool = await syncLinkPool(tx, userId, currentLinkPlan, true, false);
+  const adAvailable = AD_LINKS_AVAILABLE[normalizePlanKey(currentLinkPlan)];
+  const rotators: InspectTypeResult = { ...linkPool.rotators, limit: linkPool.limit };
+  const shortLinks: InspectTypeResult = { ...linkPool.shortLinks, limit: linkPool.limit };
+  const adLinks: InspectTypeResult = { ...linkPool.adLinks, limit: adAvailable ? linkPool.limit : 0 };
 
   const automations: InspectTypeResult[] = [];
   const aiAgents: InspectTypeResult[] = [];
@@ -504,5 +567,5 @@ export async function inspectPlanLimitsForUser(userId: string): Promise<InspectR
     marketplaceInstalls.push({ ...(await syncMarketplaceInstalls(tx, workspace.id, ownerPlan, false)), limit: MARKETPLACE_INSTALL_LIMITS[ownerPlan] ?? MARKETPLACE_INSTALL_LIMITS.free });
   }
 
-  return { userId, plan: ownerPlan, rotators, shortLinks, adLinks, automations, aiAgents, aiKnowledge, channels, apiKeys, webhooks, marketplaceInstalls };
+  return { userId, plan: ownerPlan, linkPoolLimit: linkPool.limit, rotators, shortLinks, adLinks, automations, aiAgents, aiKnowledge, channels, apiKeys, webhooks, marketplaceInstalls };
 }

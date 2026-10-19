@@ -16,7 +16,7 @@ const FIELD_MAP: Record<MeterableTool, "widgetCopies"> = {
   widget: "widgetCopies",
 };
 
-const UPGRADE_MESSAGE = "The website widget is included in your free trial and in Solo, Growth and Agency. Choose a plan to use it.";
+const UPGRADE_MESSAGE = "The website button is included in your free trial and in Solo, Growth and Agency. Choose a plan to use it.";
 
 function today() { return new Date().toISOString().slice(0, 10); }
 

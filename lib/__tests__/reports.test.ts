@@ -17,6 +17,22 @@ import {
   toDateInputValue,
   buildChatSeries,
   CHAT_SERIES_WEEKLY_THRESHOLD_DAYS,
+  startOfDayInTz,
+  addDaysInTz,
+  dayKeyInTz,
+  sanitizeTimeZone,
+  legacyPeriodToResultsPeriod,
+  resultsPeriodRange,
+  resolveResultsSelection,
+  describePeriodText,
+  describeCompareText,
+  computeShare,
+  pickTop,
+  parseLinkFilter,
+  formatLinkFilterValue,
+  linkFilterTypeFromAssetType,
+  buildResultsExportQuery,
+  buildSummarySentence,
 } from "@/lib/reports";
 
 // Wednesday 2026-10-14T12:00:00Z.
@@ -365,5 +381,304 @@ describe("buildChatSeries", () => {
   it("returns an empty series for a zero-length range", () => {
     const point = new Date("2026-10-14T00:00:00.000Z");
     expect(buildChatSeries(new Map(), { start: point, end: point })).toEqual([]);
+  });
+
+  it("buckets days in the given timezone instead of UTC", () => {
+    // Range is local midnight-to-midnight in Kolkata (UTC+5:30) for Oct 1-3.
+    const start = startOfDayInTz(new Date("2026-10-01T12:00:00.000Z"), "Asia/Kolkata");
+    const range = { start, end: addDaysInTz(start, 3, "Asia/Kolkata") };
+    const counts = new Map([["2026-10-02", 5]]);
+    const series = buildChatSeries(counts, range, "Asia/Kolkata");
+    expect(series.map((p) => p.key)).toEqual(["2026-10-01", "2026-10-02", "2026-10-03"]);
+    expect(series.map((p) => p.count)).toEqual([0, 5, 0]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// /results redesign helpers
+// ---------------------------------------------------------------------------
+
+describe("startOfDayInTz", () => {
+  it("returns UTC midnight for tz=UTC", () => {
+    expect(startOfDayInTz(new Date("2026-10-14T23:59:00.000Z"), "UTC").toISOString()).toBe("2026-10-14T00:00:00.000Z");
+  });
+
+  it("returns local midnight for a fixed-offset zone (Asia/Kolkata, UTC+5:30)", () => {
+    // 2026-10-14T20:00:00Z is 2026-10-15T01:30 in Kolkata -> local midnight is 2026-10-14T18:30:00Z.
+    const result = startOfDayInTz(new Date("2026-10-14T20:00:00.000Z"), "Asia/Kolkata");
+    expect(result.toISOString()).toBe("2026-10-14T18:30:00.000Z");
+  });
+
+  it("rolls back to the previous UTC day's local midnight when local time is still yesterday", () => {
+    // 2026-10-14T03:00:00Z is 2026-10-13T23:00 in America/New_York (UTC-4 in October, DST) -> midnight is 2026-10-13T04:00:00Z.
+    const result = startOfDayInTz(new Date("2026-10-14T03:00:00.000Z"), "America/New_York");
+    expect(result.toISOString()).toBe("2026-10-13T04:00:00.000Z");
+  });
+});
+
+describe("addDaysInTz", () => {
+  it("steps forward by whole calendar days in UTC", () => {
+    const start = startOfDayInTz(new Date("2026-10-14T00:00:00.000Z"), "UTC");
+    expect(addDaysInTz(start, 1, "UTC").toISOString()).toBe("2026-10-15T00:00:00.000Z");
+    expect(addDaysInTz(start, -7, "UTC").toISOString()).toBe("2026-10-07T00:00:00.000Z");
+  });
+
+  it("steps forward by whole local calendar days for a fixed-offset zone", () => {
+    const start = startOfDayInTz(new Date("2026-10-14T20:00:00.000Z"), "Asia/Kolkata"); // 2026-10-14T18:30:00Z
+    const next = addDaysInTz(start, 1, "Asia/Kolkata");
+    expect(next.toISOString()).toBe("2026-10-15T18:30:00.000Z");
+  });
+});
+
+describe("dayKeyInTz", () => {
+  it("matches the UTC calendar date for tz=UTC", () => {
+    expect(dayKeyInTz(new Date("2026-10-14T23:30:00.000Z"), "UTC")).toBe("2026-10-14");
+  });
+
+  it("uses the local calendar date for a zone ahead of UTC", () => {
+    // 23:30 UTC is already 2026-10-15 05:00 in Asia/Kolkata.
+    expect(dayKeyInTz(new Date("2026-10-14T23:30:00.000Z"), "Asia/Kolkata")).toBe("2026-10-15");
+  });
+});
+
+describe("sanitizeTimeZone", () => {
+  it("accepts a valid IANA zone name", () => {
+    expect(sanitizeTimeZone("Asia/Kolkata")).toBe("Asia/Kolkata");
+  });
+
+  it("falls back to UTC for missing or invalid input", () => {
+    expect(sanitizeTimeZone(null)).toBe("UTC");
+    expect(sanitizeTimeZone(undefined)).toBe("UTC");
+    expect(sanitizeTimeZone("")).toBe("UTC");
+    expect(sanitizeTimeZone("Not/AZone")).toBe("UTC");
+    expect(sanitizeTimeZone("<script>")).toBe("UTC");
+  });
+});
+
+describe("legacyPeriodToResultsPeriod", () => {
+  it("passes through a valid new-style period", () => {
+    expect(legacyPeriodToResultsPeriod("today")).toBe("today");
+    expect(legacyPeriodToResultsPeriod("7d")).toBe("7d");
+    expect(legacyPeriodToResultsPeriod("30d")).toBe("30d");
+  });
+
+  it("maps the old week/month periods onto the nearest new chip", () => {
+    expect(legacyPeriodToResultsPeriod("this_week")).toBe("7d");
+    expect(legacyPeriodToResultsPeriod("last_week")).toBe("7d");
+    expect(legacyPeriodToResultsPeriod("this_month")).toBe("30d");
+    expect(legacyPeriodToResultsPeriod("last_month")).toBe("30d");
+  });
+
+  it("returns null for anything else", () => {
+    expect(legacyPeriodToResultsPeriod(undefined)).toBeNull();
+    expect(legacyPeriodToResultsPeriod("bogus")).toBeNull();
+  });
+});
+
+describe("resultsPeriodRange", () => {
+  it("'today' is the current calendar day up to now", () => {
+    const range = resultsPeriodRange("today", NOW, "UTC");
+    expect(range.start.toISOString()).toBe("2026-10-14T00:00:00.000Z");
+    expect(range.end).toEqual(NOW);
+  });
+
+  it("'7d' spans the 7 calendar days up to and including today", () => {
+    const range = resultsPeriodRange("7d", NOW, "UTC");
+    expect(range.start.toISOString()).toBe("2026-10-08T00:00:00.000Z");
+    expect(range.end).toEqual(NOW);
+  });
+
+  it("'30d' spans the 30 calendar days up to and including today", () => {
+    const range = resultsPeriodRange("30d", NOW, "UTC");
+    expect(range.start.toISOString()).toBe("2026-09-15T00:00:00.000Z");
+    expect(range.end).toEqual(NOW);
+  });
+});
+
+describe("resolveResultsSelection", () => {
+  it("defaults to 7d with no params", () => {
+    const selection = resolveResultsSelection("full", {}, NOW, "UTC");
+    expect(selection.period).toBe("7d");
+    expect(selection.isCustom).toBe(false);
+    expect(selection.canCompare).toBe(true);
+    expect(selection.current).toEqual(resultsPeriodRange("7d", NOW, "UTC"));
+    expect(selection.previous.end).toEqual(selection.current.start);
+  });
+
+  it("basic tier never compares and never accepts a custom range", () => {
+    const selection = resolveResultsSelection("basic", { from: "2026-09-01", to: "2026-09-30" }, NOW, "UTC");
+    expect(selection.isCustom).toBe(false);
+    expect(selection.canCompare).toBe(false);
+    expect(selection.period).toBe("7d");
+  });
+
+  it("full tier resolves a valid custom range", () => {
+    const selection = resolveResultsSelection("full", { from: "2026-09-01", to: "2026-09-30" }, NOW, "UTC");
+    expect(selection.isCustom).toBe(true);
+    expect(selection.customError).toBeNull();
+    expect(selection.current.start.toISOString()).toBe("2026-09-01T00:00:00.000Z");
+  });
+
+  it("compare=0 switches comparison off even on full tier", () => {
+    const selection = resolveResultsSelection("full", { compare: "0" }, NOW, "UTC");
+    expect(selection.canCompare).toBe(false);
+  });
+
+  it("falls back to the chip range with an error message for an invalid custom range", () => {
+    const selection = resolveResultsSelection("full", { from: "2026-10-20", to: "2026-10-10" }, NOW, "UTC");
+    expect(selection.isCustom).toBe(false);
+    expect(selection.customError).toMatch(/on or before/);
+  });
+});
+
+describe("describePeriodText / describeCompareText", () => {
+  it("describes each chip in plain words", () => {
+    expect(describePeriodText({ period: "today", isCustom: false, fromValue: "", toValue: "" })).toBe("today");
+    expect(describePeriodText({ period: "7d", isCustom: false, fromValue: "", toValue: "" })).toBe("the last 7 days");
+    expect(describePeriodText({ period: "30d", isCustom: false, fromValue: "", toValue: "" })).toBe("the last 30 days");
+  });
+
+  it("describes a custom range by its dates", () => {
+    expect(describePeriodText({ period: "7d", isCustom: true, fromValue: "2026-09-01", toValue: "2026-09-30" })).toBe("2026-09-01 to 2026-09-30");
+  });
+
+  it("returns null for the compare text when comparison is off", () => {
+    expect(describeCompareText({ period: "7d", isCustom: false, canCompare: false })).toBeNull();
+  });
+
+  it("describes the compare window for a chip and for a custom range", () => {
+    expect(describeCompareText({ period: "7d", isCustom: false, canCompare: true })).toBe("the 7 days before");
+    expect(describeCompareText({ period: "30d", isCustom: true, canCompare: true })).toBe("the period before");
+  });
+});
+
+describe("computeShare", () => {
+  it("rounds to the nearest percent", () => {
+    expect(computeShare(1, 3)).toBe(33);
+    expect(computeShare(2, 3)).toBe(67);
+  });
+
+  it("returns 0 for a zero total", () => {
+    expect(computeShare(0, 0)).toBe(0);
+  });
+
+  it("returns 100 when count equals total", () => {
+    expect(computeShare(5, 5)).toBe(100);
+  });
+});
+
+describe("pickTop", () => {
+  it("returns the row with the highest value", () => {
+    const rows = [{ n: "a", v: 1 }, { n: "b", v: 5 }, { n: "c", v: 3 }];
+    expect(pickTop(rows, (r) => r.v)?.n).toBe("b");
+  });
+
+  it("returns null for an empty list", () => {
+    expect(pickTop([], (r: { v: number }) => r.v)).toBeNull();
+  });
+
+  it("keeps the first row seen on a tie", () => {
+    const rows = [{ n: "a", v: 5 }, { n: "b", v: 5 }];
+    expect(pickTop(rows, (r) => r.v)?.n).toBe("a");
+  });
+});
+
+describe("link filter helpers", () => {
+  it("round-trips format/parse", () => {
+    expect(parseLinkFilter(formatLinkFilterValue("rotator", "abc123"))).toEqual({ type: "rotator", id: "abc123" });
+    expect(parseLinkFilter(formatLinkFilterValue("shortlink", "xyz"))).toEqual({ type: "shortlink", id: "xyz" });
+    expect(parseLinkFilter(formatLinkFilterValue("adlink", "z9"))).toEqual({ type: "adlink", id: "z9" });
+  });
+
+  it("rejects malformed or unknown-type values", () => {
+    expect(parseLinkFilter(null)).toBeNull();
+    expect(parseLinkFilter("")).toBeNull();
+    expect(parseLinkFilter("no-colon")).toBeNull();
+    expect(parseLinkFilter("bogus:123")).toBeNull();
+    expect(parseLinkFilter("rotator:")).toBeNull();
+  });
+
+  it("maps ConversationStart assetType onto the LinkKind-flavoured filter type", () => {
+    expect(linkFilterTypeFromAssetType("rotator")).toBe("rotator");
+    expect(linkFilterTypeFromAssetType("short_link")).toBe("shortlink");
+    expect(linkFilterTypeFromAssetType("ad_link")).toBe("adlink");
+    expect(linkFilterTypeFromAssetType("something_else")).toBeNull();
+  });
+});
+
+describe("buildResultsExportQuery", () => {
+  it("uses period for a chip selection", () => {
+    expect(buildResultsExportQuery({ isCustom: false, period: "7d", fromValue: "", toValue: "" }, null)).toBe("period=7d");
+  });
+
+  it("uses from/to for a custom selection", () => {
+    const qs = buildResultsExportQuery({ isCustom: true, period: "30d", fromValue: "2026-09-01", toValue: "2026-09-30" }, null);
+    expect(qs).toBe("from=2026-09-01&to=2026-09-30");
+  });
+
+  it("includes the link filter when present", () => {
+    const qs = buildResultsExportQuery({ isCustom: false, period: "today", fromValue: "", toValue: "" }, "rotator:abc");
+    expect(qs).toBe("period=today&link=rotator%3Aabc");
+  });
+});
+
+describe("buildSummarySentence", () => {
+  it("reports zero clicks plainly", () => {
+    expect(
+      buildSummarySentence({ periodText: "the last 7 days", compareText: "the 7 days before", clicks: 0, change: null, topSourceLabel: null, topSalespersonName: null })
+    ).toBe("No clicks yet in the last 7 days.");
+  });
+
+  it("builds the full sentence with a positive change, source and top salesperson", () => {
+    const sentence = buildSummarySentence({
+      periodText: "the last 7 days",
+      compareText: "the 7 days before",
+      clicks: 168,
+      change: { pct: 12, direction: "up", isNew: false },
+      topSourceLabel: "Facebook",
+      topSalespersonName: "Ravi",
+    });
+    expect(sentence).toBe("You got 168 clicks in the last 7 days, 12% more than the 7 days before. Most ad clicks came from Facebook. Ravi got the most.");
+  });
+
+  it("uses 'fewer' for a negative change", () => {
+    const sentence = buildSummarySentence({
+      periodText: "today",
+      compareText: "yesterday",
+      clicks: 3,
+      change: { pct: -40, direction: "down", isNew: false },
+      topSourceLabel: null,
+      topSalespersonName: null,
+    });
+    expect(sentence).toBe("You got 3 clicks in today, 40% fewer than yesterday.");
+  });
+
+  it("omits the comparison clause when there's no previous data (isNew uses 'up from none')", () => {
+    const sentence = buildSummarySentence({
+      periodText: "today",
+      compareText: "yesterday",
+      clicks: 5,
+      change: { pct: null, direction: "up", isNew: true },
+      topSourceLabel: null,
+      topSalespersonName: null,
+    });
+    expect(sentence).toBe("You got 5 clicks in today, up from none in yesterday.");
+  });
+
+  it("drops the comparison clause entirely when compareText is null", () => {
+    const sentence = buildSummarySentence({
+      periodText: "the last 30 days",
+      compareText: null,
+      clicks: 10,
+      change: null,
+      topSourceLabel: null,
+      topSalespersonName: null,
+    });
+    expect(sentence).toBe("You got 10 clicks in the last 30 days.");
+  });
+
+  it("singularizes 1 click", () => {
+    const sentence = buildSummarySentence({ periodText: "today", compareText: null, clicks: 1, change: null, topSourceLabel: null, topSalespersonName: null });
+    expect(sentence).toBe("You got 1 click in today.");
   });
 });

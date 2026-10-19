@@ -81,7 +81,7 @@ export const growthArticles: GrowthArticle[] = [
       {
         "heading": "Choose a plan for the workflow you manage",
         "paragraphs": [
-          "The public plans are Solo $9/month, Growth $19/month and Agency $49/month. Agency includes up to 25 rotators and a shared workspace for up to five members; confirm current details on the pricing page before proposing a package.",
+          "The public plans are Solo $9/month, Growth $19/month and Agency $49/month. Agency includes up to 55 links and a shared workspace for up to five members; confirm current details on the pricing page before proposing a package.",
           "Every account gets a 3-day free trial with 100 routed handoffs across all rotators. After the trial, a paid plan is required to keep routing. Never promise a client autonomous message sending or delivery confirmation from a simple routing link."
         ]
       }
@@ -102,14 +102,14 @@ export const growthArticles: GrowthArticle[] = [
       {
         "heading": "Decide when rotation fits",
         "paragraphs": [
-          "A direct wa.me link has one destination number. To offer several numbers, you need a router that rotates between configured destinations. Wazap’s Link Rotator chooses a configured destination for each handoff.",
+          "A direct wa.me link has one destination number. To offer several numbers, you need a router that rotates between configured destinations. Wazap’s Lead rotator chooses a configured destination for each handoff.",
           "Use rotation when the same enquiry can be handled by any member of a destination team — for example, a sales or support group where any available member can respond. A router cannot determine specialist suitability or real-time availability."
         ]
       },
       {
         "heading": "Create and test the shared link",
         "paragraphs": [
-          "Sign in to Wazap and open the Link Rotator. Name the team, choose a country code and add at least two numbers without repeating that code. Add an optional predefined WhatsApp message, then create the router. For destinations in different countries, edit the saved number list with full international numbers. Copy the generated public URL rather than guessing a route or sending the dashboard address.",
+          "Sign in to Wazap and open Lead rotator. Name the team, choose a country code and add at least two numbers without repeating that code. Add an optional predefined WhatsApp message, then create the rotator. For destinations in different countries, edit the saved number list with full international numbers. Copy the generated public URL rather than guessing a route or sending the dashboard address.",
           "Open a dedicated test link from a phone and desktop browser. Check the destination number and, if configured, the prepared message before sending anything. The visitor can edit the text and decides whether to send it. Repeat carefully across the destination list: test handoffs consume the account’s free routing allowance, and no message needs to be sent to inspect the handoff."
         ]
       },
@@ -292,7 +292,7 @@ export const growthArticles: GrowthArticle[] = [
         "heading": "Compare paid plans and the operational workflow",
         "paragraphs": [
           "At review, WasepJe advertised Pro at $7.50 per month when billed annually at $90. Wazap’s public monthly plans are Solo $9, Growth $19 and Agency $49. Compare billing intervals and cancellation terms rather than treating these headline prices as identical offers.",
-          "For Wazap, evaluate the router alongside links, QR codes and optional workspace workflows. Agency includes up to 25 rotators and a shared workspace for up to five members. Choose additional features only when you need them."
+          "For Wazap, evaluate the router alongside links, QR codes and optional workspace workflows. Agency includes up to 55 links and a shared workspace for up to five members. Choose additional features only when you need them."
         ]
       },
       {

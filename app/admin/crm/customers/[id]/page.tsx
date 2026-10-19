@@ -100,7 +100,7 @@ export default async function AdminCustomerDetailPage({
       {/* Leads Stats Banner */}
       <section className="wp-growth-stats" aria-label="Lead performance stats">
         <div className="wp-crm-stat">
-          <span>Chats today</span>
+          <span>Clicks today</span>
           <strong>{leads.today}</strong>
           <small>Since midnight UTC</small>
         </div>
@@ -117,7 +117,7 @@ export default async function AdminCustomerDetailPage({
         <div className="wp-crm-stat">
           <span>Total routed leads</span>
           <strong>{leads.total}</strong>
-          <small>All-time conversation starts</small>
+          <small>All-time, across all links</small>
         </div>
       </section>
 
@@ -224,20 +224,16 @@ export default async function AdminCustomerDetailPage({
               <span className="text-slate-400 block mb-2 font-medium">Usage vs plan limits</span>
               <div className="grid grid-cols-2 gap-2 text-[11px]">
                 <div className="rounded border border-slate-800 bg-slate-900/50 p-2">
-                  <span className="text-slate-400 block">Rotators</span>
-                  <strong className="text-white">{usageVsLimits.rotators.label}</strong>
+                  <span className="text-slate-400 block">Links (lead rotators, WhatsApp &amp; ad links)</span>
+                  <strong className="text-white">{usageVsLimits.links.label}</strong>
                 </div>
                 <div className="rounded border border-slate-800 bg-slate-900/50 p-2">
-                  <span className="text-slate-400 block">Max salespeople / rotator</span>
+                  <span className="text-slate-400 block">Max salespeople / lead rotator</span>
                   <strong className="text-white">{usageVsLimits.maxSalespeoplePerRotator.label}</strong>
                 </div>
                 <div className="rounded border border-slate-800 bg-slate-900/50 p-2">
-                  <span className="text-slate-400 block">Short links</span>
-                  <strong className="text-white">{usageVsLimits.shortLinks.label}</strong>
-                </div>
-                <div className="rounded border border-slate-800 bg-slate-900/50 p-2">
                   <span className="text-slate-400 block">Ad links</span>
-                  <strong className="text-white">{usageVsLimits.adLinks.label}</strong>
+                  <strong className="text-white">{usageVsLimits.adLinksAvailable.label}</strong>
                 </div>
               </div>
             </div>
@@ -245,10 +241,10 @@ export default async function AdminCustomerDetailPage({
         </section>
       </div>
 
-      {/* Rotators & Salespeople Block */}
-      <section className="wp-growth-panel" aria-label="Customer rotators">
+      {/* Lead Rotators & Salespeople Block */}
+      <section className="wp-growth-panel" aria-label="Customer lead rotators">
         <div className="flex justify-between items-center mb-4">
-          <h2>Rotators ({rotators.length})</h2>
+          <h2>Lead rotators ({rotators.length})</h2>
           <span className="text-xs text-slate-400">Lead distribution pages</span>
         </div>
         {rotators.length ? (
@@ -256,7 +252,7 @@ export default async function AdminCustomerDetailPage({
             <table className="wp-growth-table">
               <thead>
                 <tr>
-                  <th>Rotator</th>
+                  <th>Lead rotator</th>
                   <th>Status</th>
                   <th>Clicks</th>
                   <th>Salespeople</th>
@@ -305,16 +301,16 @@ export default async function AdminCustomerDetailPage({
             </table>
           </div>
         ) : (
-          <p className="text-xs text-slate-400 py-3">No rotators created yet.</p>
+          <p className="text-xs text-slate-400 py-3">No lead rotators created yet.</p>
         )}
       </section>
 
-      {/* Short Links & Ad Links Block */}
+      {/* WhatsApp Links & Ad Links Block */}
       <div className="wp-growth-two">
-        {/* Short Links */}
-        <section className="wp-growth-panel" aria-label="Short links">
+        {/* WhatsApp Links */}
+        <section className="wp-growth-panel" aria-label="WhatsApp links">
           <div className="flex justify-between items-center mb-3">
-            <h2>Short links ({links.shortLinks.length})</h2>
+            <h2>WhatsApp links ({links.shortLinks.length})</h2>
           </div>
           {links.shortLinks.length ? (
             <div className="space-y-2.5 text-xs">
@@ -342,7 +338,7 @@ export default async function AdminCustomerDetailPage({
               ))}
             </div>
           ) : (
-            <p className="text-xs text-slate-400 py-2">No short links created.</p>
+            <p className="text-xs text-slate-400 py-2">No WhatsApp links created.</p>
           )}
         </section>
 
@@ -379,12 +375,12 @@ export default async function AdminCustomerDetailPage({
         </section>
       </div>
 
-      {/* Widget & Support Section */}
+      {/* Website Button & Support Section */}
       <div className="wp-growth-two">
-        {/* Widget Card */}
-        <section className="wp-growth-panel" aria-label="Website widget">
+        {/* Website Button Card */}
+        <section className="wp-growth-panel" aria-label="Website button">
           <div className="flex justify-between items-center mb-3">
-            <h2>Website widget</h2>
+            <h2>Website button</h2>
             <span className={`wp-crm-pill ${widget.available ? "text-[#25D366]" : "text-slate-500"}`}>
               {widget.available ? "Plan eligible" : "Unavailable"}
             </span>

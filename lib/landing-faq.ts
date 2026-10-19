@@ -25,7 +25,7 @@ export const landingFaqs: LandingFaq[] = [
   },
   {
     q: "What plans are available?",
-    a: "Every account gets a 3-day free trial with everything in Solo — 3 rotators, 3 numbers per rotator, 100 routed leads — no card required. After the trial, paid plans are Solo ($9/month), Growth ($19/month) and Agency ($49/month), with up to 25 rotators on Agency.",
+    a: "Every account gets a 3-day free trial with everything in Solo — 5 links, 3 salespeople per rotator, 100 routed leads — no card required. After the trial, paid plans are Solo ($9/month, 5 links), Growth ($19/month, 20 links) and Agency ($49/month, 55 links).",
   },
   {
     q: "Is there a free trial?",

@@ -25,6 +25,7 @@
     "@whiskeysockets/baileys": "^7.0.0-rc13",
     "bcryptjs": "^3.0.3",
     "dodopayments": "^2.42.2",
+    "libphonenumber-js": "^1.13.15",
     "lucide-react": "^1.16.0",
     "maxmind": "^5.0.7",
     "next": "16.4.0",

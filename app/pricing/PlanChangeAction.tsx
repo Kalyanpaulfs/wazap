@@ -135,7 +135,7 @@ export default function PlanChangeAction({
   const confirmText =
     kind === "upgrade"
       ? `You pay the full price of ${planLabel} today. Your new plan starts right away. Remaining days of your current plan are not refunded.`
-      : `You keep ${currentPlanLabel} until ${renewsOrExpiresAtLabel || "your renewal date"}. Then ${planLabel} starts and you pay the lower price. Extra rotators/channels above the new limit will be paused.`;
+      : `You keep ${currentPlanLabel} until ${renewsOrExpiresAtLabel || "your renewal date"}. Then ${planLabel} starts and you pay the lower price. Extra links above the new limit will be paused.`;
 
   if (!confirming) {
     return (

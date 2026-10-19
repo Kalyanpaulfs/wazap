@@ -61,7 +61,7 @@ export default function LinkBuilderPage() {
                 className="rounded-xl bg-slate-900 border border-slate-700 px-3 py-3 text-sm text-white focus:outline-none focus:border-[#25D366]">
                 {COUNTRIES.map(c => <option key={c.code} value={c.code}>{c.label}</option>)}
               </select>
-              <input aria-label="Phone number without country code" value={phone} onChange={e => setPhone(e.target.value)} placeholder="Phone number" inputMode="tel"
+              <input aria-label="Phone number without country code" value={phone} onChange={e => setPhone(e.target.value.replace(/\D/g, "").slice(0, 15))} placeholder="Phone number" inputMode="numeric"
                 className="min-w-0 flex-1 rounded-xl bg-slate-900 border border-slate-700 px-4 py-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#25D366] font-mono" />
             </div>
             <textarea aria-label="Pre-filled message" value={msg} onChange={e => setMsg(e.target.value)} rows={3} placeholder="Pre-filled message (optional) — e.g. Hi! I'd like to know more about…"

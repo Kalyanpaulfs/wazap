@@ -3,42 +3,20 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import {
-  AlertTriangle,
-  ArrowRight,
-  Crown,
-  MessageCircle,
-  Link2,
-  Megaphone,
-  BarChart3,
-} from "lucide-react";
-import {
-  IconWidget,
-  IconAdBuilder,
-  IconRotator,
-} from "@/app/tools/ToolIcons";
-import { TOOL_LIMITS } from "@/lib/tool-access";
-import { rotatorLimit, shortLinkLimit, adLinkLimit } from "@/lib/plan-limits";
-import { routerQuota, TRIAL_ROUTED_LEADS } from "@/lib/router-entitlements";
+import { AlertTriangle, ArrowRight, Crown, MessageCircle, Plus } from "lucide-react";
+import { linkPlan, routerQuota, TRIAL_ROUTED_LEADS } from "@/lib/router-entitlements";
 import { getPlanDaysLeft, isPlanExpired } from "@/lib/billing";
 import { downgradeIfExpired } from "@/lib/billing-expiry";
 import { notifySupportReplySeen } from "@/lib/support-notify";
-import ToolShortcuts from "./ToolShortcuts";
-import SetupGuide from "../product/SetupGuide";
 import UpgradeSuccessBanner from "./UpgradeSuccessBanner";
 import DashboardConsentBanner from "./DashboardConsentBanner";
 import { shouldShowConsentBanner } from "@/lib/marketing-consent";
 import { getBillingSummary } from "@/lib/billing-summary";
 import { billingStatusSentence } from "@/lib/billing-status-sentence";
-import {
-  effectivePlan,
-  isProductTrialActive,
-  trialDaysLeft,
-} from "@/lib/entitlements";
-
-function today() {
-  return new Date().toISOString().slice(0, 10);
-}
+import { getPerformanceSnapshot } from "@/lib/performance";
+import { getMyLinks, LINK_KIND_NAME } from "@/lib/my-links";
+import LinkRowActions from "../links/LinkRowActions";
+import { effectivePlan, isProductTrialActive, trialDaysLeft } from "@/lib/entitlements";
 
 const PLAN_LABELS: Record<string, string> = {
   free: "Free trial ended",
@@ -47,18 +25,6 @@ const PLAN_LABELS: Record<string, string> = {
   ultimate: "Agency",
   business: "Business",
 };
-const PLAN_COLORS: Record<string, string> = {
-  free: "text-slate-400",
-  basic: "text-blue-300",
-  pro: "text-[#25D366]",
-  ultimate: "text-yellow-300",
-  business: "text-emerald-300",
-};
-
-function usagePercent(used: number, limit: number | null) {
-  if (!limit) return 0;
-  return Math.min(100, Math.round((used / limit) * 100));
-}
 
 export default async function DashboardPage({
   searchParams,
@@ -80,36 +46,9 @@ export default async function DashboardPage({
   const sessionPlan = sessionUser.plan ?? "free";
   const userEmail = (session.user.email ?? "").toLowerCase();
 
-  const [
-    user,
-    usage,
-    supportMessages,
-    adLinkCount,
-    rotatorCount,
-    shortLinkCount,
-    scheduledCount,
-    firstToolSuccess,
-    routedLinkCount,
-    chatStarts30d,
-    billingSummary,
-    marketingLead,
-    rotatorLeadsUsed,
-  ] = await Promise.all([
+  const [user, supportMessages, billingSummary, marketingLead, rotatorLeadsUsed] = await Promise.all([
     prisma.user.findUnique({ where: { id: userId } }),
-    prisma.dailyUsage.findUnique({
-      where: { userId_date: { userId, date: today() } },
-    }),
     Promise.resolve([] as import("@prisma/client").ContactMessage[]), // Guest enquiries need independently verified ownership.
-    prisma.adLink.count({ where: { userId } }),
-    prisma.rotatorLink.count({ where: { userId } }),
-    prisma.shortLink.count({ where: { userId } }),
-    prisma.scheduledSend.count({ where: { userId, status: "pending" } }),
-    prisma.funnelEvent.findFirst({
-      where: { userId, name: "first_tool_success" },
-      select: { id: true },
-    }),
-    prisma.rotatorLink.count({where:{userId,totalClicks:{gt:0}}}),
-    prisma.conversationStart.count({where:{userId,createdAt:{gte:new Date(new Date().getTime()-30*24*60*60*1000)}}}),
     getBillingSummary(userId),
     prisma.crmLead.findUnique({ where: { email: userEmail }, select: { marketingStatus: true, doNotContact: true, emailSuppressedAt: true } }),
     prisma.conversationStart.count({ where: { userId, assetType: "rotator" } }),
@@ -159,71 +98,21 @@ export default async function DashboardPage({
   // Trial still active by date, but the 100 routed leads are used up -
   // distinct from a trial that has actually ended (trialEnded above).
   const trialCapHit = inTrial && !routerQuotaInfo.allowed;
-  const rotatorMax = rotatorLimit(plan);
-  const shortLinkMax = shortLinkLimit(plan);
-  const adLinkMax = adLinkLimit(plan);
-  const savedWorkflowCount =
-    adLinkCount +
-    rotatorCount +
-    shortLinkCount +
-    scheduledCount;
-  const linksLiveCount = rotatorCount + shortLinkCount + adLinkCount;
-  const p = (
-    plan === "business" ? "ultimate" : plan
-  ) as keyof typeof TOOL_LIMITS.widget;
-  const toolUsages = [
-    {
-      href: "/tools/widget",
-      Icon: IconWidget,
-      name: "Widget",
-      used: usage?.widgetCopies ?? 0,
-      limit: TOOL_LIMITS.widget[p]?.uses,
-      limitText: TOOL_LIMITS.widget[p]?.label,
-      value: "Embed chat",
-    },
-    {
-      href: "/tools/ad-builder",
-      Icon: IconAdBuilder,
-      name: "Ad Builder",
-      used: adLinkCount,
-      limit: adLinkMax,
-      limitText: adLinkMax === 0 ? "Not in your plan" : `${adLinkMax} link${adLinkMax === 1 ? "" : "s"}`,
-      value: `${adLinkCount} saved`,
-    },
-    {
-      href: "/tools/rotator",
-      Icon: IconRotator,
-      name: "Rotators",
-      used: rotatorCount,
-      limit: rotatorMax,
-      limitText: `${rotatorMax} rotator${rotatorMax === 1 ? "" : "s"}`,
-      value: `${rotatorCount} live`,
-    },
-  ];
 
-  // Plan-usage cards shown at the top of the dashboard (FEAT-PLAN-LIMITS):
-  // rotators / short links / ad links, each against the current plan's
-  // limit, with an upgrade hint when a feature isn't in the plan at all.
-  const planUsageCards = [
-    { title: "Rotators", used: rotatorCount, limit: rotatorMax, href: "/tools/rotator", cta: "Open rotators" },
-    { title: "Short links", used: shortLinkCount, limit: shortLinkMax, href: "/tools/shortlink", cta: "Open short links" },
-    { title: "Ad links", used: adLinkCount, limit: adLinkMax, href: "/tools/ad-builder", cta: "Open ad builder" },
-  ];
+  // Usage + last links: same source as /links (lib/router-entitlements
+  // linkPlan + lib/my-links getMyLinks) so the numbers here never disagree
+  // with My links.
+  const usagePlan = linkPlan(user);
+  const { rows, used, limit } = await getMyLinks(userId, usagePlan);
+  const lastLinks = rows.slice(0, 3);
+  const hasAnyLinks = rows.length > 0;
 
-  const quickActions = [
-    {
-      href: "/tools/rotator",
-      icon: IconRotator,
-      title: "Lead routing",
-      desc: "Create one link and distribute enquiries across your team.",
-    },
-    {
-      href: "/performance",
-      icon: BarChart3,
-      title: "Performance",
-      desc: "See chats started today, this week and this month.",
-    },
-  ];
+  // Clicks today / last 7 days: same numbers as Results (Overview tab).
+  const { totals } = await getPerformanceSnapshot(userId);
+
+  const nextStep = !hasAnyLinks
+    ? { label: "Create your first link", href: "/links/new" }
+    : { label: "See your results", href: "/results" };
 
   return (
     <>
@@ -232,11 +121,16 @@ export default async function DashboardPage({
           {justUpgraded && <UpgradeSuccessBanner plan={user?.plan || "free"} expiresAt={user?.planExpiresAt?.toISOString() || null} expectedPlan={params.plan} change={params.change} />}
           <DashboardConsentBanner initialShow={showConsentBanner} />
 
-
-          <header className="wp-overview-heading"><div><p className="wp-eyebrow">YOUR BUSINESS WORKSPACE</p><h1>Overview</h1><p>Keep your conversations moving. Start with what needs your attention.</p></div><Link prefetch={false} href="/performance" className="wp-primary">View performance <ArrowRight size={16}/></Link></header>
-          <section className="wp-overview-summary" aria-label="Workspace summary">{[["Chats · 30 days",chatStarts30d,"/performance","Chat starts across your links and rotators"],["Saved workflows",savedWorkflowCount,"/tools","Links, pages and saved work"],["Links live",linksLiveCount,"/performance","Rotators, short links and ad links"]].map(([label,count,href,description])=><Link prefetch={false} href={String(href)} key={String(label)}><span>{String(label)}<ArrowRight size={14}/></span><strong>{String(count)}</strong><small>{String(description)}</small></Link>)}</section>
-          <section className="wp-overview-actions" aria-label="Next actions">{quickActions.map(({href,icon:Icon,title,desc})=><Link prefetch={false} key={href} href={href}><span className="wp-tool-icon"><Icon size={21}/></span><span><strong>{title}</strong><small>{desc}</small></span><ArrowRight size={17}/></Link>)}</section>
-
+          <header className="wp-overview-heading">
+            <div>
+              <p className="wp-eyebrow">YOUR BUSINESS WORKSPACE</p>
+              <h1>{session.user.name ? `Hi, ${session.user.name}` : "Home"}</h1>
+              <p>Keep your conversations moving. Start with what needs your attention.</p>
+            </div>
+            <Link prefetch={false} href="/links/new" className="wp-primary">
+              <Plus size={16} /> Create link
+            </Link>
+          </header>
 
           {(inTrial || trialEnded) && (
             <div
@@ -254,14 +148,14 @@ export default async function DashboardPage({
                   </p>
                   <p className="mt-0.5 text-xs text-slate-400">
                     {trialEnded
-                      ? "Choose a plan and your rotators, short links and ad links start working again."
+                      ? "Choose a plan and your lead rotators, brand links and ad links start working again."
                       : trialCapHit
                       ? `You've used the ${TRIAL_ROUTED_LEADS} leads in your free trial. Choose a plan to keep routing.`
-                      : "After that, your rotators, short links and ad links stop working until you choose a plan."}
+                      : "After that, your lead rotators, brand links and ad links stop working until you choose a plan."}
                   </p>
                 </div>
                 <Link
-                  href="/plans"
+                  href="/billing"
                   className="rounded-full bg-[#25D366] px-4 py-1.5 text-xs font-semibold text-black transition-colors hover:bg-[#1fba58]"
                 >
                   Choose a plan
@@ -287,11 +181,11 @@ export default async function DashboardPage({
                       : `Your ${PLAN_LABELS[plan]} plan expires in ${daysLeft} day${daysLeft !== 1 ? "s" : ""}`}
                   </p>
                   <p className="mt-0.5 text-xs text-slate-400">
-                    When it ends, your rotators, short links and ad links stop working. Renew to keep them running.
+                    When it ends, your lead rotators, brand links and ad links stop working. Renew to keep them running.
                   </p>
                 </div>
                 <Link
-                  href="/pricing"
+                  href="/billing"
                   className="rounded-full bg-[#25D366] px-4 py-1.5 text-xs font-semibold text-black transition-colors hover:bg-[#1fba58]"
                 >
                   Renew
@@ -300,64 +194,19 @@ export default async function DashboardPage({
             </div>
           )}
 
-          <section className="grid gap-4 md:grid-cols-3">
-            {planUsageCards.map(({ title, used, limit, href, cta }) => {
-              const notInPlan = limit === 0;
-              const pct = usagePercent(used, notInPlan ? null : limit);
-              const Icon = title === "Rotators" ? IconRotator : title === "Short links" ? Link2 : Megaphone;
-              return (
-                <div key={title} className="rounded-2xl border border-slate-800 bg-[#111811] p-5">
-                  <div className="mb-3 flex items-center gap-2">
-                    <Icon className="h-4 w-4 text-[#25D366]" />
-                    <span className="text-sm font-medium text-white">{title}</span>
-                  </div>
-                  {notInPlan ? (
-                    <div className="text-xl font-bold text-slate-500">Not in your plan</div>
-                  ) : (
-                    <div className="text-3xl font-bold text-white">
-                      {used}
-                      <span className="text-lg font-normal text-slate-500"> / {limit}</span>
-                    </div>
-                  )}
-                  {used > limit && (
-                    <p className="mt-2 text-xs text-yellow-300">
-                      {notInPlan ? `You have ${used} from before. ` : "Over your plan limit. "}They keep working, but you can&apos;t add more.
-                    </p>
-                  )}
-                  {!notInPlan && (
-                    <div className="mt-3 h-1.5 w-full rounded-full bg-slate-800">
-                      <div
-                        className={`h-1.5 rounded-full transition-all ${pct >= 100 ? "bg-red-500" : pct >= 80 ? "bg-yellow-400" : "bg-[#25D366]"}`}
-                        style={{ width: `${pct}%` }}
-                      />
-                    </div>
-                  )}
-                  <Link href={notInPlan ? "/pricing" : href} className="mt-3 inline-block text-xs font-semibold text-[#25D366] hover:underline">
-                    {notInPlan ? "Upgrade plan →" : `${cta} →`}
-                  </Link>
-                </div>
-              );
-            })}
-          </section>
-
-          <div className="wp-overview-body"><ToolShortcuts tools={toolUsages.map(({Icon,...tool})=>tool)}/><div className="wp-overview-side">            <aside id="billing" className="wp-overview-plan scroll-mt-5">
-              <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                Current plan
-              </p>
-              <div className="mt-3 flex items-center gap-3">
+          <section className="grid gap-4 sm:grid-cols-3">
+            <div id="billing" className="rounded-2xl border border-slate-800 bg-[#111811] p-5 scroll-mt-5">
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Current plan</p>
+              <div className="mt-3 flex items-center gap-2">
                 <Crown className="h-5 w-5 text-[#25d366]" />
-                <span className="text-2xl font-bold text-white">
-                  {inTrial ? "Free trial" : PLAN_LABELS[plan]}
-                </span>
-                {inTrial && (
-                  <span className="rounded-full border border-[#25D366]/30 bg-[#25D366]/10 px-2.5 py-1 text-xs font-semibold text-[#25D366]">
-                    {productTrialDaysLeft} day
-                    {productTrialDaysLeft !== 1 ? "s" : ""} left · no card
-                    required
-                  </span>
-                )}
+                <span className="text-xl font-bold text-white">{inTrial ? "Free trial" : PLAN_LABELS[plan]}</span>
               </div>
-              <p className="mt-2 text-sm leading-relaxed text-slate-400">
+              {inTrial && (
+                <span className="mt-2 inline-flex rounded-full border border-[#25D366]/30 bg-[#25D366]/10 px-2.5 py-1 text-xs font-semibold text-[#25D366]">
+                  {productTrialDaysLeft} day{productTrialDaysLeft !== 1 ? "s" : ""} left · no card required
+                </span>
+              )}
+              <p className="mt-2 text-xs leading-relaxed text-slate-400">
                 {billingStatusSentence({
                   plan: billingSummary?.plan ?? plan,
                   inTrial,
@@ -369,15 +218,69 @@ export default async function DashboardPage({
                   pendingChange: billingSummary?.pendingChange ?? null,
                 })}
               </p>
-              <div className="mt-4 flex flex-wrap gap-4 text-sm font-semibold">
-                <Link href="/billing" className="text-[#25D366] hover:underline">
-                  Manage billing →
-                </Link>
-                <Link href="/plans" className="text-[#25D366] hover:underline">
-                  See plans →
+              <Link href="/billing" className="mt-3 inline-block text-xs font-semibold text-[#25D366] hover:underline">
+                {trialEnded ? "Choose a plan →" : "Manage billing →"}
+              </Link>
+            </div>
+
+            <Link href="/links" className="rounded-2xl border border-slate-800 bg-[#111811] p-5 hover:border-[#25D366]">
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Links</p>
+              <div className="mt-3 text-xl font-bold text-white">{used} of {limit} used</div>
+              <span className="mt-3 inline-block text-xs font-semibold text-[#25D366]">Open My links →</span>
+            </Link>
+
+            <Link href="/results" className="rounded-2xl border border-slate-800 bg-[#111811] p-5 hover:border-[#25D366]">
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Clicks</p>
+              <div className="mt-3 text-xl font-bold text-white">{totals.chatsToday} today · {totals.chats7d} / 7 days</div>
+              <span className="mt-3 inline-block text-xs font-semibold text-[#25D366]">See results →</span>
+            </Link>
+          </section>
+
+          <Link
+            href={nextStep.href}
+            className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#25D366]/30 bg-[#25D366]/10 p-5"
+          >
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-[#25D366]">Next step</p>
+              <p className="mt-1 text-lg font-bold text-white">{nextStep.label}</p>
+            </div>
+            <ArrowRight className="h-5 w-5 text-[#25D366]" />
+          </Link>
+
+          <section className="rounded-3xl border border-slate-800 bg-[#111811] p-5 sm:p-7" aria-label="Your latest links">
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <h2 className="font-bold text-white">Your latest links</h2>
+              <Link href="/links" className="text-sm font-semibold text-[#25D366] hover:underline">
+                See all links →
+              </Link>
+            </div>
+            {!hasAnyLinks ? (
+              <div className="mt-5 rounded-2xl border border-dashed border-slate-700 p-10 text-center text-slate-500">
+                <p className="text-white font-semibold">No links yet</p>
+                <p className="mt-1 text-sm">Create your first link in 1 minute.</p>
+                <Link href="/links/new" className="mt-4 inline-flex rounded-full bg-[#25D366] px-5 py-2.5 text-sm font-bold text-black hover:bg-[#1fba58]">
+                  Create link
                 </Link>
               </div>
-            </aside>          <SetupGuide userId={userId} progress={{rotators:rotatorCount,routedLinks:routedLinkCount,toolSuccess:Boolean(firstToolSuccess)}} /></div></div>
+            ) : (
+              <div className="mt-5 space-y-3">
+                {lastLinks.map((row) => (
+                  <div key={`${row.kind}-${row.id}`} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-800 bg-slate-950/40 p-4">
+                    <div>
+                      <Link href={row.editHref} className="font-semibold text-white hover:text-[#25D366] hover:underline">
+                        {row.name}
+                      </Link>
+                      <div className="mt-1 flex items-center gap-2 text-xs text-slate-500">
+                        <span className="rounded-full border border-slate-700 px-2 py-0.5 text-slate-300">{LINK_KIND_NAME[row.kind]}</span>
+                        <span>{row.metric.toLocaleString()} clicks</span>
+                      </div>
+                    </div>
+                    <LinkRowActions id={row.id} kind={row.kind} name={row.name} publicUrl={row.publicUrl} editHref={row.editHref} manuallyPaused={row.manuallyPaused} />
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
 
           {supportMessages.length > 0 && (
             <section className="rounded-2xl border border-[#25D366]/20 bg-[#111811] p-5 sm:p-6">

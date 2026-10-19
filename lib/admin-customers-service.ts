@@ -234,7 +234,7 @@ export type CustomerDetailResult = {
     name: string;
     code: string;
     publicUrl: string;
-    status: "Live" | "Paused";
+    status: "Live" | "Paused" | "Paused by customer";
     totalClicks: number;
     salespeople: { number: string; name: string }[];
     createdAt: string;
@@ -247,7 +247,7 @@ export type CustomerDetailResult = {
       publicUrl: string;
       phone: string;
       clicks: number;
-      status: "Live" | "Paused";
+      status: "Live" | "Paused" | "Paused by customer";
       createdAt: string;
     }[];
     adLinks: {
@@ -258,7 +258,7 @@ export type CustomerDetailResult = {
       utmSource: string | null;
       utmMedium: string | null;
       utmCampaign: string | null;
-      status: "Live" | "Paused";
+      status: "Live" | "Paused" | "Paused by customer";
       createdAt: string;
     }[];
   };
@@ -317,6 +317,7 @@ export async function getAdminCustomerDetails(userId: string): Promise<CustomerD
           numberNames: true,
           totalClicks: true,
           planPausedAt: true,
+          pausedAt: true,
           createdAt: true,
         },
       },
@@ -329,6 +330,7 @@ export async function getAdminCustomerDetails(userId: string): Promise<CustomerD
           phone: true,
           clicks: true,
           planPausedAt: true,
+          pausedAt: true,
           createdAt: true,
         },
       },
@@ -343,6 +345,7 @@ export async function getAdminCustomerDetails(userId: string): Promise<CustomerD
           utmCampaign: true,
           clicks: true,
           planPausedAt: true,
+          pausedAt: true,
           createdAt: true,
         },
       },
@@ -526,7 +529,7 @@ export async function getAdminCustomerDetails(userId: string): Promise<CustomerD
       name: r.name,
       code: r.code,
       publicUrl: `${origin}/r/${r.code}`,
-      status: r.planPausedAt ? "Paused" : "Live",
+      status: r.planPausedAt ? "Paused" : r.pausedAt ? "Paused by customer" : "Live",
       totalClicks: r.totalClicks,
       salespeople: r.numbers.map((num) => ({
         number: num,
@@ -542,7 +545,7 @@ export async function getAdminCustomerDetails(userId: string): Promise<CustomerD
         publicUrl: `${origin}/w/${s.code}`,
         phone: s.phone,
         clicks: s.clicks,
-        status: s.planPausedAt ? "Paused" : "Live",
+        status: s.planPausedAt ? "Paused" : s.pausedAt ? "Paused by customer" : "Live",
         createdAt: s.createdAt.toISOString(),
       })),
       adLinks: user.adLinks.map((a) => ({
@@ -553,7 +556,7 @@ export async function getAdminCustomerDetails(userId: string): Promise<CustomerD
         utmSource: a.utmSource,
         utmMedium: a.utmMedium,
         utmCampaign: a.utmCampaign,
-        status: a.planPausedAt ? "Paused" : "Live",
+        status: a.planPausedAt ? "Paused" : a.pausedAt ? "Paused by customer" : "Live",
         createdAt: a.createdAt.toISOString(),
       })),
     },

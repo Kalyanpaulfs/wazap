@@ -8,7 +8,7 @@ const quickAnswers: { q: string; a: React.ReactNode }[] = [
     q: "How do I create a lead routing link?",
     a: (
       <>
-        Go to <Link href="/tools/rotator" className="text-[#25D366] underline">Link Rotator</Link>, name your rotator, add at least two
+        Go to <Link href="/links/new/rotator" className="text-[#25D366] underline">Lead rotator</Link>, name your rotator, add at least two
         salespeople with their WhatsApp numbers, and share the generated link. Each click opens WhatsApp with the next
         person in rotation — you can also download a QR code from the rotator card.
       </>
@@ -16,23 +16,23 @@ const quickAnswers: { q: string; a: React.ReactNode }[] = [
   },
   {
     q: "How do I add or name a salesperson?",
-    a: "On a rotator, each row is a salesperson: enter their name and WhatsApp number. The name is optional, but it shows up in your Reports so it's easy to recognise who got which lead.",
+    a: "On a rotator, each row is a salesperson: enter their name and WhatsApp number. The name is optional, but it shows up in your Results so it's easy to recognise who got which lead.",
   },
   {
     q: "Why is my link paused?",
-    a: "Either your 3-day free trial has ended and your links are paused, or you moved to a lower plan and went over its rotator, number, or short-link limit. Choose a plan (or trim items) to resume — anything paused keeps its data.",
+    a: "Either your 3-day free trial has ended and your links are paused, or you moved to a lower plan and went over its shared link total (lead rotators, WhatsApp links and ad links all count together) or its salespeople-per-rotator limit. Choose a plan (or trim items) to resume — anything paused keeps its data.",
   },
   {
     q: "What does each plan include?",
     a: (
       <>
-        <strong className="text-white">Free trial (3 days):</strong> everything in Solo — 3 rotators, 3 numbers each, 100 leads, 2 short links, widget, basic reports. After the trial, links pause until you choose a plan.{" "}
+        <strong className="text-white">Free trial (3 days):</strong> everything in Solo — 5 links, 3 salespeople per rotator, 100 leads, website button, basic reports. After the trial, links pause until you choose a plan.{" "}
         <strong className="text-white">Solo ($9/mo):</strong> same, ongoing — no 3-day limit.{" "}
-        <strong className="text-white">Growth ($19/mo):</strong> 10 rotators, 10 numbers each, 5 short links, 5 ad
-        links, full reports.{" "}
-        <strong className="text-white">Agency ($49/mo):</strong> 25 rotators, 20 numbers each, 15 short links, 15 ad
-        links, full reports with shared exports. See{" "}
-        <Link href="/plans" className="text-[#25D366] underline">Plans</Link> for the full comparison.
+        <strong className="text-white">Growth ($19/mo):</strong> 20 links (incl. ad links), 10 salespeople per rotator,
+        full reports.{" "}
+        <strong className="text-white">Agency ($49/mo):</strong> 55 links (any type), 20 salespeople per rotator,
+        full reports with shared exports. See{" "}
+        <Link href="/billing#plans" className="text-[#25D366] underline">Plans</Link> for the full comparison.
       </>
     ),
   },
@@ -59,8 +59,8 @@ const quickAnswers: { q: string; a: React.ReactNode }[] = [
     q: "Where do I see my results?",
     a: (
       <>
-        <Link href="/performance" className="text-[#25D366] underline">Performance</Link> shows live click and routing
-        activity for every plan. <Link href="/reports" className="text-[#25D366] underline">Reports</Link> (Solo and
+        <Link href="/results" className="text-[#25D366] underline">Results</Link> shows live click and routing
+        activity for every plan, on the Overview tab. <Link href="/results?tab=source" className="text-[#25D366] underline">By source &amp; campaign</Link> (Solo and
         above) adds fuller breakdowns by source, campaign, and date range.
       </>
     ),

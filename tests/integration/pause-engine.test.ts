@@ -72,8 +72,8 @@ describe("Case 16: plan-limit pausing engine", () => {
 
     const { subscriptionId: S0 } = await bootstrapLiveSubscription({ provider: "paypal", userId, plan: "pro", amount: 19 });
 
-    // 5 rotators (pro limit 10, basic limit 3): scores 50 > 40 > 30 > 20 > 10.
-    const rotators = await makeRotators(userId, [50, 40, 30, 20, 10]);
+    // 6 rotators (shared link pool: pro 20, basic 5): scores 50 > 40 > 30 > 20 > 10 > 5.
+    const rotators = await makeRotators(userId, [50, 40, 30, 20, 10, 5]);
     // 5 automations (pro limit 10, basic limit 3): 4 active with distinct
     // lastRunAt, plus one the user paused themselves (status "paused",
     // never touched by the plan-limit engine).
@@ -110,7 +110,7 @@ describe("Case 16: plan-limit pausing engine", () => {
       expect(freshUser.plan).toBe("basic");
 
       const rotatorRows = await prisma.rotatorLink.findMany({ where: { id: { in: rotators.map((r) => r.id) } }, orderBy: { totalClicks: "desc" } });
-      expect(rotatorRows.map((r) => r.planPausedAt !== null)).toEqual([false, false, false, true, true]); // top 3 (basic limit) kept
+      expect(rotatorRows.map((r) => r.planPausedAt !== null)).toEqual([false, false, false, false, false, true]); // top 5 (basic link pool) kept
 
       const automationRows = await prisma.automationRule.findMany({ where: { id: { in: automations.map((a) => a.id) } } });
       const selfPaused = automationRows.find((a) => a.id === selfPausedId)!;
@@ -144,7 +144,7 @@ describe("Case 16: plan-limit pausing engine", () => {
       expect(othersAfterUpgrade.every((a) => a.planPausedAt === null && a.status === "active")).toBe(true);
 
       // Nothing was ever deleted.
-      expect(await prisma.rotatorLink.count({ where: { id: { in: rotators.map((r) => r.id) } } })).toBe(5);
+      expect(await prisma.rotatorLink.count({ where: { id: { in: rotators.map((r) => r.id) } } })).toBe(6);
       expect(await prisma.automationRule.count({ where: { id: { in: automations.map((a) => a.id) } } })).toBe(5);
     });
   });
@@ -168,12 +168,14 @@ describe("Case 16: plan-limit pausing engine", () => {
   // happen on a real downgrade (previous plan rank strictly higher than the
   // new one). The cases below exercise that through the real trigger paths.
 
-  it("a renewal charge for the SAME plan never pauses short links/ad links, even over the new (tighter) limits", async () => {
+  it("a renewal charge for the SAME plan never pauses short links/ad links, even over the shared link pool limit", async () => {
     const user0 = await createTestUser({ plan: "free" });
     userId = user0.id; email = user0.email;
     const { subscriptionId: S0 } = await bootstrapLiveSubscription({ provider: "paypal", userId, plan: "pro", amount: 19 });
 
-    // New pro limit is 5 for both short links and ad links (lib/plan-limits.ts) - 7 of each is over.
+    // Pro's shared link pool is 20 (lib/plan-limits.ts LINK_LIMITS) - 14 is
+    // within it, but that shouldn't matter: a same-plan renewal never pauses
+    // regardless of pool room.
     const shortLinks = await makeShortLinks(userId, [70, 60, 50, 40, 30, 20, 10]);
     const adLinks = await makeAdLinks(userId, [70, 60, 50, 40, 30, 20, 10]);
 
@@ -196,12 +198,16 @@ describe("Case 16: plan-limit pausing engine", () => {
     expect(pausedIds(adLinkRows)).toEqual([]);
   });
 
-  it("Growth -> Solo downgrade pauses short links/ad links per the NEW (tighter) limits, keeping the highest-score items", async () => {
+  it("Growth -> Solo downgrade pauses the shared pool overflow (keeping the highest-score items across tables) and ALL ad links (not offered on Solo)", async () => {
     const user0 = await createTestUser({ plan: "free" });
     userId = user0.id; email = user0.email;
     const { subscriptionId: S0 } = await bootstrapLiveSubscription({ provider: "paypal", userId, plan: "pro", amount: 19 });
 
-    // New basic (Solo) limits: short links 2, ad links 0 (lib/plan-limits.ts).
+    // New basic (Solo) link pool is 5 (lib/plan-limits.ts LINK_LIMITS) - 3
+    // rotators + 3 short links is 6, one over. Ad links aren't offered on
+    // Solo at all (AD_LINKS_AVAILABLE.basic is false), so both are paused
+    // regardless of pool room, and never occupy a pool slot.
+    const rotators = await makeRotators(userId, [80, 70, 60]);
     const shortLinks = await makeShortLinks(userId, [50, 40, 30]);
     const adLinks = await makeAdLinks(userId, [50, 40]);
 
@@ -228,11 +234,14 @@ describe("Case 16: plan-limit pausing engine", () => {
     const freshUser = await getUser(userId);
     expect(freshUser.plan).toBe("basic");
 
+    const rotatorRows = await prisma.rotatorLink.findMany({ where: { id: { in: rotators.map((r) => r.id) } } });
+    expect(rotatorRows.every((r) => r.planPausedAt === null)).toBe(true); // all 3 rotators outscore every short link - none paused
+
     const shortLinkRows = await prisma.shortLink.findMany({ where: { id: { in: shortLinks.map((r) => r.id) } }, orderBy: { clicks: "desc" } });
-    expect(shortLinkRows.map((r) => r.planPausedAt !== null)).toEqual([false, false, true]); // top 2 (new basic limit) kept
+    expect(shortLinkRows.map((r) => r.planPausedAt !== null)).toEqual([false, false, true]); // pool is 3 rotators + 2 short links = 5; the lowest-scoring short link is the 6th and gets paused
 
     const adLinkRows = await prisma.adLink.findMany({ where: { id: { in: adLinks.map((r) => r.id) } } });
-    expect(pausedIds(adLinkRows).sort()).toEqual(adLinks.map((r) => r.id).sort()); // basic ad-link limit is 0 - all paused
+    expect(pausedIds(adLinkRows).sort()).toEqual(adLinks.map((r) => r.id).sort()); // ad links aren't offered on Solo - all paused
   });
 
   it("paid plan expiring to free pauses ALL rotators/short links/ad links (Free-trial restructure: free is 0 of everything)", async () => {
@@ -287,8 +296,8 @@ describe("Case 16: plan-limit pausing engine", () => {
   it("an unresolvable previous plan never pauses, even when the plan just went down and is now over the new limit", async () => {
     const user0 = await createTestUser({ plan: "pro" });
     userId = user0.id; email = user0.email;
-    // New basic short-link limit is 2 - 3 is over it.
-    const shortLinks = await makeShortLinks(userId, [30, 20, 10]);
+    // New basic link pool is 5 - 6 short links is one over it.
+    const shortLinks = await makeShortLinks(userId, [60, 50, 40, 30, 20, 10]);
 
     await withEnv({ PLAN_LIMIT_PAUSING_ENABLED: "true" }, async () => {
       await prisma.user.update({ where: { id: userId }, data: { plan: "basic" } });
@@ -348,7 +357,7 @@ describe("Case 16: plan-limit pausing engine", () => {
     const user0 = await createTestUser({ plan: "free", trialStartedAt, trialEndsAt, trialPlan: "pro" });
     userId = user0.id; email = user0.email;
 
-    // Solo (basic) limits: rotators 3, short links 2, ad links 0. These were
+    // Solo (basic) link pool is 5, ad links not offered at all. These were
     // never blocked at creation time in this test (it writes rows directly),
     // but buying Solo is a same-rank move from the trial's own Solo-equivalent
     // limits, not a downgrade - so none of them get paused by this purchase.
@@ -388,7 +397,7 @@ describe("Case 16: plan-limit pausing engine", () => {
     const user0 = await createTestUser({ plan: "free", trialStartedAt, trialEndsAt, trialPlan: "pro" });
     userId = user0.id; email = user0.email;
 
-    // Growth (pro) limits: rotators 10, short links 5, ad links 5 - well within.
+    // Growth (pro) shared link pool is 20, ad links offered - all well within.
     const rotators = await makeRotators(userId, [10, 9, 8]);
     const shortLinks = await makeShortLinks(userId, [10, 9]);
     const adLinks = await makeAdLinks(userId, [10]);

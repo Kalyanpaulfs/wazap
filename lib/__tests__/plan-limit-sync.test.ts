@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
-import { selectPauseResume, isLinkDowngrade, linkLimitValue, isNewStyleTrial, previousLinkPlanFor, type RankCandidate } from "@/lib/plan-limit-sync";
-import { ROTATOR_LIMITS, SHORT_LINK_LIMITS, AD_LINK_LIMITS } from "@/lib/plan-limits";
+import {
+  selectPauseResume, isLinkDowngrade, linkLimitValue, isNewStyleTrial, previousLinkPlanFor,
+  selectLinkPoolPauseResume, type RankCandidate, type LinkPoolCandidate,
+} from "@/lib/plan-limit-sync";
+import { LINK_LIMITS } from "@/lib/plan-limits";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -110,19 +113,96 @@ describe("selectPauseResume", () => {
 });
 
 describe("linkLimitValue (lib/plan-limits.ts numbers, not the stale TOOL_LIMITS ones)", () => {
-  it("reads the new 2026 rotator/short-link/ad-link caps per plan (Free-trial restructure: free is 0)", () => {
-    expect(linkLimitValue(ROTATOR_LIMITS, "free")).toBe(0);
-    expect(linkLimitValue(ROTATOR_LIMITS, "basic")).toBe(3);
-    expect(linkLimitValue(ROTATOR_LIMITS, "pro")).toBe(10);
-    expect(linkLimitValue(ROTATOR_LIMITS, "ultimate")).toBe(25);
-    expect(linkLimitValue(SHORT_LINK_LIMITS, "free")).toBe(0);
-    expect(linkLimitValue(SHORT_LINK_LIMITS, "pro")).toBe(5);
-    expect(linkLimitValue(AD_LINK_LIMITS, "basic")).toBe(0);
-    expect(linkLimitValue(AD_LINK_LIMITS, "ultimate")).toBe(15);
+  it("reads the shared link pool cap per plan (UX-1 step 1; Free-trial restructure: free is 0)", () => {
+    expect(linkLimitValue(LINK_LIMITS, "free")).toBe(0);
+    expect(linkLimitValue(LINK_LIMITS, "basic")).toBe(5);
+    expect(linkLimitValue(LINK_LIMITS, "pro")).toBe(20);
+    expect(linkLimitValue(LINK_LIMITS, "ultimate")).toBe(55);
   });
 
   it("maps a legacy 'business' plan onto ultimate's numbers", () => {
-    expect(linkLimitValue(ROTATOR_LIMITS, "business")).toBe(linkLimitValue(ROTATOR_LIMITS, "ultimate"));
+    expect(linkLimitValue(LINK_LIMITS, "business")).toBe(linkLimitValue(LINK_LIMITS, "ultimate"));
+  });
+});
+
+// UX-1 step 1: rotators/short links/ad links used to each have their own
+// limit; they now rank together as ONE pool. selectLinkPoolPauseResume is
+// selectPauseResume plus cross-table id tagging - these cases are the
+// owner's pool examples (a)-(e).
+describe("selectLinkPoolPauseResume (shared link pool ranking)", () => {
+  function poolItem(model: LinkPoolCandidate["model"], id: string, score: number, createdAt: string, planPausedAt: string | null = null): LinkPoolCandidate {
+    return { model, id, score, createdAt: new Date(createdAt), planPausedAt: planPausedAt ? new Date(planPausedAt) : null };
+  }
+
+  it("(a) Growth -> Solo: 4 rotators + 3 short links rank as ONE pool of 7 against the new limit of 5 - busiest 5 stay live, 2 paused", () => {
+    const candidates = [
+      poolItem("rotatorLink", "r1", 40, "2026-01-01"),
+      poolItem("rotatorLink", "r2", 30, "2026-01-02"),
+      poolItem("rotatorLink", "r3", 20, "2026-01-03"),
+      poolItem("rotatorLink", "r4", 5, "2026-01-04"), // least used rotator
+      poolItem("shortLink", "s1", 35, "2026-01-05"),
+      poolItem("shortLink", "s2", 25, "2026-01-06"),
+      poolItem("shortLink", "s3", 1, "2026-01-07"), // least used short link
+    ];
+    const selection = selectLinkPoolPauseResume(candidates, LINK_LIMITS.basic);
+    expect(selection.rotatorLink.pauseIds).toEqual(["r4"]);
+    expect(selection.shortLink.pauseIds).toEqual(["s3"]);
+    expect(selection.rotatorLink.resumeIds).toEqual([]);
+    expect(selection.shortLink.resumeIds).toEqual([]);
+    expect(selection.adLink).toEqual({ pauseIds: [], resumeIds: [] }); // ad links aren't in this call at all - synced separately with limit 0
+  });
+
+  it("(b) upgrade Solo -> Growth: previously pool-paused rotator/short-link AND separately-paused ad links all resume once ad links rejoin the pool under 20", () => {
+    const candidates = [
+      poolItem("rotatorLink", "r1", 40, "2026-01-01"),
+      poolItem("rotatorLink", "r2", 30, "2026-01-02"),
+      poolItem("rotatorLink", "r3", 20, "2026-01-03"),
+      poolItem("rotatorLink", "r4", 5, "2026-01-04", "2026-02-01"), // paused by the earlier downgrade
+      poolItem("shortLink", "s1", 35, "2026-01-05"),
+      poolItem("shortLink", "s2", 25, "2026-01-06"),
+      poolItem("shortLink", "s3", 1, "2026-01-07", "2026-02-01"), // paused by the earlier downgrade
+      poolItem("adLink", "a1", 10, "2026-01-08", "2026-02-01"), // was synced separately (limit 0) on Solo
+      poolItem("adLink", "a2", 5, "2026-01-09", "2026-02-01"),
+    ];
+    const selection = selectLinkPoolPauseResume(candidates, LINK_LIMITS.pro);
+    expect(selection.rotatorLink.resumeIds).toEqual(["r4"]);
+    expect(selection.shortLink.resumeIds).toEqual(["s3"]);
+    expect(selection.adLink.resumeIds.sort()).toEqual(["a1", "a2"]);
+    expect(selection.rotatorLink.pauseIds).toEqual([]);
+    expect(selection.shortLink.pauseIds).toEqual([]);
+    expect(selection.adLink.pauseIds).toEqual([]);
+  });
+
+  it("(c) everything already fits: renewal/same-plan selection pauses nothing (the allowPause gate, exercised in plan-limit-sync, is a separate concern from ranking)", () => {
+    const candidates = [
+      poolItem("rotatorLink", "r1", 10, "2026-01-01"),
+      poolItem("shortLink", "s1", 5, "2026-01-02"),
+      poolItem("adLink", "a1", 1, "2026-01-03"),
+    ];
+    const selection = selectLinkPoolPauseResume(candidates, LINK_LIMITS.ultimate);
+    expect(selection.rotatorLink.pauseIds).toEqual([]);
+    expect(selection.shortLink.pauseIds).toEqual([]);
+    expect(selection.adLink.pauseIds).toEqual([]);
+  });
+
+  it("(d) resolving to free: pool limit 0 pauses every pool candidate", () => {
+    const candidates = [
+      poolItem("rotatorLink", "r1", 10, "2026-01-01"),
+      poolItem("shortLink", "s1", 5, "2026-01-02"),
+    ];
+    const selection = selectLinkPoolPauseResume(candidates, LINK_LIMITS.free);
+    expect(selection.rotatorLink.pauseIds).toEqual(["r1"]);
+    expect(selection.shortLink.pauseIds).toEqual(["s1"]);
+  });
+
+  it("(e) id collision safety: a rotator and a short link sharing the same raw id are never conflated", () => {
+    const candidates = [
+      poolItem("rotatorLink", "dup", 10, "2026-01-01"), // higher score - should be kept
+      poolItem("shortLink", "dup", 1, "2026-01-02"), // lower score, SAME raw id - should be paused
+    ];
+    const selection = selectLinkPoolPauseResume(candidates, 1);
+    expect(selection.rotatorLink.pauseIds).toEqual([]);
+    expect(selection.shortLink.pauseIds).toEqual(["dup"]);
   });
 });
 

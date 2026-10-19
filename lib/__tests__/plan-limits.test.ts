@@ -1,20 +1,20 @@
 import { describe, expect, it } from "vitest";
 import {
   normalizePlanKey,
-  ROTATOR_LIMITS,
+  LINK_LIMITS,
   NUMBERS_PER_ROTATOR_LIMITS,
-  SHORT_LINK_LIMITS,
-  AD_LINK_LIMITS,
+  AD_LINKS_AVAILABLE,
   PLAN_DISPLAY_NAME,
-  rotatorLimit,
+  linkLimit,
   numbersPerRotatorLimit,
-  shortLinkLimit,
-  adLinkLimit,
+  adLinksAvailable,
   widgetAvailable,
   reportsTier,
   supportLabel,
   canCreateMore,
   numbersPatchAllowed,
+  nextPlanPoolHint,
+  nextPlanNumbersHint,
 } from "@/lib/plan-limits";
 
 describe("normalizePlanKey", () => {
@@ -34,24 +34,20 @@ describe("normalizePlanKey", () => {
   });
 });
 
-describe("owner-approved plan table", () => {
-  it("matches the signed-off rotator link limits (Free-trial restructure: free is 0, nothing grandfathered)", () => {
-    expect(ROTATOR_LIMITS).toEqual({ free: 0, basic: 3, pro: 10, ultimate: 25 });
+describe("owner-approved plan table (UX-1 step 1: shared link pool)", () => {
+  it("matches the signed-off link pool limits (Free-trial restructure: free is 0, nothing grandfathered)", () => {
+    expect(LINK_LIMITS).toEqual({ free: 0, basic: 5, pro: 20, ultimate: 55 });
   });
   it("matches the signed-off numbers-per-rotator limits (Free-trial restructure: free is 0)", () => {
     expect(NUMBERS_PER_ROTATOR_LIMITS).toEqual({ free: 0, basic: 3, pro: 10, ultimate: 20 });
   });
-  it("matches the signed-off short link limits", () => {
-    expect(SHORT_LINK_LIMITS).toEqual({ free: 0, basic: 2, pro: 5, ultimate: 15 });
-  });
-  it("matches the signed-off ad link limits", () => {
-    expect(AD_LINK_LIMITS).toEqual({ free: 0, basic: 0, pro: 5, ultimate: 15 });
+  it("ad links are only offered on Growth and Agency", () => {
+    expect(AD_LINKS_AVAILABLE).toEqual({ free: false, basic: false, pro: true, ultimate: true });
   });
   it("business is treated exactly like ultimate for every limit", () => {
-    expect(rotatorLimit("business")).toBe(rotatorLimit("ultimate"));
+    expect(linkLimit("business")).toBe(linkLimit("ultimate"));
     expect(numbersPerRotatorLimit("business")).toBe(numbersPerRotatorLimit("ultimate"));
-    expect(shortLinkLimit("business")).toBe(shortLinkLimit("ultimate"));
-    expect(adLinkLimit("business")).toBe(adLinkLimit("ultimate"));
+    expect(adLinksAvailable("business")).toBe(adLinksAvailable("ultimate"));
     expect(widgetAvailable("business")).toBe(widgetAvailable("ultimate"));
     expect(reportsTier("business")).toBe(reportsTier("ultimate"));
     expect(supportLabel("business")).toBe(supportLabel("ultimate"));
@@ -110,5 +106,27 @@ describe("numbersPatchAllowed (grandfathering rule #2: numbers per rotator)", ()
   });
   it("blocks any increase for a legacy rotator already over the limit", () => {
     expect(numbersPatchAllowed(14, 15, 3)).toBe(false);
+  });
+});
+
+describe("nextPlanPoolHint (UX-1 step 2: create-link chooser upgrade copy)", () => {
+  it("names the next plan and its link pool total", () => {
+    expect(nextPlanPoolHint("basic")).toBe("Growth for 20");
+    expect(nextPlanPoolHint("pro")).toBe("Agency for 55");
+  });
+  it("has nothing to suggest at Agency, or for free", () => {
+    expect(nextPlanPoolHint("ultimate")).toBe("");
+    expect(nextPlanPoolHint("free")).toBe("");
+  });
+});
+
+describe("nextPlanNumbersHint (UX-1 step 3: rotator create form salespeople counter)", () => {
+  it("names the next plan and its numbers-per-rotator total", () => {
+    expect(nextPlanNumbersHint("basic")).toBe("Growth allows 10");
+    expect(nextPlanNumbersHint("pro")).toBe("Agency allows 20");
+  });
+  it("has nothing to suggest at Agency, or for free", () => {
+    expect(nextPlanNumbersHint("ultimate")).toBe("");
+    expect(nextPlanNumbersHint("free")).toBe("");
   });
 });

@@ -1,10 +1,13 @@
 "use client";
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
 import { MessageCircle, Copy, Check, Code } from "lucide-react";
 import { COUNTRIES } from "@/lib/countries";
 
 export default function WidgetGeneratorPage() {
+  const { data: session } = useSession();
+  const isLoggedIn = Boolean(session?.user);
   const [dial, setDial] = useState("971");
   const [number, setNumber] = useState("");
   const [message, setMessage] = useState("Hello! I'd like to get in touch.");
@@ -58,7 +61,7 @@ export default function WidgetGeneratorPage() {
 
   async function copy() {
     setLimitError(null);
-    if (!validNumber) { setLimitError("Enter a valid phone number before copying your widget."); return; }
+    if (!validNumber) { setLimitError("Enter a valid phone number before copying your button."); return; }
     try {
     const res = await fetch("/api/tools/use", {
       method: "POST",
@@ -67,18 +70,22 @@ export default function WidgetGeneratorPage() {
     });
     const data = await res.json();
     if (res.status === 403) { setAvailable(false); return; }
-    if (!res.ok) throw new Error(data.error || "Widget copy could not be completed. Please try again.");
+    if (!res.ok) throw new Error(data.error || "Button copy could not be completed. Please try again.");
     await navigator.clipboard.writeText(embedCode);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);    } catch (error) {
-      setLimitError(error instanceof Error ? error.message : "Widget copy could not be completed. Please try again.");
+      setLimitError(error instanceof Error ? error.message : "Button copy could not be completed. Please try again.");
     }
   }
 
   return (
     <>
       <div className="border-b border-green-900/20 bg-[#0a0f0a]/90 px-4 min-h-10 py-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
-        <Link href="/tools" className="text-slate-500 hover:text-white">← Tools</Link>
+        {isLoggedIn ? (
+          <Link href="/links/new" className="text-slate-500 hover:text-white">← Create a link</Link>
+        ) : (
+          <Link href="/tools" className="text-slate-500 hover:text-white">← Tools</Link>
+        )}
         <span className="text-slate-700">/</span>
         <span className="text-white font-medium">Widget Generator</span>
       </div>
@@ -100,7 +107,7 @@ export default function WidgetGeneratorPage() {
                     className="w-full min-w-0 rounded-xl bg-slate-900 border border-slate-700 px-3 py-2.5 text-sm text-white focus:outline-none focus:border-[#25D366] sm:w-44 sm:shrink-0">
                     {COUNTRIES.map(c => <option key={c.code} value={c.dial.replace("+","")}>{c.dial} {c.name}</option>)}
                   </select>
-                  <input aria-label="Phone number" type="tel" value={number} onChange={e => setNumber(e.target.value)} placeholder="Phone number"
+                  <input aria-label="Phone number" type="tel" inputMode="numeric" value={number} onChange={e => setNumber(e.target.value.replace(/\D/g, "").slice(0, 15))} placeholder="Phone number"
                     className="w-full min-w-0 flex-1 rounded-xl bg-slate-900 border border-slate-700 px-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#25D366]" />
                 </div>
                 <div>
@@ -183,8 +190,8 @@ export default function WidgetGeneratorPage() {
                 </div>
                 {locked ? (
                   <div className="rounded-xl bg-slate-900 p-4 text-sm text-slate-300">
-                    The website widget is included in Solo, Growth and Agency.{" "}
-                    <Link href="/pricing?source=widget" className="font-semibold text-[#25D366] underline">See plans</Link>
+                    The website button is included in Solo, Growth and Agency.{" "}
+                    <Link href={isLoggedIn ? "/billing#plans" : "/pricing?source=widget"} className="font-semibold text-[#25D366] underline">See plans</Link>
                   </div>
                 ) : (
                   <pre className="text-xs text-slate-400 bg-slate-900 rounded-xl p-4 overflow-x-auto whitespace-pre-wrap font-mono">{embedCode}</pre>

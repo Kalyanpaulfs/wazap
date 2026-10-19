@@ -81,7 +81,7 @@ export default function QRGenerator({ isLoggedIn }: Props) {
 
         <div className="flex gap-2">
           <CountryPicker value={dial} onChange={setDial} />
-          <input type="tel" inputMode="numeric" value={number} onChange={e => setNumber(e.target.value)} placeholder="Your phone number"
+          <input type="tel" inputMode="numeric" value={number} onChange={e => setNumber(e.target.value.replace(/\D/g, "").slice(0, 15))} placeholder="Your phone number"
             className="flex-1 min-w-0 rounded-xl bg-slate-900 border border-slate-700 px-4 py-3 text-white placeholder-slate-600 focus:outline-none focus:border-[#25D366] transition-colors" />
         </div>
 

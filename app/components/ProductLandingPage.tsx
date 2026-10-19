@@ -3,10 +3,9 @@ import type { LucideIcon } from "lucide-react";
 import { ArrowRight, CheckCircle2 } from "lucide-react";
 import {
   PLAN_DISPLAY_NAME,
-  ROTATOR_LIMITS,
+  LINK_LIMITS,
   NUMBERS_PER_ROTATOR_LIMITS,
-  SHORT_LINK_LIMITS,
-  AD_LINK_LIMITS,
+  AD_LINKS_AVAILABLE,
   WIDGET_AVAILABLE,
   REPORTS_TIER,
   type PlanKey,
@@ -56,10 +55,9 @@ function planRow(plan: PlanKey) {
     plan,
     name: plan === "free" ? "Free trial" : PLAN_DISPLAY_NAME[plan],
     price: planPrice(plan),
-    rotators: ROTATOR_LIMITS[limitsPlan],
+    links: LINK_LIMITS[limitsPlan],
     numbersPerRotator: NUMBERS_PER_ROTATOR_LIMITS[limitsPlan],
-    shortLinks: SHORT_LINK_LIMITS[limitsPlan],
-    adLinks: AD_LINK_LIMITS[limitsPlan],
+    adLinks: AD_LINKS_AVAILABLE[limitsPlan],
     widget: WIDGET_AVAILABLE[limitsPlan],
     reports: reportsLabel,
   };
@@ -161,11 +159,10 @@ export default function ProductLandingPage({ content }: { content: ProductLandin
                 <tr className="border-b border-slate-800 bg-[#111811] text-slate-400">
                   <th className="px-4 py-3 font-semibold">Plan</th>
                   <th className="px-4 py-3 font-semibold">Price</th>
-                  <th className="px-4 py-3 font-semibold">Rotators</th>
+                  <th className="px-4 py-3 font-semibold">Links</th>
                   <th className="px-4 py-3 font-semibold">Salespeople / rotator</th>
-                  <th className="px-4 py-3 font-semibold">Short links</th>
                   <th className="px-4 py-3 font-semibold">Ad links</th>
-                  <th className="px-4 py-3 font-semibold">Widget</th>
+                  <th className="px-4 py-3 font-semibold">Website button</th>
                   <th className="px-4 py-3 font-semibold">Reports</th>
                 </tr>
               </thead>
@@ -174,10 +171,9 @@ export default function ProductLandingPage({ content }: { content: ProductLandin
                   <tr key={row.plan} className={`border-b border-slate-800/60 last:border-0 ${row.plan === "basic" ? "bg-[#25D366]/5" : ""}`}>
                     <td className="px-4 py-3 font-semibold text-white">{row.name}</td>
                     <td className="px-4 py-3 text-slate-300">{row.price}/mo</td>
-                    <td className={`px-4 py-3 text-slate-300 ${highlight === "rotator" ? "font-semibold text-[#25D366]" : ""}`}>{row.rotators}</td>
+                    <td className={`px-4 py-3 text-slate-300 ${highlight === "rotator" || highlight === "shortLinks" ? "font-semibold text-[#25D366]" : ""}`}>{row.links}</td>
                     <td className={`px-4 py-3 text-slate-300 ${highlight === "rotator" ? "font-semibold text-[#25D366]" : ""}`}>{row.numbersPerRotator}</td>
-                    <td className={`px-4 py-3 text-slate-300 ${highlight === "shortLinks" ? "font-semibold text-[#25D366]" : ""}`}>{row.shortLinks || "—"}</td>
-                    <td className={`px-4 py-3 text-slate-300 ${highlight === "adLinks" ? "font-semibold text-[#25D366]" : ""}`}>{row.adLinks || "—"}</td>
+                    <td className={`px-4 py-3 text-slate-300 ${highlight === "adLinks" ? "font-semibold text-[#25D366]" : ""}`}>{row.adLinks ? "Yes" : "—"}</td>
                     <td className={`px-4 py-3 text-slate-300 ${highlight === "widget" ? "font-semibold text-[#25D366]" : ""}`}>{row.widget ? "Yes" : "—"}</td>
                     <td className="px-4 py-3 text-slate-300">{row.reports}</td>
                   </tr>

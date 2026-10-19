@@ -67,7 +67,7 @@ export function renderWelcomeEmail(name: string | null, base: string): string {
       <p style="margin:0 0 20px;color:#9fb0a3">Your account is ready, with a 3-day free trial—everything in Solo ($9 plan), no card required, 100 routed leads while it lasts. Create your first professional WhatsApp workflow in a few minutes.</p>
       <div style="background:#0f1b13;border:1px solid #1d3323;border-radius:14px;padding:17px 18px;margin:0 0 22px">
         <div style="color:#fff;font-weight:700;margin-bottom:7px">A good first workflow</div>
-        <div style="color:#9fb0a3">Create a tracked link or QR code, add your message, then follow every click from your dashboard. Teams can also route leads automatically with the WhatsApp rotator.</div>
+        <div style="color:#9fb0a3">Create a tracked link or QR code, add your message, then follow every click from your dashboard. Teams can also route leads automatically with a Lead rotator.</div>
       </div>
       <p style="margin:22px 0">
         <a href="${base}/dashboard" style="display:inline-block;background:#25D366;color:#061008;text-decoration:none;font-weight:800;padding:13px 22px;border-radius:999px;margin:0 8px 8px 0">Create my first workflow →</a>
@@ -87,7 +87,7 @@ export function renderTrialReminderEmail(name: string | null, days: number, base
     <div style="padding:30px 28px;color:#cbd5e1;font-size:15px;line-height:1.65">
       <p style="margin:0 0 12px">${hi}</p>
       <h1 style="margin:0 0 12px;color:#fff;font-size:27px;line-height:1.2">Your free trial has ${days} day${days !== 1 ? "s" : ""} left.</h1>
-      <p style="margin:0 0 20px;color:#9fb0a3">Keep your tracked links, QR codes, and WhatsApp rotator active by choosing a plan before the trial ends.</p>
+      <p style="margin:0 0 20px;color:#9fb0a3">Keep your tracked links, QR codes, and Lead rotators active by choosing a plan before the trial ends.</p>
       <p style="margin:22px 0"><a href="${base}/pricing" style="display:inline-block;background:#25D366;color:#061008;text-decoration:none;font-weight:800;padding:13px 22px;border-radius:999px">Choose my plan →</a></p>
       <p style="margin:18px 0 0;color:#718078;font-size:12px">No automatic charge will occur. If you do not choose a plan, your links and reports pause when the trial ends; your saved data remains in your workspace.</p>
     </div>
@@ -106,9 +106,9 @@ export function renderTrialEndedEmail(name: string | null, base: string): string
     <div style="padding:30px 28px;color:#cbd5e1;font-size:15px;line-height:1.65">
       <p style="margin:0 0 12px">${hi}</p>
       <h1 style="margin:0 0 12px;color:#fff;font-size:27px;line-height:1.2">Your free trial has ended.</h1>
-      <p style="margin:0 0 20px;color:#9fb0a3">Your rotators, short links, ad links and widget are now paused, and no new leads are being routed. Nothing was deleted — choose a plan to turn everything back on instantly.</p>
-      <p style="margin:22px 0"><a href="${base}/plans" style="display:inline-block;background:#25D366;color:#061008;text-decoration:none;font-weight:800;padding:13px 22px;border-radius:999px">Choose a plan →</a></p>
-      <p style="margin:18px 0 0;color:#718078;font-size:12px">Your saved data stays in your workspace. You can still sign in, see your Account, and use the free link builder and QR maker any time.</p>
+      <p style="margin:0 0 20px;color:#9fb0a3">Your lead rotators, WhatsApp links, ad links and website button are now paused, and no new leads are being routed. Nothing was deleted — choose a plan to turn everything back on instantly.</p>
+      <p style="margin:22px 0"><a href="${base}/billing#plans" style="display:inline-block;background:#25D366;color:#061008;text-decoration:none;font-weight:800;padding:13px 22px;border-radius:999px">Choose a plan →</a></p>
+      <p style="margin:18px 0 0;color:#718078;font-size:12px">Your saved data stays in your workspace. You can still sign in, see your Account, and use the free QR maker any time.</p>
     </div>
   </div>`;
 }
@@ -127,7 +127,7 @@ export function renderTrialConversionEmail(name: string | null, days: number, ba
       <p style="margin:0 0 20px;color:#9fb0a3">With ${timeLeft}, now is the best time to choose the plan that fits how you handle WhatsApp leads.</p>
       <div style="background:#0f1b13;border:1px solid #1d3323;border-radius:14px;padding:17px 18px;margin:0 0 22px;color:#9fb0a3">
         <div style="color:#fff;font-weight:700;margin-bottom:8px">Plans start at $9/month</div>
-        Keep your tracked links, QR codes, WhatsApp rotator, performance reports and higher usage limits. Pay securely by card or PayPal.
+        Keep your tracked links, QR codes, Lead rotators, results reporting and higher usage limits. Pay securely by card or PayPal.
       </div>
       <p style="margin:22px 0"><a href="${base}/pricing?utm_source=trial_email&amp;utm_medium=email&amp;utm_campaign=trial_conversion_20260813" style="display:inline-block;background:#25D366;color:#061008;text-decoration:none;font-weight:800;padding:13px 22px;border-radius:999px">Choose my Wazap plan →</a></p>
       <p style="margin:18px 0 0;color:#718078;font-size:12px">No automatic charge will occur. Need help choosing? Reply to this email and tell us how many people handle your WhatsApp leads.</p>
@@ -199,7 +199,7 @@ export function renderAccountRestoredEmail(opts: { name: string | null; accountU
     <div style="padding:30px 28px;color:#cbd5e1;font-size:15px;line-height:1.65">
       <p style="margin:0 0 12px">${greeting}</p>
       <h1 style="margin:0 0 12px;color:#fff;font-size:27px;line-height:1.2">Account closure cancelled</h1>
-      <p style="margin:0 0 20px;color:#9fb0a3">Your Wazap account stays active, including your rotators, tracked links, chats and reports. No data was deleted.</p>
+      <p style="margin:0 0 20px;color:#9fb0a3">Your Wazap account stays active, including your lead rotators, tracked links, leads and results. No data was deleted.</p>
       <p style="margin:22px 0"><a href="${accountUrl}" style="display:inline-block;background:#25D366;color:#061008;text-decoration:none;font-weight:800;padding:13px 22px;border-radius:999px">Open Account settings →</a></p>
     </div>
     <div style="padding:16px 28px;background:#080e09;color:#5f6f63;font-size:11px;text-align:center">Wazap.lt · Secure business conversation workspace</div>
@@ -285,7 +285,7 @@ export function renderExpiryEmail(name: string | null, planLabel: string, days: 
     </div>
     <div style="padding:24px;color:#cbd5e1;font-size:14px;line-height:1.6">
       <p style="margin:0 0 12px">${hi}</p>
-      <p style="margin:0 0 12px">Your <b style="color:#fff">${escapeHtml(planLabel)}</b> plan expires <b style="color:#fbbf24">${when}</b>. Renew now to keep uninterrupted access to every Wazap tool — widgets, rotator, QR and more.</p>
+      <p style="margin:0 0 12px">Your <b style="color:#fff">${escapeHtml(planLabel)}</b> plan expires <b style="color:#fbbf24">${when}</b>. Renew now to keep uninterrupted access to every Wazap tool — website button, lead rotator, QR and more.</p>
       <p style="margin:20px 0">
         <a href="${base}/pricing" style="display:inline-block;background:#25D366;color:#000;text-decoration:none;font-weight:600;padding:12px 22px;border-radius:999px;font-size:14px">Renew my plan →</a>
       </p>

@@ -2,14 +2,14 @@ import BrandLogo from "./components/BrandLogo";
 import Link from "next/link";
 
 const groups = [
-  { title: "Tools", links: [["/tools/rotator", "Lead router"], ["/pricing", "Pricing"], ["/tools", "Free tools"]] },
+  { title: "Tools", links: [["/tools/rotator", "Lead rotator"], ["/pricing", "Pricing"], ["/tools", "Free tools"]] },
   {
     title: "Products",
     links: [
       ["/whatsapp-lead-routing", "Lead routing"],
       ["/whatsapp-ad-tracking", "Ad tracking"],
-      ["/whatsapp-short-links", "Short links"],
-      ["/whatsapp-website-widget", "Website widget"],
+      ["/whatsapp-short-links", "WhatsApp links"],
+      ["/whatsapp-website-widget", "Website button"],
     ],
   },
   { title: "Help & company", links: [["/resources", "Guides & comparisons"], ["/#faq", "FAQ"], ["/contact", "Contact"], ["/about", "About Wazap"], ["/languages", "Languages"]] },

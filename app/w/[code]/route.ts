@@ -13,6 +13,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ code: st
   const link = await prisma.shortLink.findUnique({ where: { code: code.toLowerCase() }, include: { user: { select: OWNER_ENTITLEMENT_SELECT } } });
   if (!link) redirect("/");
   if (link.planPausedAt) redirect("/link-paused?type=shortlink");
+  // Manual pause (owner feature): the customer paused this link themselves,
+  // independent of the plan pause above. No click is recorded.
+  if (link.pausedAt) redirect("/link-paused?type=shortlink&reason=owner");
   // Live owner check on every click: free with no active Free trial never
   // routes, even before a pause-sync cron has run.
   if (!canRouteLinks(link.user)) redirect("/link-paused?type=shortlink&reason=plan");

@@ -6,13 +6,11 @@ import { prisma } from "@/lib/prisma";
 import { recordFunnelEvent } from "@/lib/funnel";
 import { cacheRoute, removeCachedRoute } from "@/lib/routing-cache";
 import { routerQuota, linkPlan } from "@/lib/router-entitlements";
-import { rotatorLimit, numbersPerRotatorLimit, numbersPatchAllowed } from "@/lib/plan-limits";
+import { linkLimit, numbersPerRotatorLimit, numbersPatchAllowed } from "@/lib/plan-limits";
+import { checkLinkPoolForCreate } from "@/lib/link-pool";
 import { accountPlanLabel } from "@/lib/entitlements";
 import { normalizeNumberNames } from "@/lib/salesperson-names";
-
-function getLimit(plan: string) {
-  return rotatorLimit(plan);
-}
+import { isPlausibleE164Digits } from "@/lib/phone";
 
 function genCode() { return randomBytes(5).toString("hex").toUpperCase(); }
 async function uniqueCode(): Promise<string> {
@@ -56,7 +54,7 @@ export async function GET() {
       destinationClicks: analytics.get(rotator.id)?.destinations ?? {},
     })),
     quota: routerQuota(user, lifetimeStarts),
-    limits: { plan, planLabel: accountPlanLabel(user), rotators: getLimit(plan), numbersPerRotator: numbersPerRotatorLimit(plan) },
+    limits: { plan, planLabel: accountPlanLabel(user), rotators: linkLimit(plan), numbersPerRotator: numbersPerRotatorLimit(plan) },
   });
 }
 
@@ -70,22 +68,17 @@ export async function POST(req: Request) {
     select: { plan: true, planExpiresAt: true, trialPlan: true, trialEndsAt: true, createdAt: true },
   });
   const plan = linkPlan(entitlementUser);
-  const limit = getLimit(plan);
-
-  if (limit === 0) {
-    return NextResponse.json({ error: "Your free trial has ended. Choose a plan to create rotators.", upgrade: true }, { status: 403 });
-  }
-  const count = await prisma.rotatorLink.count({ where: { userId, planPausedAt: null } });
-  if (count >= limit) {
-    return NextResponse.json({ error: `Plan limit reached. Your ${accountPlanLabel(entitlementUser)} plan allows ${limit} rotator${limit !== 1 ? "s" : ""}. Upgrade for more.`, upgrade: true }, { status: 403 });
+  const poolCheck = await checkLinkPoolForCreate(userId, plan, "rotator", accountPlanLabel(entitlementUser));
+  if (!poolCheck.ok) {
+    return NextResponse.json({ error: poolCheck.error, upgrade: true }, { status: 403 });
   }
 
   const body = await req.json().catch(() => null);
   if (!body || typeof body !== "object" || typeof body.name !== "string" || !body.name.trim() || !Array.isArray(body.numbers) || !body.numbers.length || body.numbers.some((number: unknown) => typeof number !== "string")) {
-    return NextResponse.json({ error: "Add a router name and a list of WhatsApp numbers." }, { status: 400 });
+    return NextResponse.json({ error: "Add a lead rotator name and a list of WhatsApp numbers." }, { status: 400 });
   }
   const { name, numbers, fallbackNumber, message, numberNames } = body;
-  const cleanNumbers = (numbers as unknown[]).map(number => String(number).replace(/\D/g, "")).filter(number => number.length >= 8).slice(0, 100);
+  const cleanNumbers = (numbers as unknown[]).map(number => String(number).replace(/\D/g, "")).filter(isPlausibleE164Digits).slice(0, 100);
   const cleanFallback = String(fallbackNumber ?? "").replace(/\D/g, "");
   if (!cleanNumbers.length) return NextResponse.json({ error: "Add at least one valid WhatsApp number." }, { status: 400 });
   const numberLimit = numbersPerRotatorLimit(plan);
@@ -118,16 +111,24 @@ export async function PATCH(req: Request) {
   if (req.headers.get("origin") !== new URL(process.env.NEXTAUTH_URL || "https://wazap.lt").origin) return NextResponse.json({ error: "Invalid request origin." }, { status: 403 });
   const userId = (session.user as any).id;
   const body = await req.json().catch(() => null);
-  if (!body || typeof body.id !== "string") return NextResponse.json({ error: "Choose a rotator." }, { status: 400 });
+  if (!body || typeof body.id !== "string") return NextResponse.json({ error: "Choose a lead rotator." }, { status: 400 });
   const existing = await prisma.rotatorLink.findFirst({ where: { id: body.id, userId } });
-  if (!existing) return NextResponse.json({ error: "Rotator not found." }, { status: 404 });
-  const data: { name?: string; numbers?: string[]; numberNames?: Record<string, string>; fallbackNumber?: string; message?: string } = {};
+  if (!existing) return NextResponse.json({ error: "Lead rotator not found." }, { status: 404 });
+  const data: { name?: string; numbers?: string[]; numberNames?: Record<string, string>; fallbackNumber?: string; message?: string; pausedAt?: Date | null } = {};
+  // Manual pause (owner feature, distinct from planPausedAt): customer
+  // controls this themselves, independent of the plan-pause engine, which
+  // never reads/writes this field. A paused rotator still counts toward the
+  // link pool - see lib/link-pool.ts countLiveLinks (planPausedAt only).
+  if (body.paused !== undefined) {
+    if (typeof body.paused !== "boolean") return NextResponse.json({ error: "Invalid paused value." }, { status: 400 });
+    data.pausedAt = body.paused ? new Date() : null;
+  }
   if (body.name !== undefined) {
     if (typeof body.name !== "string" || !body.name.trim() || body.name.length > 100) return NextResponse.json({ error: "Enter a name of up to 100 characters." }, { status: 400 });
     data.name = body.name.trim();
   }
   if (body.numbers !== undefined) {
-    if (!Array.isArray(body.numbers) || !body.numbers.length || body.numbers.length > 100 || body.numbers.some((n: unknown) => typeof n !== "string" || !/^\+?[1-9][0-9]{7,14}$/.test(n))) return NextResponse.json({ error: "Use international numbers with 8–15 digits, one per line." }, { status: 400 });
+    if (!Array.isArray(body.numbers) || !body.numbers.length || body.numbers.length > 100 || body.numbers.some((n: unknown) => typeof n !== "string" || !isPlausibleE164Digits(n))) return NextResponse.json({ error: "Use international numbers with 8–15 digits, one per line." }, { status: 400 });
     data.numbers = [...new Set<string>(body.numbers.map((n: string) => n.replace(/^\+/, "")))];
     // Grandfathering: a PATCH that keeps or reduces the number count is
     // always allowed, even for a legacy rotator already over the new
@@ -143,7 +144,7 @@ export async function PATCH(req: Request) {
     }
   }
   if (body.fallbackNumber !== undefined) {
-    if (typeof body.fallbackNumber !== "string" || (body.fallbackNumber && !/^\+?[1-9][0-9]{7,14}$/.test(body.fallbackNumber))) return NextResponse.json({ error: "Enter a valid international fallback number." }, { status: 400 });
+    if (typeof body.fallbackNumber !== "string" || (body.fallbackNumber && !isPlausibleE164Digits(body.fallbackNumber))) return NextResponse.json({ error: "Enter a valid international fallback number." }, { status: 400 });
     data.fallbackNumber = body.fallbackNumber.replace(/^\+/, "") || (data.numbers || existing.numbers)[0];
   } else if (data.numbers && !data.numbers.includes(existing.fallbackNumber || "")) data.fallbackNumber = data.numbers[0];
   if (body.numberNames !== undefined) {
@@ -162,10 +163,16 @@ export async function PATCH(req: Request) {
   }
   if (!Object.keys(data).length) return NextResponse.json({ error: "No changes supplied." }, { status: 400 });
   const result = await prisma.rotatorLink.updateMany({ where: { id: body.id, userId }, data });
-  if (!result.count) return NextResponse.json({ error: "Rotator not found." }, { status: 404 });
+  if (!result.count) return NextResponse.json({ error: "Lead rotator not found." }, { status: 404 });
   const updated = await prisma.rotatorLink.findFirst({ where: { id: body.id, userId } });
-  if (!updated) return NextResponse.json({ error: "Rotator not found." }, { status: 404 });
+  if (!updated) return NextResponse.json({ error: "Lead rotator not found." }, { status: 404 });
+  // On pause, drop the cache entry and stop (never leave a paused rotator
+  // servable via the degraded-cache fallback). On resume (or any other
+  // edit), re-cache as before - but only when it's actually live; a
+  // rotator that's still plan-paused must not get re-cached either.
   await removeCachedRoute(updated.code);
-  await cacheRoute({ code: updated.code, numbers: updated.numbers, fallbackNumber: updated.fallbackNumber, message: updated.message, currentIdx: updated.currentIdx });
+  if (!updated.pausedAt && !updated.planPausedAt) {
+    await cacheRoute({ code: updated.code, numbers: updated.numbers, fallbackNumber: updated.fallbackNumber, message: updated.message, currentIdx: updated.currentIdx });
+  }
   return NextResponse.json(updated);
 }

@@ -3,13 +3,12 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { recordFunnelEvent } from "@/lib/funnel";
-import { adLinkLimit, PLAN_DISPLAY_NAME } from "@/lib/plan-limits";
+import { linkLimit, adLinksAvailable, PLAN_DISPLAY_NAME } from "@/lib/plan-limits";
+import { checkLinkPoolForCreate } from "@/lib/link-pool";
 import { linkPlan } from "@/lib/router-entitlements";
 import { accountPlanLabel } from "@/lib/entitlements";
-
-function getLimit(plan: string) {
-  return adLinkLimit(plan);
-}
+import { sameSiteRequest } from "@/lib/crm";
+import { isPlausibleE164Digits } from "@/lib/phone";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -24,7 +23,7 @@ export async function GET() {
   });
   return NextResponse.json({
     links: links.map(l => ({ ...l, clicks: l._count.clickEvents })),
-    limit: getLimit(plan),
+    limit: adLinksAvailable(plan) ? linkLimit(plan) : 0,
     plan,
     planLabel: accountPlanLabel(entitlementUser),
   });
@@ -33,23 +32,20 @@ export async function GET() {
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!sameSiteRequest(req)) return NextResponse.json({ error: "Invalid request origin." }, { status: 403 });
   const userId = (session.user as any).id;
   const entitlementUser = await prisma.user.findUnique({ where: { id: userId }, select: { plan: true, planExpiresAt: true, trialPlan: true, trialEndsAt: true } });
   const plan = linkPlan(entitlementUser);
-  const limit = getLimit(plan);
-
-  if (limit === 0) {
-    return NextResponse.json({ error: "Ad links are not included in your plan. Upgrade to create tracked ad links.", upgrade: true }, { status: 403 });
-  }
-  const count = await prisma.adLink.count({ where: { userId, planPausedAt: null } });
-  if (count >= limit) {
-    return NextResponse.json({ error: `Plan limit reached. Your ${accountPlanLabel(entitlementUser)} plan allows ${limit} ad link${limit !== 1 ? "s" : ""}. Upgrade for more.`, upgrade: true }, { status: 403 });
+  const poolCheck = await checkLinkPoolForCreate(userId, plan, "adlink", accountPlanLabel(entitlementUser));
+  if (!poolCheck.ok) {
+    return NextResponse.json({ error: poolCheck.error, upgrade: true }, { status: 403 });
   }
 
   const { name, number, message, utmSource, utmMedium, utmCampaign } = await req.json();
-  if (!name || !number) return NextResponse.json({ error: "Missing fields" }, { status: 400 });
+  const n = String(number ?? "").replace(/\D/g, "");
+  if (!name || !isPlausibleE164Digits(n)) return NextResponse.json({ error: "A name and a valid phone number (with country code) are required." }, { status: 400 });
   const link = await prisma.adLink.create({
-    data: { userId, name, number, message, utmSource, utmMedium, utmCampaign },
+    data: { userId, name, number: n, message, utmSource, utmMedium, utmCampaign },
   });
   await recordFunnelEvent("first_tool_success", { userId, source: "ad_builder" });
   return NextResponse.json(link);
@@ -58,8 +54,55 @@ export async function POST(req: Request) {
 export async function DELETE(req: Request) {
   const session = await getServerSession(authOptions);
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!sameSiteRequest(req)) return NextResponse.json({ error: "Invalid request origin." }, { status: 403 });
   const userId = (session.user as any).id;
   const { id } = await req.json();
   await prisma.adLink.deleteMany({ where: { id, userId } });
   return NextResponse.json({ success: true });
+}
+
+// UX-1 step 4: editing an existing ad link (name, number, message, UTM
+// fields). The public /a/<id> redirect reads number/message straight from
+// the DB, so editing here is safe - there is no separate "code" to protect.
+export async function PATCH(req: Request) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!sameSiteRequest(req)) return NextResponse.json({ error: "Invalid request origin." }, { status: 403 });
+  const userId = (session.user as any).id;
+  const body = await req.json().catch(() => null);
+  if (!body || typeof body.id !== "string") return NextResponse.json({ error: "Choose a link." }, { status: 400 });
+
+  const existing = await prisma.adLink.findFirst({ where: { id: body.id, userId } });
+  if (!existing) return NextResponse.json({ error: "Link not found." }, { status: 404 });
+
+  const data: { name?: string; number?: string; message?: string | null; utmSource?: string | null; utmMedium?: string | null; utmCampaign?: string | null; pausedAt?: Date | null } = {};
+  // Manual pause (owner feature, distinct from planPausedAt): customer
+  // controls this themselves, independent of the plan-pause engine, which
+  // never reads/writes this field. A paused link still counts toward the
+  // link pool - see lib/link-pool.ts countLiveLinks (planPausedAt only).
+  if (body.paused !== undefined) {
+    if (typeof body.paused !== "boolean") return NextResponse.json({ error: "Invalid paused value." }, { status: 400 });
+    data.pausedAt = body.paused ? new Date() : null;
+  }
+  if (body.name !== undefined) {
+    if (!body.name || typeof body.name !== "string" || !body.name.trim()) return NextResponse.json({ error: "Give it a name." }, { status: 400 });
+    data.name = String(body.name).trim().slice(0, 100);
+  }
+  if (body.number !== undefined) {
+    const n = String(body.number ?? "").replace(/\D/g, "");
+    if (!isPlausibleE164Digits(n)) return NextResponse.json({ error: "A valid phone number (with country code) is required." }, { status: 400 });
+    data.number = n;
+  }
+  if (body.message !== undefined) {
+    data.message = typeof body.message === "string" ? body.message.slice(0, 600) : null;
+  }
+  if (body.utmSource !== undefined) data.utmSource = typeof body.utmSource === "string" ? body.utmSource.slice(0, 60) : null;
+  if (body.utmMedium !== undefined) data.utmMedium = typeof body.utmMedium === "string" ? body.utmMedium.slice(0, 60) : null;
+  if (body.utmCampaign !== undefined) data.utmCampaign = typeof body.utmCampaign === "string" ? body.utmCampaign.slice(0, 60) : null;
+  if (!Object.keys(data).length) return NextResponse.json({ error: "No changes supplied." }, { status: 400 });
+
+  const result = await prisma.adLink.updateMany({ where: { id: body.id, userId }, data });
+  if (!result.count) return NextResponse.json({ error: "Link not found." }, { status: 404 });
+  const updated = await prisma.adLink.findFirst({ where: { id: body.id, userId } });
+  return NextResponse.json(updated);
 }

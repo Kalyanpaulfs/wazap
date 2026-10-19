@@ -31,6 +31,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     ]);
     if (!link) return NextResponse.redirect(fallback || `${PUBLIC_BASE}/tools/ad-builder`, 307);
     if (link.planPausedAt) return NextResponse.redirect(`${PUBLIC_BASE}/link-paused?type=ad`, 307);
+    // Manual pause (owner feature): the customer paused this link
+    // themselves, independent of the plan pause above. No click is recorded.
+    if (link.pausedAt) return NextResponse.redirect(`${PUBLIC_BASE}/link-paused?type=ad&reason=owner`, 307);
     // Live owner check on every click: free with no active Free trial never
     // routes, even before a pause-sync cron has run.
     if (!canRouteLinks(link.user)) return NextResponse.redirect(`${PUBLIC_BASE}/link-paused?type=ad&reason=plan`, 307);

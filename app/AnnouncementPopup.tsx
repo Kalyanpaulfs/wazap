@@ -4,12 +4,12 @@ import Link from "next/link";
 import { X, Sparkles, ArrowRight } from "lucide-react";
 
 // Bump VERSION whenever the announcement content changes to re-show it to everyone.
-const VERSION = "v3";
+const VERSION = "v4";
 const KEY = `wazap_announce_${VERSION}`;
 
 const NEW_TOOLS = [
-  { emoji: "🔗", name: "Short Links", desc: "Create branded click-to-chat links for bios, ads, and support pages.", href: "/tools/shortlink" },
-  { emoji: "🔁", name: "Link Rotator", desc: "Rotate click-to-chat handoffs across your team's WhatsApp numbers.", href: "/tools/rotator" },
+  { emoji: "🔗", name: "WhatsApp Links", desc: "Create branded click-to-chat links for bios, ads, and support pages.", href: "/tools/shortlink" },
+  { emoji: "🔁", name: "Lead Rotator", desc: "Rotate click-to-chat handoffs across your team's WhatsApp numbers.", href: "/tools/rotator" },
 ];
 const COMING = [
   { emoji: "💳", name: "Card payments" },

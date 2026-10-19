@@ -1,4 +1,4 @@
-import { normalizePlanKey, ROTATOR_LIMITS, NUMBERS_PER_ROTATOR_LIMITS, SHORT_LINK_LIMITS, AD_LINK_LIMITS, WIDGET_AVAILABLE } from "./plan-limits";
+import { normalizePlanKey, LINK_LIMITS, NUMBERS_PER_ROTATOR_LIMITS, AD_LINKS_AVAILABLE, WIDGET_AVAILABLE } from "./plan-limits";
 import { isProductTrialActive, trialDaysLeft } from "./entitlements";
 import { isPlanExpired, getPlanDaysLeft, PLAN_NAMES } from "./billing";
 
@@ -43,11 +43,13 @@ export function getCustomerAccountStatus(user: {
   return { status: "active", scheduledFor: null, requestedAt: null };
 }
 
+// UX-1 step 1: rotators/short links/ad links share one pool - admin screens
+// show pool usage (any mix of the three) plus whether ad links are even
+// offered on this plan, rather than three separate counts.
 export type UsageLimitsComparison = {
-  rotators: { current: number; limit: number; label: string };
+  links: { current: number; limit: number; label: string };
   maxSalespeoplePerRotator: { current: number; limit: number; label: string };
-  shortLinks: { current: number; limit: number; label: string };
-  adLinks: { current: number; limit: number; label: string };
+  adLinksAvailable: { available: boolean; label: string };
   widget: { available: boolean; label: string };
 };
 
@@ -61,32 +63,26 @@ export function computeUsageVsLimits(
   }
 ): UsageLimitsComparison {
   const key = normalizePlanKey(plan);
-  const rotLimit = ROTATOR_LIMITS[key];
+  const linkCount = counts.rotators + counts.shortLinks + counts.adLinks;
+  const linkCap = LINK_LIMITS[key];
   const numLimit = NUMBERS_PER_ROTATOR_LIMITS[key];
-  const shortLimit = SHORT_LINK_LIMITS[key];
-  const adLimit = AD_LINK_LIMITS[key];
+  const adOk = AD_LINKS_AVAILABLE[key];
   const widgetOk = WIDGET_AVAILABLE[key];
 
   return {
-    rotators: {
-      current: counts.rotators,
-      limit: rotLimit,
-      label: `${counts.rotators} of ${rotLimit}`,
+    links: {
+      current: linkCount,
+      limit: linkCap,
+      label: `${linkCount} of ${linkCap}`,
     },
     maxSalespeoplePerRotator: {
       current: counts.maxSalespeople,
       limit: numLimit,
       label: `${counts.maxSalespeople} of ${numLimit}`,
     },
-    shortLinks: {
-      current: counts.shortLinks,
-      limit: shortLimit,
-      label: `${counts.shortLinks} of ${shortLimit}`,
-    },
-    adLinks: {
-      current: counts.adLinks,
-      limit: adLimit,
-      label: `${counts.adLinks} of ${adLimit}`,
+    adLinksAvailable: {
+      available: adOk,
+      label: adOk ? "Available" : "Not available on this plan",
     },
     widget: {
       available: widgetOk,

@@ -21,7 +21,7 @@ function RoutingDemo() {
   const [clicks, setClicks] = useState(0);
   const active = clicks ? (clicks - 1) % agents.length : -1;
   return <div className="wz-router">
-    <div className="wz-router-top"><span className="wz-window-dots"><i /><i /><i /></span><span>Wazap / Lead router</span><span className="wz-demo-tag">DEMO</span></div>
+    <div className="wz-router-top"><span className="wz-window-dots"><i /><i /><i /></span><span>Wazap / Lead rotator</span><span className="wz-demo-tag">DEMO</span></div>
     <div className="wz-link-box"><div className="wz-icon-tile"><Link2 size={23} /></div><div><small>ONE LINK. YOUR WHOLE TEAM.</small><strong>wazap.lt/r/your-team</strong></div><QrCode size={25} /></div>
     <div className="wz-route-line"><span /><Shuffle size={21} /><span /></div>
     <div className="wz-agent-grid">{agents.map((name, i) => <div key={name} className={`wz-agent ${active === i ? "is-active" : ""}`}><div className="wz-avatar">{name[0]}<i /></div><strong>{name}</strong><small>{clicks ? Math.floor((clicks + 2 - i) / 3) : 0} routed</small></div>)}</div>
