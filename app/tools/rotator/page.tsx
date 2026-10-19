@@ -102,160 +102,160 @@ export default function RotatorPage() {
 
   return (
     <>
-      <div className="border-b border-green-900/20 bg-[#0a0f0a]/90 px-4 min-h-10 py-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
-        <Link href="/tools" className="text-slate-500 hover:text-white">← Tools</Link>
-        <span className="text-slate-700">/</span>
-        <span className="text-white font-medium">Link Rotator</span>
+      <div className="border-b border-border bg-bg/90 px-4 min-h-10 py-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+        <Link href="/tools" className="text-muted hover:text-text">← Tools</Link>
+        <span className="text-text">/</span>
+        <span className="text-text font-medium">Link Rotator</span>
       </div>
 
-      <div className="hero-bg px-4 py-12">
+      <div className="px-4 py-12">
         <div className="mx-auto max-w-3xl space-y-8">
           <div className="text-center">
-            <h1 className="text-3xl font-bold text-white mb-2">WhatsApp Lead Router</h1>
-            <p className="text-slate-400">One trackable link that rotates click-to-chat handoffs across your configured WhatsApp numbers.</p>
-            <div className="mt-4 flex flex-wrap justify-center gap-2 text-xs text-slate-500">
-              <span className="rounded-full border border-slate-800 px-3 py-1">No API setup</span>
-              <span className="rounded-full border border-slate-800 px-3 py-1">No QR scan</span>
-              <span className="rounded-full border border-slate-800 px-3 py-1">No chat-content access</span>
+            <h1 className="text-3xl font-bold text-text mb-2">WhatsApp Lead Router</h1>
+            <p className="text-muted">One trackable link that rotates click-to-chat handoffs across your configured WhatsApp numbers.</p>
+            <div className="mt-4 flex flex-wrap justify-center gap-2 text-xs text-muted">
+              <span className="rounded-full border border-border px-3 py-1">No API setup</span>
+              <span className="rounded-full border border-border px-3 py-1">No QR scan</span>
+              <span className="rounded-full border border-border px-3 py-1">No chat-content access</span>
             </div>
           </div>
 
           {quota && quota.plan === "free" && (
-            <div className={`rounded-2xl border p-5 ${quota.allowed ? "border-[#25D366]/30 bg-[#25D366]/10" : "border-amber-400/30 bg-amber-400/10"}`}>
+            <div className={`rounded-2xl border p-5 ${quota.allowed ? "border-accent/30 bg-accent-soft" : "border-warning/30 bg-highlight-soft"}`}>
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div>
-                  <p className="font-semibold text-white">{quota.grace ? "Existing links remain live during your transition period" : "Your free trial has ended — links paused"}</p>
-                  <p className="mt-1 text-sm text-slate-400">
+                  <p className="font-semibold text-text">{quota.grace ? "Existing links remain live during your transition period" : "Your free trial has ended — links paused"}</p>
+                  <p className="mt-1 text-sm text-muted">
                     {quota.grace && quota.graceEndsAt
                       ? `Free routing ends ${new Date(quota.graceEndsAt).toLocaleDateString()}. Choose a plan before then to keep every link live.`
                       : "Choose a plan to resume routing. Solo gives unlimited leads for $9/month."}
                   </p>
                 </div>
-                <Link href="/pricing?source=rotator_quota" className="rounded-full bg-[#25D366] px-5 py-2.5 text-sm font-bold text-black hover:bg-[#1fba58]">Choose a plan</Link>
+                <Link href="/pricing?source=rotator_quota" className="rounded-full bg-accent px-5 py-2.5 text-sm font-bold text-on-accent hover:bg-accent-hover">Choose a plan</Link>
               </div>
             </div>
           )}
 
           {/* Trial lead cap reached mid-trial (trial still active by date, but the 100 routed leads are used up) */}
           {quota && quota.plan !== "free" && quota.limit != null && !quota.allowed && (
-            <div className="rounded-2xl border border-amber-400/30 bg-amber-400/10 p-5">
+            <div className="rounded-2xl border border-warning/30 bg-highlight-soft p-5">
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div>
-                  <p className="font-semibold text-white">You&apos;ve used your {quota.limit} trial leads</p>
-                  <p className="mt-1 text-sm text-slate-400">
+                  <p className="font-semibold text-text">You&apos;ve used your {quota.limit} trial leads</p>
+                  <p className="mt-1 text-sm text-muted">
                     You&apos;ve used the {quota.limit} leads in your free trial. Choose a plan to keep routing.
                   </p>
                 </div>
-                <Link href="/pricing?source=rotator_quota" className="rounded-full bg-[#25D366] px-5 py-2.5 text-sm font-bold text-black hover:bg-[#1fba58]">Choose a plan</Link>
+                <Link href="/pricing?source=rotator_quota" className="rounded-full bg-accent px-5 py-2.5 text-sm font-bold text-on-accent hover:bg-accent-hover">Choose a plan</Link>
               </div>
             </div>
           )}
 
           {/* Trial lead meter (non-blocking, shown while still under the cap) */}
           {quota && quota.allowed && quota.limit != null && (
-            <p className={`text-sm ${quota.used >= quota.limit - 10 ? "font-semibold text-red-400" : "text-slate-500"}`}>
+            <p className={`text-sm ${quota.used >= quota.limit - 10 ? "font-semibold text-danger" : "text-muted"}`}>
               {quota.used} of {quota.limit} trial leads used
             </p>
           )}
 
-          <form onSubmit={create} className="rounded-2xl border border-slate-800 bg-[#111811] p-6 space-y-4">
-            <h2 className="font-semibold text-white flex items-center gap-2"><Plus className="h-4 w-4 text-[#25D366]" /> New Rotator</h2>
+          <form onSubmit={create} className="rounded-2xl border border-border bg-surface p-6 space-y-4">
+            <h2 className="font-semibold text-text flex items-center gap-2"><Plus className="h-4 w-4 text-accent" /> New Rotator</h2>
             {authRequired && (
-              <div className="rounded-xl border border-[#25D366]/30 bg-[#25D366]/10 p-4 text-sm">
-                <p className="font-semibold text-white">Create a free account to save your rotator</p>
-                <p className="mt-1 text-slate-400">Start a 3-day free trial with everything in Solo — no card needed. Sign up, then return here to create and track it.</p>
+              <div className="rounded-xl border border-accent/30 bg-accent-soft p-4 text-sm">
+                <p className="font-semibold text-text">Create a free account to save your rotator</p>
+                <p className="mt-1 text-muted">Start a 3-day free trial with everything in Solo — no card needed. Sign up, then return here to create and track it.</p>
                 <div className="mt-3 flex flex-wrap gap-3">
-                  <Link href="/signup?redirect=/tools/rotator" className="rounded-full bg-[#25D366] px-4 py-2 text-xs font-bold text-black hover:bg-[#1fba58]">Sign Up Free</Link>
-                  <Link href="/login?redirect=/tools/rotator" className="rounded-full border border-slate-700 px-4 py-2 text-xs font-semibold text-white hover:border-[#25D366]">Log In</Link>
+                  <Link href="/signup?redirect=/tools/rotator" className="rounded-full bg-accent px-4 py-2 text-xs font-bold text-on-accent hover:bg-accent-hover">Sign Up Free</Link>
+                  <Link href="/login?redirect=/tools/rotator" className="rounded-full border border-border-strong px-4 py-2 text-xs font-semibold text-text hover:border-accent">Log In</Link>
                 </div>
               </div>
             )}
             <div>
-              <label className="text-xs text-slate-400 block mb-1">Rotator Name</label>
+              <label className="text-xs text-muted block mb-1">Rotator Name</label>
               <input aria-label="e.g. Sales Team" required value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Sales Team"
-                className="w-full rounded-xl bg-slate-900 border border-slate-700 px-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#25D366]" />
+                className="w-full rounded-xl bg-surface border border-border-strong px-4 py-2.5 text-sm text-text placeholder:text-muted/70 focus:outline-none focus:border-accent" />
             </div>
             <div>
-              <label className="text-xs text-slate-400 block mb-2">Country Code (applies to all)</label>
+              <label className="text-xs text-muted block mb-2">Country Code (applies to all)</label>
               <select value={dial} onChange={e => setDial(e.target.value)}
-                className="rounded-xl bg-slate-900 border border-slate-700 px-3 py-2.5 text-sm text-white focus:outline-none focus:border-[#25D366]">
+                className="rounded-xl bg-surface border border-border-strong px-3 py-2.5 text-sm text-text focus:outline-none focus:border-accent">
                 {COUNTRIES.map(c => <option key={c.code} value={c.dial.replace("+","")}>{c.dial} {c.name}</option>)}
               </select>
             </div>
             <div className="space-y-2">
-              <label className="text-xs text-slate-400 block">
-                Salespeople (min 2){limits && <span className="text-slate-500"> · {rows.length} of {limits.numbersPerRotator}</span>}
+              <label className="text-xs text-muted block">
+                Salespeople (min 2){limits && <span className="text-muted"> · {rows.length} of {limits.numbersPerRotator}</span>}
               </label>
               {rows.map((row, i) => (
                 <div key={i} className="flex gap-2">
                   <input value={row.name} onChange={e => setRows(prev => prev.map((v, j) => j === i ? { ...v, name: e.target.value } : v))}
                     placeholder="e.g. Ravi" aria-label={`Salesperson ${i + 1} name (optional)`}
-                    className="min-w-0 w-28 sm:w-36 rounded-xl bg-slate-900 border border-slate-700 px-3 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#25D366]" />
+                    className="min-w-0 w-28 sm:w-36 rounded-xl bg-surface border border-border-strong px-3 py-2.5 text-sm text-text placeholder:text-muted/70 focus:outline-none focus:border-accent" />
                   <input value={row.number} onChange={e => setRows(prev => prev.map((v, j) => j === i ? { ...v, number: e.target.value } : v))}
                     placeholder={`Agent ${i + 1} phone number`} aria-label={`Salesperson ${i + 1} phone number`}
-                    className="min-w-0 flex-1 rounded-xl bg-slate-900 border border-slate-700 px-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#25D366]" />
+                    className="min-w-0 flex-1 rounded-xl bg-surface border border-border-strong px-4 py-2.5 text-sm text-text placeholder:text-muted/70 focus:outline-none focus:border-accent" />
                   {rows.length > 2 && (
                     <button type="button" onClick={() => setRows(prev => prev.filter((_, j) => j !== i))}
-                      className="text-slate-600 hover:text-red-400 p-2 transition-colors">
+                      className="text-muted hover:text-danger p-2 transition-colors">
                       <Trash2 className="h-4 w-4" />
                     </button>
                   )}
                 </div>
               ))}
               {limits && rows.length >= limits.numbersPerRotator ? (
-                <p className="text-xs text-amber-400">
+                <p className="text-xs text-warning">
                   Your {limits.planLabel} plan allows {limits.numbersPerRotator} numbers per rotator. <Link href="/pricing" className="underline">Upgrade</Link> to add more.
                 </p>
               ) : (
                 <button type="button" onClick={() => setRows(prev => [...prev, { name: "", number: "" }])}
-                  className="text-xs text-[#25D366] hover:underline">+ Add salesperson</button>
+                  className="text-xs text-accent hover:underline">+ Add salesperson</button>
               )}
             </div>
             <div>
-              <label className="text-xs text-slate-400 block mb-1" htmlFor="rotator-message">Predefined WhatsApp message (optional)</label>
-              <textarea id="rotator-message" maxLength={2000} value={message} onChange={e => setMessage(e.target.value)} placeholder="Hi, I’d like more information." className="w-full rounded-xl bg-slate-900 border border-slate-700 px-4 py-2.5 text-sm text-white" />
-              <p className="text-xs text-slate-500 mt-1">Shown in WhatsApp for every destination. The visitor chooses whether to send it.</p>
+              <label className="text-xs text-muted block mb-1" htmlFor="rotator-message">Predefined WhatsApp message (optional)</label>
+              <textarea id="rotator-message" maxLength={2000} value={message} onChange={e => setMessage(e.target.value)} placeholder="Hi, I’d like more information." className="w-full rounded-xl bg-surface border border-border-strong px-4 py-2.5 text-sm text-text" />
+              <p className="text-xs text-muted mt-1">Shown in WhatsApp for every destination. The visitor chooses whether to send it.</p>
             </div>
-            {error && !authRequired && <p role="alert" className="text-sm text-red-400">{error}</p>}
+            {error && !authRequired && <p role="alert" className="text-sm text-danger">{error}</p>}
             {limits && !authRequired && (
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-muted">
                 {rotators.length} rotator{rotators.length === 1 ? "" : "s"} · {limits.planLabel} plan link total: {limits.rotators} (shared with WhatsApp and ad links)
-                {rotators.length >= limits.rotators && <> · <Link href="/pricing" className="text-[#25D366] underline">Upgrade for more</Link></>}
+                {rotators.length >= limits.rotators && <> · <Link href="/pricing" className="text-accent underline">Upgrade for more</Link></>}
               </p>
             )}
             <button type="submit" disabled={creating || authRequired}
-              className="rounded-full bg-[#25D366] hover:bg-[#1fba58] disabled:opacity-50 px-6 py-2.5 text-sm font-bold text-black transition-colors">
+              className="rounded-full bg-accent hover:bg-accent-hover disabled:opacity-50 px-6 py-2.5 text-sm font-bold text-on-accent transition-colors">
               {authRequired ? "Sign up above to create" : creating ? "Creating..." : "Create Rotator"}
             </button>
           </form>
 
           {loading ? (
-            <div className="text-center text-slate-500 py-8">Loading...</div>
+            <div className="text-center text-muted py-8">Loading...</div>
           ) : rotators.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-slate-700 p-12 text-center text-slate-500">No rotators yet. Create one above.</div>
+            <div className="rounded-2xl border border-dashed border-border-strong p-12 text-center text-muted">No rotators yet. Create one above.</div>
           ) : (
             <div className="space-y-4">
-              <h2 className="font-semibold text-white">Your Rotators</h2>
+              <h2 className="font-semibold text-text">Your Rotators</h2>
               {rotators.map(r => {
                 const url = typeof window !== "undefined" ? getUrl(r.code) : "";
                 return (
-                  <div key={r.id} className="rounded-2xl border border-slate-800 bg-[#111811] p-5">
+                  <div key={r.id} className="rounded-2xl border border-border bg-surface p-5">
                     <div className="flex items-start justify-between gap-3 flex-wrap mb-3">
                       <div>
-                        <div className="flex items-center gap-2"><h3 className="font-semibold text-white">{r.name}</h3>{r.planPausedAt && <PlanPausedBadge />}</div>
-                        <p className="text-xs text-slate-500 mt-0.5">{r.numbers.length} destinations · {r.totalClicks} total routed handoffs · {r.last30Days} in the last 30 days</p>
+                        <div className="flex items-center gap-2"><h3 className="font-semibold text-text">{r.name}</h3>{r.planPausedAt && <PlanPausedBadge />}</div>
+                        <p className="text-xs text-muted mt-0.5">{r.numbers.length} destinations · {r.totalClicks} total routed handoffs · {r.last30Days} in the last 30 days</p>
                       </div>
                       <div className="flex items-center gap-2">
-                        <div className="flex items-center gap-1.5 rounded-full bg-[#25D366]/10 border border-[#25D366]/30 px-3 py-1">
-                          <RefreshCw className="h-3.5 w-3.5 text-[#25D366]" />
-                          <span className="text-sm font-bold text-[#25D366]">{r.totalClicks}</span>
+                        <div className="flex items-center gap-1.5 rounded-full bg-accent-soft border border-accent/30 px-3 py-1">
+                          <RefreshCw className="h-3.5 w-3.5 text-accent" />
+                          <span className="text-sm font-bold text-accent">{r.totalClicks}</span>
                         </div>
                         <button onClick={() => copy(r.id, url)}
-                          className="flex items-center gap-1.5 rounded-full border border-slate-700 hover:border-[#25D366] px-3 py-1.5 text-xs text-slate-300 hover:text-white transition-colors">
-                          {copied === r.id ? <Check className="h-3.5 w-3.5 text-[#25D366]" /> : <Copy className="h-3.5 w-3.5" />}
+                          className="flex items-center gap-1.5 rounded-full border border-border-strong hover:border-accent px-3 py-1.5 text-xs text-muted hover:text-text transition-colors">
+                          {copied === r.id ? <Check className="h-3.5 w-3.5 text-accent" /> : <Copy className="h-3.5 w-3.5" />}
                           {copied === r.id ? "Copied!" : "Copy Link"}
                         </button>
-                        <button onClick={() => del(r.id)} className="text-slate-600 hover:text-red-400 transition-colors p-1.5">
+                        <button onClick={() => del(r.id)} className="text-muted hover:text-danger transition-colors p-1.5">
                           <Trash2 className="h-4 w-4" />
                         </button>
                       </div>
@@ -267,22 +267,22 @@ export default function RotatorPage() {
                       saving={saving === r.id}
                       onSave={payload => saveRotator(r.id, payload)}
                     />
-                    <div className="bg-slate-900 rounded-xl px-3 py-2 text-xs text-slate-400 font-mono">{url}</div>
+                    <div className="bg-surface rounded-xl px-3 py-2 text-xs text-muted font-mono">{url}</div>
                     <RotatorQR url={url} name={r.name} />
                     <div className="mt-4 grid gap-2 sm:grid-cols-2">
                       {r.numbers.map((n, i) => {
                         const label = r.numberNames?.[n];
                         return (
-                          <div key={i} className="flex items-center justify-between rounded-xl bg-slate-900 px-3 py-2 text-xs">
+                          <div key={i} className="flex items-center justify-between rounded-xl bg-surface px-3 py-2 text-xs">
                             {label ? (
                               <span>
-                                <span className="block font-semibold text-white">{label}</span>
-                                <span className="block font-mono text-slate-500">+{n}</span>
+                                <span className="block font-semibold text-text">{label}</span>
+                                <span className="block font-mono text-muted">+{n}</span>
                               </span>
                             ) : (
-                              <span className="font-mono text-slate-400">+{n}</span>
+                              <span className="font-mono text-muted">+{n}</span>
                             )}
-                            <span className="font-semibold text-[#25D366]">{r.destinationClicks?.[n] ?? 0} routed / 30d</span>
+                            <span className="font-semibold text-accent">{r.destinationClicks?.[n] ?? 0} routed / 30d</span>
                           </div>
                         );
                       })}
@@ -331,24 +331,24 @@ function RotatorEditForm({
 
   return (
     <form className="space-y-2" onSubmit={submit}>
-      <label className="text-xs text-slate-400 block" htmlFor={`name-${rotator.id}`}>Router name</label>
-      <input id={`name-${rotator.id}`} value={name} onChange={e => setName(e.target.value)} required maxLength={100} className="w-full rounded-xl bg-slate-900 border border-slate-700 px-3 py-2 text-sm text-white" />
+      <label className="text-xs text-muted block" htmlFor={`name-${rotator.id}`}>Router name</label>
+      <input id={`name-${rotator.id}`} value={name} onChange={e => setName(e.target.value)} required maxLength={100} className="w-full rounded-xl bg-surface border border-border-strong px-3 py-2 text-sm text-text" />
 
-      <label className="text-xs text-slate-400 block">
-        Salespeople{limits && <span className="text-slate-500"> · {rows.length} of {limits.numbersPerRotator}</span>}
+      <label className="text-xs text-muted block">
+        Salespeople{limits && <span className="text-muted"> · {rows.length} of {limits.numbersPerRotator}</span>}
       </label>
       <div className="space-y-2">
         {rows.map((row, i) => (
           <div key={i} className="flex gap-2">
             <input value={row.name} onChange={e => setRows(prev => prev.map((v, j) => j === i ? { ...v, name: e.target.value } : v))}
               placeholder="e.g. Ravi" aria-label={`Salesperson ${i + 1} name (optional)`}
-              className="min-w-0 w-28 sm:w-36 rounded-xl bg-slate-900 border border-slate-700 px-3 py-2 text-sm text-white placeholder-slate-600" />
+              className="min-w-0 w-28 sm:w-36 rounded-xl bg-surface border border-border-strong px-3 py-2 text-sm text-text placeholder:text-muted/70" />
             <input value={row.number} onChange={e => setRows(prev => prev.map((v, j) => j === i ? { ...v, number: e.target.value } : v))}
               placeholder="WhatsApp number" aria-label={`Salesperson ${i + 1} phone number`}
-              className="min-w-0 flex-1 rounded-xl bg-slate-900 border border-slate-700 px-3 py-2 text-sm text-white placeholder-slate-600" />
+              className="min-w-0 flex-1 rounded-xl bg-surface border border-border-strong px-3 py-2 text-sm text-text placeholder:text-muted/70" />
             {rows.length > 1 && (
               <button type="button" onClick={() => setRows(prev => prev.filter((_, j) => j !== i))}
-                className="text-slate-600 hover:text-red-400 p-2 transition-colors">
+                className="text-muted hover:text-danger p-2 transition-colors">
                 <Trash2 className="h-4 w-4" />
               </button>
             )}
@@ -356,19 +356,19 @@ function RotatorEditForm({
         ))}
       </div>
       {atLimit ? (
-        <p className="text-xs text-amber-400">
+        <p className="text-xs text-warning">
           Your {limits?.planLabel} plan allows {limits?.numbersPerRotator} numbers per rotator. <Link href="/pricing" className="underline">Upgrade</Link> to add more.
         </p>
       ) : (
         <button type="button" onClick={() => setRows(prev => [...prev, { name: "", number: "" }])}
-          className="text-xs text-[#25D366] hover:underline">+ Add salesperson</button>
+          className="text-xs text-accent hover:underline">+ Add salesperson</button>
       )}
 
-      <label className="text-xs text-slate-400 block" htmlFor={`fallback-${rotator.id}`}>Fallback number</label>
-      <input id={`fallback-${rotator.id}`} value={fallbackNumber} onChange={e => setFallbackNumber(e.target.value)} className="w-full rounded-xl bg-slate-900 border border-slate-700 px-3 py-2 text-sm text-white" />
-      <label className="text-xs text-slate-400 block" htmlFor={`message-${rotator.id}`}>Predefined WhatsApp message</label>
-      <textarea id={`message-${rotator.id}`} value={message} onChange={e => setMessage(e.target.value)} maxLength={2000} className="w-full rounded-xl bg-slate-900 border border-slate-700 px-3 py-2 text-sm text-white" />
-      <button disabled={saving} className="text-xs text-[#25D366] disabled:opacity-50">{saving ? "Saving…" : "Save router"}</button>
+      <label className="text-xs text-muted block" htmlFor={`fallback-${rotator.id}`}>Fallback number</label>
+      <input id={`fallback-${rotator.id}`} value={fallbackNumber} onChange={e => setFallbackNumber(e.target.value)} className="w-full rounded-xl bg-surface border border-border-strong px-3 py-2 text-sm text-text" />
+      <label className="text-xs text-muted block" htmlFor={`message-${rotator.id}`}>Predefined WhatsApp message</label>
+      <textarea id={`message-${rotator.id}`} value={message} onChange={e => setMessage(e.target.value)} maxLength={2000} className="w-full rounded-xl bg-surface border border-border-strong px-3 py-2 text-sm text-text" />
+      <button disabled={saving} className="text-xs text-accent disabled:opacity-50">{saving ? "Saving…" : "Save router"}</button>
     </form>
   );
 }

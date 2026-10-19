@@ -102,7 +102,7 @@ export default function PlanChangeAction({
   if (showCheckout) {
     return (
       <div className="space-y-2">
-        <p className="text-center text-xs text-slate-400">Continue below to complete checkout.</p>
+        <p className="text-center text-xs text-muted">Continue below to complete checkout.</p>
         <WazapCardPayment
           planName={planId}
           locale={locale}
@@ -122,12 +122,12 @@ export default function PlanChangeAction({
           type="button"
           onClick={run}
           disabled={busy}
-          className="flex w-full items-center justify-center rounded-full bg-[#25D366] hover:bg-[#1fba58] py-3 text-sm font-semibold text-black transition-colors disabled:opacity-50"
+          className="flex w-full items-center justify-center rounded-full bg-accent hover:bg-accent-hover py-3 text-sm font-semibold text-on-accent transition-colors disabled:opacity-50"
         >
           {busy ? "Renewing…" : "Renew"}
         </button>
-        {error && <p className="text-center text-xs text-red-400">{error}</p>}
-        {notice && <p className="text-center text-xs text-[#25D366]">{notice}</p>}
+        {error && <p className="text-center text-xs text-danger">{error}</p>}
+        {notice && <p className="text-center text-xs text-accent">{notice}</p>}
       </div>
     );
   }
@@ -145,35 +145,35 @@ export default function PlanChangeAction({
           onClick={() => setConfirming(true)}
           className={`flex w-full items-center justify-center rounded-full py-3 text-sm font-semibold transition-colors ${
             kind === "upgrade"
-              ? "bg-[#25D366] hover:bg-[#1fba58] text-black"
-              : "border border-slate-700 hover:border-[#25D366] text-slate-200"
+              ? "bg-accent hover:bg-accent-hover text-on-accent"
+              : "border border-border-strong hover:border-accent text-on-accent"
           }`}
         >
           {kind === "upgrade" ? "Upgrade now" : "Downgrade"}
         </button>
-        {error && <p className="text-center text-xs text-red-400">{error}</p>}
-        {notice && <p className="text-center text-xs text-[#25D366]">{notice}</p>}
+        {error && <p className="text-center text-xs text-danger">{error}</p>}
+        {notice && <p className="text-center text-xs text-accent">{notice}</p>}
       </div>
     );
   }
 
   return (
-    <div className="rounded-xl border border-slate-700 bg-black/20 p-3 space-y-3">
-      <p className="text-xs leading-5 text-slate-300">{confirmText}</p>
+    <div className="rounded-xl border border-border-strong bg-bg/20 p-3 space-y-3">
+      <p className="text-xs leading-5 text-muted">{confirmText}</p>
       <div className="flex gap-2">
         <button
           type="button"
           onClick={run}
           disabled={busy}
-          className="flex-1 rounded-lg bg-[#25D366] py-2 text-xs font-bold text-black disabled:opacity-50"
+          className="flex-1 rounded-lg bg-accent py-2 text-xs font-bold text-on-accent disabled:opacity-50"
         >
           {busy ? "Confirming…" : "Confirm"}
         </button>
-        <button type="button" disabled={busy} onClick={() => setConfirming(false)} className="px-2 text-xs text-slate-400">
+        <button type="button" disabled={busy} onClick={() => setConfirming(false)} className="px-2 text-xs text-muted">
           Cancel
         </button>
       </div>
-      {error && <p className="text-center text-xs text-red-400">{error}</p>}
+      {error && <p className="text-center text-xs text-danger">{error}</p>}
     </div>
   );
 }

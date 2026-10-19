@@ -15,8 +15,8 @@ function SignupForm() {
     <AuthShell mode="signup" nextHref={`/login?redirect=${encodeURIComponent(redirect)}`}>
       <GoogleSignInButton callbackUrl={redirect} />
       <EmailCodeSignIn mode="signup" redirect={redirect} />
-      <p className="text-center text-sm text-slate-500 mt-4">
-        Already have an account? <Link href={`/login?redirect=${encodeURIComponent(redirect)}`} className="text-[#25D366] hover:underline">Sign in</Link>
+      <p className="text-center text-sm text-muted mt-4">
+        Already have an account? <Link href={`/login?redirect=${encodeURIComponent(redirect)}`} className="font-medium text-accent hover:underline">Sign in</Link>
       </p>
     </AuthShell>
   );

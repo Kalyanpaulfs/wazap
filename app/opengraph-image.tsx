@@ -1,72 +1,69 @@
 import { ImageResponse } from "next/og";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
 
 export const alt = "Wazap — One WhatsApp link for your sales team";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
+// Social-card colours mirror app/theme/tokens.css (ImageResponse cannot read CSS variables).
+const INK = "#0e1726";
+const MUTED = "#5b6676";
+const ACCENT = "#087f50";
+const PAGE = "#f7f8f5";
+
 const pill = (label: string) => (
   <div style={{
-    background: "rgba(37,211,102,0.1)", border: "1px solid rgba(37,211,102,0.3)",
-    borderRadius: "999px", padding: "8px 20px",
-    fontSize: "18px", color: "#25D366", fontWeight: "600", display: "flex",
+    background: "#e3f7ec", border: "1px solid rgba(8,127,80,0.25)", borderRadius: "999px",
+    padding: "8px 20px", fontSize: "20px", color: "#06703f", fontWeight: 600, display: "flex",
   }}>{label}</div>
 );
 
-export default function OGImage() {
+export default async function OGImage() {
+  const art = await readFile(path.join(process.cwd(), "public/art/home/hero-og.jpg"));
+  const artSrc = `data:image/jpeg;base64,${art.toString("base64")}`;
   return new ImageResponse(
     (
       <div style={{
-        width: "1200px", height: "630px",
-        background: "linear-gradient(135deg, #0a0f0a 0%, #0d1f0d 50%, #0a0f0a 100%)",
-        display: "flex", flexDirection: "column", alignItems: "center",
-        justifyContent: "center", fontFamily: "sans-serif", position: "relative", overflow: "hidden",
+        width: "1200px", height: "630px", background: PAGE, display: "flex", alignItems: "center",
+        fontFamily: "sans-serif", position: "relative", overflow: "hidden", padding: "0 72px",
       }}>
         <div style={{
-          position: "absolute", top: "-100px", left: "-100px",
-          width: "500px", height: "500px", borderRadius: "50%", display: "flex",
-          background: "radial-gradient(circle, rgba(37,211,102,0.15) 0%, transparent 70%)",
+          position: "absolute", bottom: "-260px", left: "-160px", width: "720px", height: "720px", borderRadius: "50%", display: "flex",
+          background: "radial-gradient(circle, rgba(15,169,104,0.16) 0%, transparent 70%)",
         }} />
-        <div style={{
-          position: "absolute", bottom: "-100px", right: "-100px",
-          width: "400px", height: "400px", borderRadius: "50%", display: "flex",
-          background: "radial-gradient(circle, rgba(18,140,126,0.1) 0%, transparent 70%)",
-        }} />
-
-        <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "32px" }}>
-          <div style={{
-            width: "56px", height: "56px", borderRadius: "14px", background: "#25D366",
-            display: "flex", alignItems: "center", justifyContent: "center",
-          }}>
-            <div style={{ fontSize: "32px", color: "white", display: "flex" }}>⚡</div>
+        <div style={{ display: "flex", flexDirection: "column", width: "560px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "14px", marginBottom: "36px" }}>
+            <svg width="52" height="52" viewBox="0 0 512 512" fill="none">
+              <path fill="#16f06e" d="M256 43C138 43 43 138 43 256c0 47 15 90 42 125L68 460c-2 16 9 22 22 14l88-60c25 12 51 18 78 18 118 0 213-95 213-213S374 43 256 43Z" />
+              <g stroke="#ffffff" strokeWidth="50" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M205 164h22c34 0 41 27 57 51s25 41 59 41" />
+                <path d="M205 348h22c34 0 41-27 57-51s25-41 59-41" />
+              </g>
+              <circle cx="165" cy="164" r="47" fill="#ffffff" />
+              <circle cx="165" cy="348" r="47" fill="#ffffff" />
+              <circle cx="370" cy="256" r="53" fill="#ffffff" />
+            </svg>
+            <span style={{ fontSize: "40px", fontWeight: 800, color: INK, letterSpacing: "-1px" }}>Wazap</span>
           </div>
-          <span style={{ fontSize: "40px", fontWeight: "800", color: "#25D366", letterSpacing: "-1px" }}>Wazap</span>
+          <div style={{ display: "flex", flexDirection: "column", fontSize: "56px", fontWeight: 800, color: INK, lineHeight: 1.05, letterSpacing: "-2px" }}>
+            <span>One WhatsApp link.</span>
+            <span style={{ color: ACCENT }}>Your whole team.</span>
+          </div>
+          <div style={{ display: "flex", fontSize: "24px", color: MUTED, lineHeight: 1.4, margin: "24px 0 34px", maxWidth: "540px" }}>
+            Rotate handoffs across your team. Start with a 3-day free trial, 100 routed handoffs.
+          </div>
+          <div style={{ display: "flex", gap: "12px" }}>
+            {pill("Lead Routing")}
+            {pill("Campaign Links")}
+            
+          </div>
         </div>
-
-        <div style={{
-          fontSize: "64px", fontWeight: "800", color: "white", display: "flex",
-          textAlign: "center", lineHeight: "1.1", marginBottom: "20px", maxWidth: "900px",
-        }}>
-          One WhatsApp Link.<span style={{ color: "#25D366" }}> Your Whole Team.</span>
+        <div style={{ display: "flex", position: "absolute", right: "24px", top: "55px", width: "520px", height: "520px" }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={artSrc} width={520} height={520} alt="" />
         </div>
-
-        <div style={{
-          fontSize: "26px", color: "#94a3b8", textAlign: "center", display: "flex",
-          maxWidth: "700px", marginBottom: "48px",
-        }}>
-          Rotate handoffs across your team. Start with a 3-day free trial — 100 routed handoffs.
-        </div>
-
-        <div style={{ display: "flex", gap: "16px", justifyContent: "center" }}>
-          {pill("Lead Routing")}
-          {pill("QR Generator")}
-          {pill("Campaign Links")}
-          {pill("From $9/month")}
-          
-        </div>
-
-        <div style={{ position: "absolute", bottom: "28px", right: "40px", fontSize: "20px", color: "#334155", display: "flex" }}>
-          wazap.lt
-        </div>
+        <div style={{ position: "absolute", bottom: "26px", left: "72px", fontSize: "20px", color: MUTED, display: "flex" }}>wazap.lt</div>
       </div>
     ),
     { ...size }

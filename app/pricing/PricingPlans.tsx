@@ -88,24 +88,24 @@ export default function PricingPlans({
 
   return (
     <>
-      <div className="mb-6 flex items-center justify-center gap-2 text-center text-xs text-slate-500">
-        <span className="h-1.5 w-1.5 rounded-full bg-[#25D366]" aria-hidden="true" />
+      <div className="mb-6 flex items-center justify-center gap-2 text-center text-xs text-muted">
+        <span className="h-1.5 w-1.5 rounded-full bg-accent" aria-hidden="true" />
         <span>Prices before applicable taxes. {text.estimated} · {localization.currency}{localization.currency !== "USD" ? ` · ${text.billedUsd}` : ""}</span>
       </div>
 
       {/* Not logged in — account gate */}
       {!isLoggedIn && (
-        <div className="rounded-2xl border border-[#25D366]/30 bg-[#25D366]/5 p-5 mb-8 flex items-center justify-between gap-4 flex-wrap">
+        <div className="rounded-2xl border border-accent/30 bg-accent-soft p-5 mb-8 flex items-center justify-between gap-4 flex-wrap">
           <div>
-            <p className="text-white font-semibold">{text.accountRequired}</p>
-            <p className="text-slate-400 text-sm mt-0.5">Sign in or create an account, then choose your payment method. {text.paymentMethods}</p>
+            <p className="text-text font-semibold">{text.accountRequired}</p>
+            <p className="text-muted text-sm mt-0.5">Sign in or create an account, then choose your payment method. {text.paymentMethods}</p>
             <div className="mt-3 flex flex-wrap gap-2 text-xs font-semibold">
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-700 bg-black/20 px-3 py-1 text-slate-200">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-border-strong bg-bg/20 px-3 py-1 text-text">
                 <Wallet className="h-3.5 w-3.5" />
                 PayPal available
               </span>
               {cardCheckoutEnabled && (
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-700 bg-black/20 px-3 py-1 text-slate-200">
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-border-strong bg-bg/20 px-3 py-1 text-text">
                   <CreditCard className="h-3.5 w-3.5" />
                   Card checkout
                 </span>
@@ -113,10 +113,10 @@ export default function PricingPlans({
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <Link href="/login?redirect=/pricing" className="rounded-full border border-slate-600 hover:border-white px-5 py-2 text-sm font-semibold text-slate-300 hover:text-white transition-colors">
+            <Link href="/login?redirect=/pricing" className="rounded-full border border-border-strong hover:border-muted px-5 py-2 text-sm font-semibold text-muted hover:text-text transition-colors">
               Sign In
             </Link>
-            <Link href="/signup?redirect=/pricing" className="rounded-full bg-[#25D366] hover:bg-[#1fba58] px-5 py-2 text-sm font-semibold text-black transition-colors">
+            <Link href="/signup?redirect=/pricing" className="rounded-full bg-accent hover:bg-accent-hover px-5 py-2 text-sm font-semibold text-on-accent transition-colors">
               Create Account
             </Link>
           </div>
@@ -124,18 +124,18 @@ export default function PricingPlans({
       )}
 
       {isLoggedIn && (
-        <div className="rounded-2xl border border-slate-800 bg-[#111811] p-4 mb-6 flex items-center gap-3">
-          <div className="w-2 h-2 rounded-full bg-[#25D366]" />
-          <p className="text-sm text-slate-300">
-            Signed in as <span className="text-white font-medium">{userEmail}</span> — {text.choosePlan}
+        <div className="rounded-2xl border border-border bg-surface p-4 mb-6 flex items-center gap-3">
+          <div className="w-2 h-2 rounded-full bg-accent" />
+          <p className="text-sm text-muted">
+            Signed in as <span className="text-text font-medium">{userEmail}</span> — {text.choosePlan}
           </p>
         </div>
       )}
 
-      {activeSubscriptionPlan && !managedByPlanChanges && <div className="mb-6 rounded-2xl border border-[#25D366]/40 bg-[#25D366]/10 p-4 text-center text-sm text-green-200">You already have a subscription. <Link href="/billing" className="font-semibold underline">Manage your existing plan</Link> before starting another.</div>}
+      {activeSubscriptionPlan && !managedByPlanChanges && <div className="mb-6 rounded-2xl border border-accent/40 bg-accent-soft p-4 text-center text-sm text-accent-hover">You already have a subscription. <Link href="/billing" className="font-semibold underline">Manage your existing plan</Link> before starting another.</div>}
 
       {selectedPlan && !activeSubscriptionPlan && !managedByPlanChanges && (
-        <div className="mb-6 rounded-2xl border border-[#25D366]/40 bg-[#25D366]/10 p-4 text-center text-sm text-green-200">
+        <div className="mb-6 rounded-2xl border border-accent/40 bg-accent-soft p-4 text-center text-sm text-accent-hover">
           {isLoggedIn ? "Your account is ready. Continue with your selected plan below and choose PayPal or card checkout." : "Your selected plan is highlighted below. Create an account to continue to secure checkout."}
         </div>
       )}
@@ -147,35 +147,35 @@ export default function PricingPlans({
           return (
           <div key={plan.id} dir={localization.direction} className={`relative min-w-0 rounded-2xl p-6 flex flex-col ${
             plan.highlighted || selectedPlan === plan.id
-              ? "border-2 border-[#25D366] bg-[#25D366]/5 shadow-[0_0_40px_rgba(37,211,102,0.15)]"
-              : "border border-slate-800 bg-[#111811]"
+              ? "border-2 border-accent bg-accent-soft shadow-[0_0_40px_rgba(15,169,104,0.18)]"
+              : "border border-border bg-surface"
           }`}>
             {plan.highlighted && (
-              <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 flex items-center gap-1 rounded-full bg-[#25D366] px-4 py-1 text-xs font-semibold text-black">
-                <Star className="h-3 w-3 fill-black" /> For growing teams
+              <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 flex items-center gap-1 whitespace-nowrap rounded-full bg-accent px-4 py-1 text-xs font-semibold text-on-accent">
+                <Star className="h-3 w-3 fill-current" /> For growing teams
               </div>
             )}
 
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-xl font-bold text-white">{plan.name}</h2>
+                <h2 className="text-xl font-bold text-text">{plan.name}</h2>
                 {currentPlanKey === plan.id && (
-                  <span className="rounded-full border border-[#25D366]/40 bg-[#25D366]/10 px-2.5 py-0.5 text-xs font-semibold text-[#25D366]">
+                  <span className="rounded-full border border-accent/40 bg-accent-soft px-2.5 py-0.5 text-xs font-semibold text-accent">
                     Current plan
                   </span>
                 )}
               </div>
-              <p className="text-slate-500 text-sm mt-1">{plan.description}</p>
+              <p className="text-muted text-sm mt-1">{plan.description}</p>
               <div className="mt-5 mb-6 flex flex-wrap items-baseline gap-x-2">
-                <span className="text-4xl font-bold tracking-tight text-white">{localPrice}</span>
-                <span className="text-slate-500 text-sm">/ {text.month}</span>
+                <span className="text-4xl font-bold tracking-tight text-text">{localPrice}</span>
+                <span className="text-muted text-sm">/ {text.month}</span>
               </div>
             </div>
 
             <ul className="space-y-3 flex-1 mb-8">
               {plan.features.map((feature) => (
-                <li key={feature} className="flex items-start gap-2.5 text-sm text-slate-300">
-                  <span className="text-[#25D366] mt-0.5 shrink-0">✓</span>
+                <li key={feature} className="flex items-start gap-2.5 text-sm text-muted">
+                  <span className="text-accent mt-0.5 shrink-0">✓</span>
                   {feature}
                 </li>
               ))}
@@ -183,25 +183,25 @@ export default function PricingPlans({
 
             {plan.salesOnly ? (
               <div className="space-y-2">
-                <Link href="/contact?subject=Business%20plan" className="flex w-full items-center justify-center rounded-full bg-[#25D366] py-3 text-sm font-semibold text-black transition-colors hover:bg-[#1fba58]">
+                <Link href="/contact?subject=Business%20plan" className="flex w-full items-center justify-center rounded-full bg-accent py-3 text-sm font-semibold text-on-accent transition-colors hover:bg-accent-hover">
                   Talk to Wazap
                 </Link>
-                <p className="text-center text-xs text-slate-500">Tailored confirmation before billing</p>
+                <p className="text-center text-xs text-muted">Tailored confirmation before billing</p>
               </div>
             ) : managedByPlanChanges && billing ? (
               billing.pendingChange ? (
                 plan.id === billing.plan ? (
-                  <p className="rounded-full border border-[#25D366]/40 bg-[#25D366]/10 py-3 text-center text-sm font-semibold text-[#25D366]">
+                  <p className="rounded-full border border-accent/40 bg-accent-soft py-3 text-center text-sm font-semibold text-accent">
                     {pendingNoteText}
                   </p>
                 ) : (
-                  <button type="button" disabled className="flex w-full cursor-not-allowed items-center justify-center rounded-full border border-slate-800 py-3 text-center text-sm font-semibold text-slate-500">
+                  <button type="button" disabled className="flex w-full cursor-not-allowed items-center justify-center rounded-full border border-border py-3 text-center text-sm font-semibold text-muted">
                     {pendingNoteText}
                   </button>
                 )
               ) : plan.id === billing.plan ? (
                 billing.autoRenew ? (
-                  <button type="button" disabled className="flex w-full cursor-not-allowed items-center justify-center rounded-full border border-slate-800 py-3 text-center text-sm font-semibold text-slate-500">
+                  <button type="button" disabled className="flex w-full cursor-not-allowed items-center justify-center rounded-full border border-border py-3 text-center text-sm font-semibold text-muted">
                     Current plan · renews automatically on {renewsOrExpiresAtLabel || "your renewal date"}
                   </button>
                 ) : (
@@ -233,7 +233,7 @@ export default function PricingPlans({
                 />
               )
             ) : activeSubscriptionPlan ? (
-              <Link href="/billing" className="block rounded-full border border-[#25D366] py-3 text-center text-sm font-semibold text-[#25D366]">Manage existing subscription →</Link>
+              <Link href="/billing" className="block rounded-full border border-accent py-3 text-center text-sm font-semibold text-accent">Manage existing subscription →</Link>
             ) : isLoggedIn ? (
               <WazapCardPayment
                 planName={plan.id}
@@ -245,13 +245,13 @@ export default function PricingPlans({
               />
             ) : (
               <div className="space-y-3">
-                <div className={`grid gap-2 text-xs font-semibold text-slate-300 ${cardCheckoutEnabled ? "grid-cols-2" : "grid-cols-1"}`}>
-                  <div className="flex items-center justify-center gap-1.5 rounded-full border border-slate-800 bg-black/20 py-2">
+                <div className={`grid gap-2 text-xs font-semibold text-muted ${cardCheckoutEnabled ? "grid-cols-2" : "grid-cols-1"}`}>
+                  <div className="flex items-center justify-center gap-1.5 rounded-full border border-border bg-bg/20 py-2">
                     <Wallet className="h-3.5 w-3.5" />
                     PayPal
                   </div>
                   {cardCheckoutEnabled && (
-                    <div className="flex items-center justify-center gap-1.5 rounded-full border border-slate-800 bg-black/20 py-2">
+                    <div className="flex items-center justify-center gap-1.5 rounded-full border border-border bg-bg/20 py-2">
                       <CreditCard className="h-3.5 w-3.5" />
                       Card
                     </div>
@@ -259,12 +259,12 @@ export default function PricingPlans({
                 </div>
                 <Link
                   href={`/signup?redirect=${encodeURIComponent(`/pricing?plan=${plan.id}`)}`}
-                  className="flex items-center justify-center gap-2 w-full rounded-full bg-[#25D366] hover:bg-[#1fba58] py-3 text-sm font-semibold text-black transition-colors"
+                  className="flex items-center justify-center gap-2 w-full rounded-full bg-accent hover:bg-accent-hover py-3 text-sm font-semibold text-on-accent transition-colors"
                 >
                   <LogIn className="h-4 w-4" />
                   Create account, then {plan.name} — {localPrice}/{text.month}
                 </Link>
-                <Link href={`/login?redirect=${encodeURIComponent(`/pricing?plan=${plan.id}`)}`} className="block text-center text-sm text-[#25D366] hover:underline">
+                <Link href={`/login?redirect=${encodeURIComponent(`/pricing?plan=${plan.id}`)}`} className="block text-center text-sm text-accent hover:underline">
                   Already have an account? Sign in for {plan.name}
                 </Link>
               </div>

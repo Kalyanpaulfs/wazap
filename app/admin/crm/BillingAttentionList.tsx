@@ -21,14 +21,14 @@ export default function BillingAttentionList({ items }: { items: AttentionItem[]
     }
   }
   if (!items.length) return <div className="wp-growth-callout mt-6"><strong>Payments needing attention</strong><p className="text-xs leading-6 mt-2">Nothing to review. Refunds, chargebacks, disputes and payments Wazap could not match will appear here.</p></div>;
-  return <div className="mt-6 rounded-2xl border border-amber-500/40 bg-amber-500/5 p-4">
-    <strong className="text-amber-200">Payments needing attention ({items.length})</strong>
-    <p className="text-xs text-slate-400 mt-1">Check each one in the PayPal or Dodo dashboard, fix the customer if needed, then mark it resolved.</p>
-    {error && <p role="alert" className="text-xs text-red-400 mt-2">{error}</p>}
+  return <div className="mt-6 rounded-2xl border border-warning/40 bg-highlight-soft p-4">
+    <strong className="text-warning">Payments needing attention ({items.length})</strong>
+    <p className="text-xs text-muted mt-1">Check each one in the PayPal or Dodo dashboard, fix the customer if needed, then mark it resolved.</p>
+    {error && <p role="alert" className="text-xs text-danger mt-2">{error}</p>}
     <div className="wp-growth-table-wrap mt-3"><table className="wp-growth-table"><thead><tr><th>When</th><th>Provider · event</th><th>What happened</th><th>Customer</th><th>Amount</th><th></th></tr></thead><tbody>
       {items.map(item => <tr key={item.id}>
         <td className="text-xs">{new Date(item.createdAt).toLocaleString("en-GB",{timeZone:"UTC"})}</td>
-        <td><strong>{item.provider === "dodo" ? "Dodo" : "PayPal"}</strong><p className="text-xs text-slate-400 mt-1">{item.eventType}</p></td>
+        <td><strong>{item.provider === "dodo" ? "Dodo" : "PayPal"}</strong><p className="text-xs text-muted mt-1">{item.eventType}</p></td>
         <td className="text-xs">{item.reason}{item.chargeId && <details className="mt-1"><summary>Payment reference</summary><p className="break-all">{item.chargeId}</p></details>}</td>
         <td className="text-xs">{item.customer || item.email || "Unknown"}</td>
         <td className="text-xs">{item.amount != null ? `${item.currency || ""} ${item.amount.toFixed(2)}` : "n/a"}</td>

@@ -111,12 +111,12 @@ export default function LinkRowActions({
   if (confirming) {
     return (
       <div className="flex flex-wrap items-center gap-2 text-xs">
-        <span className="text-slate-300">Delete this link?</span>
+        <span className="text-muted">Delete this link?</span>
         <button
           type="button"
           onClick={confirmDelete}
           disabled={deleting}
-          className="rounded-full bg-red-500/90 px-3 py-1.5 font-semibold text-white hover:bg-red-500 disabled:opacity-50"
+          className="rounded-full bg-danger/10 px-3 py-1.5 font-semibold text-text hover:bg-danger disabled:opacity-50"
         >
           {deleting ? "Deleting…" : "Yes, delete"}
         </button>
@@ -124,7 +124,7 @@ export default function LinkRowActions({
           type="button"
           onClick={() => setConfirming(false)}
           disabled={deleting}
-          className="rounded-full border border-slate-700 px-3 py-1.5 text-slate-300 hover:border-slate-500"
+          className="rounded-full border border-border-strong px-3 py-1.5 text-muted hover:border-border-strong"
         >
           Cancel
         </button>
@@ -135,12 +135,12 @@ export default function LinkRowActions({
   if (confirmingPause) {
     return (
       <div className="flex flex-wrap items-center gap-2 text-xs">
-        <span className="text-slate-300">Pause this link? People who click it will see a &quot;paused&quot; page.</span>
+        <span className="text-muted">Pause this link? People who click it will see a &quot;paused&quot; page.</span>
         <button
           type="button"
           onClick={togglePause}
           disabled={pausing}
-          className="rounded-full bg-amber-500/90 px-3 py-1.5 font-semibold text-black hover:bg-amber-500 disabled:opacity-50"
+          className="rounded-full bg-highlight-soft px-3 py-1.5 font-semibold text-ink hover:bg-highlight disabled:opacity-50"
         >
           {pausing ? "Pausing…" : "Yes, pause"}
         </button>
@@ -148,7 +148,7 @@ export default function LinkRowActions({
           type="button"
           onClick={() => setConfirmingPause(false)}
           disabled={pausing}
-          className="rounded-full border border-slate-700 px-3 py-1.5 text-slate-300 hover:border-slate-500"
+          className="rounded-full border border-border-strong px-3 py-1.5 text-muted hover:border-border-strong"
         >
           Cancel
         </button>
@@ -162,16 +162,16 @@ export default function LinkRowActions({
         type="button"
         onClick={copy}
         title="Copy link"
-        className="flex items-center gap-1 rounded-full border border-slate-700 px-2.5 py-1.5 text-xs text-slate-300 hover:border-[#25D366] hover:text-white"
+        className="flex items-center gap-1 rounded-full border border-border-strong px-2.5 py-1.5 text-xs text-muted hover:border-accent hover:text-text"
       >
-        {copied ? <Check className="h-3.5 w-3.5 text-[#25D366]" /> : <Copy className="h-3.5 w-3.5" />}
+        {copied ? <Check className="h-3.5 w-3.5 text-accent" /> : <Copy className="h-3.5 w-3.5" />}
         {copied ? "Copied" : "Copy"}
       </button>
       <button
         type="button"
         onClick={downloadQR}
         title="Download QR"
-        className="flex items-center gap-1 rounded-full border border-slate-700 px-2.5 py-1.5 text-xs text-slate-300 hover:border-[#25D366] hover:text-white"
+        className="flex items-center gap-1 rounded-full border border-border-strong px-2.5 py-1.5 text-xs text-muted hover:border-accent hover:text-text"
       >
         <QrCode className="h-3.5 w-3.5" />
         QR
@@ -181,7 +181,7 @@ export default function LinkRowActions({
         target="_blank"
         rel="noopener noreferrer"
         title="Open"
-        className="flex items-center gap-1 rounded-full border border-slate-700 px-2.5 py-1.5 text-xs text-slate-300 hover:border-[#25D366] hover:text-white"
+        className="flex items-center gap-1 rounded-full border border-border-strong px-2.5 py-1.5 text-xs text-muted hover:border-accent hover:text-text"
       >
         <ExternalLink className="h-3.5 w-3.5" />
         Open
@@ -189,7 +189,7 @@ export default function LinkRowActions({
       <Link
         href={editHref}
         title="Edit"
-        className="flex items-center gap-1 rounded-full border border-slate-700 px-2.5 py-1.5 text-xs text-slate-300 hover:border-[#25D366] hover:text-white"
+        className="flex items-center gap-1 rounded-full border border-border-strong px-2.5 py-1.5 text-xs text-muted hover:border-accent hover:text-text"
       >
         <Pencil className="h-3.5 w-3.5" />
         Edit
@@ -199,22 +199,22 @@ export default function LinkRowActions({
         onClick={() => (manuallyPaused ? togglePause() : setConfirmingPause(true))}
         disabled={pausing}
         title={manuallyPaused ? "Resume" : "Pause"}
-        className="flex items-center gap-1 rounded-full border border-slate-700 px-2.5 py-1.5 text-xs text-slate-300 hover:border-[#25D366] hover:text-white disabled:opacity-50"
+        className="flex items-center gap-1 rounded-full border border-border-strong px-2.5 py-1.5 text-xs text-muted hover:border-accent hover:text-text disabled:opacity-50"
       >
         {manuallyPaused ? <Play className="h-3.5 w-3.5" /> : <Pause className="h-3.5 w-3.5" />}
         {pausing ? "Saving…" : manuallyPaused ? "Resume" : "Pause"}
       </button>
-      {pauseError && <span className="text-xs text-red-400">{pauseError}</span>}
+      {pauseError && <span className="text-xs text-danger">{pauseError}</span>}
       <button
         type="button"
         onClick={() => setConfirming(true)}
         title="Delete"
-        className="flex items-center gap-1 rounded-full border border-slate-700 px-2.5 py-1.5 text-xs text-slate-400 hover:border-red-500/60 hover:text-red-300"
+        className="flex items-center gap-1 rounded-full border border-border-strong px-2.5 py-1.5 text-xs text-muted hover:border-danger/60 hover:text-danger"
       >
         <Trash2 className="h-3.5 w-3.5" />
         Delete
       </button>
-      {error && <span className="text-xs text-red-400">{error}</span>}
+      {error && <span className="text-xs text-danger">{error}</span>}
     </div>
   );
 }

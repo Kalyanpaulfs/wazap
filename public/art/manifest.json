@@ -1,0 +1,130 @@
+[
+ {
+  "file": "art/home/hero-routing.webp",
+  "prompt_id": "hero-routing",
+  "aspect": "1:1",
+  "generated": "2026-10-19",
+  "tool": "gpt-image",
+  "usedBy": "home hero"
+ },
+ {
+  "file": "art/home/feature-connect.webp",
+  "prompt_id": "feature-connect",
+  "aspect": "3:2",
+  "generated": "2026-10-19",
+  "tool": "gpt-image",
+  "usedBy": "home feature 01"
+ },
+ {
+  "file": "art/home/feature-distribute.webp",
+  "prompt_id": "feature-distribute",
+  "aspect": "3:2",
+  "generated": "2026-10-19",
+  "tool": "gpt-image",
+  "usedBy": "home feature 02"
+ },
+ {
+  "file": "art/home/feature-protect.webp",
+  "prompt_id": "feature-protect",
+  "aspect": "3:2",
+  "generated": "2026-10-19",
+  "tool": "gpt-image",
+  "usedBy": "home feature 03"
+ },
+ {
+  "file": "art/products/product-lead-routing.webp",
+  "prompt_id": "product-lead-routing",
+  "aspect": "3:2",
+  "generated": "2026-10-19",
+  "tool": "gpt-image",
+  "usedBy": "/whatsapp-lead-routing hero"
+ },
+ {
+  "file": "art/products/product-ad-tracking.webp",
+  "prompt_id": "product-ad-tracking",
+  "aspect": "3:2",
+  "generated": "2026-10-19",
+  "tool": "gpt-image",
+  "usedBy": "/whatsapp-ad-tracking hero"
+ },
+ {
+  "file": "art/products/product-short-links.webp",
+  "prompt_id": "product-short-links",
+  "aspect": "3:2",
+  "generated": "2026-10-19",
+  "tool": "gpt-image",
+  "usedBy": "/whatsapp-short-links hero"
+ },
+ {
+  "file": "art/products/product-website-widget.webp",
+  "prompt_id": "product-website-widget",
+  "aspect": "3:2",
+  "generated": "2026-10-19",
+  "tool": "gpt-image",
+  "usedBy": "/whatsapp-website-widget hero"
+ },
+ {
+  "file": "growth/art/overview-v2.webp",
+  "prompt_id": "overview-v2",
+  "aspect": "3:2",
+  "generated": "2026-10-19",
+  "tool": "gpt-image",
+  "usedBy": "guides/resources/compare/solutions visuals"
+ },
+ {
+  "file": "growth/art/property-v2.webp",
+  "prompt_id": "property-v2",
+  "aspect": "3:2",
+  "generated": "2026-10-19",
+  "tool": "gpt-image",
+  "usedBy": "guides/resources/compare/solutions visuals"
+ },
+ {
+  "file": "growth/art/campaign-v2.webp",
+  "prompt_id": "campaign-v2",
+  "aspect": "3:2",
+  "generated": "2026-10-19",
+  "tool": "gpt-image",
+  "usedBy": "guides/resources/compare/solutions visuals"
+ },
+ {
+  "file": "growth/art/routing-v2.webp",
+  "prompt_id": "routing-v2",
+  "aspect": "3:2",
+  "generated": "2026-10-19",
+  "tool": "gpt-image",
+  "usedBy": "guides/resources/compare/solutions visuals"
+ },
+ {
+  "file": "growth/art/rotation-v2.webp",
+  "prompt_id": "rotation-v2",
+  "aspect": "3:2",
+  "generated": "2026-10-19",
+  "tool": "gpt-image",
+  "usedBy": "guides/resources/compare/solutions visuals"
+ },
+ {
+  "file": "growth/art/tracking-v2.webp",
+  "prompt_id": "tracking-v2",
+  "aspect": "3:2",
+  "generated": "2026-10-19",
+  "tool": "gpt-image",
+  "usedBy": "guides/resources/compare/solutions visuals"
+ },
+ {
+  "file": "growth/art/compare-linkly-v2.webp",
+  "prompt_id": "compare-linkly-v2",
+  "aspect": "3:2",
+  "generated": "2026-10-19",
+  "tool": "gpt-image",
+  "usedBy": "guides/resources/compare/solutions visuals"
+ },
+ {
+  "file": "growth/art/compare-wasepje-v2.webp",
+  "prompt_id": "compare-wasepje-v2",
+  "aspect": "3:2",
+  "generated": "2026-10-19",
+  "tool": "gpt-image",
+  "usedBy": "guides/resources/compare/solutions visuals"
+ }
+]

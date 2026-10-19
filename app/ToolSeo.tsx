@@ -29,22 +29,22 @@ export default function ToolSeo({ k, children }: { k: string; children?: React.R
     ],
   };
   return (
-    <section className="border-t border-slate-800/60 py-10">
+    <section className="border-t border-border py-10">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(appLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }} />
       <ToolGuideSection>
         {children}
         {guide && <div className="mb-12">
-          <h2 className="text-2xl font-bold text-white">{guide.title}</h2>
+          <h2 className="text-2xl font-bold text-text">{guide.title}</h2>
           <ol className="mt-5 space-y-3">
-            {guide.steps.map((step, i) => <li key={step} className="flex gap-3 rounded-2xl border border-slate-800 bg-[#111811] p-5">
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#25D366]/15 text-sm font-bold text-[#25D366]">{i + 1}</span>
-              <p className="text-sm leading-6 text-slate-300">{step}</p>
+            {guide.steps.map((step, i) => <li key={step} className="flex gap-3 rounded-2xl border border-border bg-surface p-5">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent-soft text-sm font-bold text-accent">{i + 1}</span>
+              <p className="text-sm leading-6 text-muted">{step}</p>
             </li>)}
           </ol>
-          <p className="mt-5 text-sm leading-6 text-slate-400">{guide.note}</p>
+          <p className="mt-5 text-sm leading-6 text-muted">{guide.note}</p>
           <nav aria-label="Related WhatsApp tools" className="mt-5 flex flex-wrap gap-2">
-            {guide.related.map(key => { const tool = TOOL_SEO[key]; return tool ? <Link key={key} href={tool.href} className="inline-flex min-h-11 items-center rounded-full border border-slate-700 px-4 py-2 text-sm text-[#25D366] hover:border-[#25D366]">{tool.name}</Link> : null; })}
+            {guide.related.map(key => { const tool = TOOL_SEO[key]; return tool ? <Link key={key} href={tool.href} className="inline-flex min-h-11 items-center rounded-full border border-border-strong px-4 py-2 text-sm text-accent hover:border-accent">{tool.name}</Link> : null; })}
           </nav>
         </div>}
       </ToolGuideSection>

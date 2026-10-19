@@ -61,30 +61,26 @@ export default async function ToolsPage() {
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(toolsJsonLd) }} />
 
-      <div className="hero-bg min-h-[calc(100vh-56px)] px-4 py-12 sm:py-16">
+      <div className="min-h-[calc(100vh-56px)] px-4 py-12 sm:py-16">
         <div className="text-center mb-10">
-          <div className="inline-flex items-center gap-2 rounded-full border border-[#25D366]/30 bg-[#25D366]/10 px-4 py-1.5 text-sm text-[#25D366] mb-4">
+          <div className="inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent-soft px-4 py-1.5 text-sm text-accent mb-4">
             Start with one job
           </div>
-          <h1 className="text-4xl sm:text-5xl font-bold text-white mb-3">WhatsApp Tools</h1>
-          <p className="mx-auto max-w-2xl text-slate-400 text-lg">Share WhatsApp chats across your team, track your links, and add WhatsApp to your website. Choose a tool below.</p>
+          <h1 className="text-4xl sm:text-5xl font-bold text-text mb-3">WhatsApp Tools</h1>
+          <p className="mx-auto max-w-2xl text-muted text-lg">Share WhatsApp chats across your team, track your links, and add WhatsApp to your website. Choose a tool below.</p>
         </div>
 
         <div className="mx-auto grid max-w-5xl grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {tools.map(({ href, icon: Icon, title, desc, action }) => (
-            <Link key={title} href={href} className="group rounded-2xl border border-slate-800 bg-[#111811] p-6 transition-all hover:border-[#25D366]/50 hover:bg-[#25D366]/10">
-              <Icon className="mb-4 h-6 w-6 text-[#25D366]" />
-              <h2 className="text-lg font-semibold text-white">{title}</h2>
-              <p className="mt-1 text-sm leading-relaxed text-slate-400">{desc}</p>
-              <span className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-[#25D366]">{action} <ArrowRight className="h-4 w-4" /></span>
+            <Link key={title} href={href} className="group rounded-2xl border border-border bg-surface p-6 transition-all hover:border-accent/50 hover:bg-accent-soft">
+              <Icon className="mb-4 h-6 w-6 text-accent" />
+              <h2 className="text-lg font-semibold text-text">{title}</h2>
+              <p className="mt-1 text-sm leading-relaxed text-muted">{desc}</p>
+              <span className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-accent">{action} <ArrowRight className="h-4 w-4" /></span>
             </Link>
           ))}
         </div>
       </div>
-
-      <footer className="border-t border-slate-800 px-4 py-8 text-center text-sm text-slate-600">
-        <p>© 2026 Wazap.lt — Not affiliated with WhatsApp or Meta.</p>
-      </footer>
     </>
   );
 }

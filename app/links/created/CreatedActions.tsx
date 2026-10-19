@@ -60,23 +60,23 @@ export default function CreatedActions({
   return (
     <div className="space-y-4">
       {qrDataUrl && (
-        <img src={qrDataUrl} alt={`QR code for ${name}`} className="mx-auto h-40 w-40 rounded-xl border border-slate-800 bg-white p-2" />
+        <img src={qrDataUrl} alt={`QR code for ${name}`} className="mx-auto h-40 w-40 rounded-xl border border-border bg-surface p-2" />
       )}
 
       <div className="flex flex-wrap items-center justify-center gap-2.5">
         <button
           type="button"
           onClick={copyLink}
-          className="inline-flex items-center gap-1.5 rounded-full border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-200 hover:border-[#25D366] hover:text-white"
+          className="inline-flex items-center gap-1.5 rounded-full border border-border-strong px-4 py-2 text-sm font-semibold text-text hover:border-accent hover:text-text"
         >
-          {copied ? <Check className="h-4 w-4 text-[#25D366]" /> : <Copy className="h-4 w-4" />}
+          {copied ? <Check className="h-4 w-4 text-accent" /> : <Copy className="h-4 w-4" />}
           {copied ? "Copied!" : "Copy link"}
         </button>
         <button
           type="button"
           onClick={downloadQR}
           disabled={!qrDataUrl}
-          className="inline-flex items-center gap-1.5 rounded-full border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-200 hover:border-[#25D366] hover:text-white disabled:opacity-50"
+          className="inline-flex items-center gap-1.5 rounded-full border border-border-strong px-4 py-2 text-sm font-semibold text-text hover:border-accent hover:text-text disabled:opacity-50"
         >
           <Download className="h-4 w-4" />
           Download QR
@@ -85,7 +85,7 @@ export default function CreatedActions({
           href={shareUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 rounded-full border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-200 hover:border-[#25D366] hover:text-white"
+          className="inline-flex items-center gap-1.5 rounded-full border border-border-strong px-4 py-2 text-sm font-semibold text-text hover:border-accent hover:text-text"
         >
           <MessageCircle className="h-4 w-4" />
           Share on WhatsApp
@@ -94,15 +94,15 @@ export default function CreatedActions({
           href={publicUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 rounded-full bg-[#25D366] px-4 py-2 text-sm font-bold text-black hover:bg-[#1fba58]"
+          className="inline-flex items-center gap-1.5 rounded-full bg-accent px-4 py-2 text-sm font-bold text-on-accent hover:bg-accent-hover"
         >
           <ExternalLink className="h-4 w-4" />
           Test it now
         </a>
       </div>
 
-      <p className="text-xs text-slate-500">{testNote}</p>
-      {error && <p role="alert" className="text-sm text-red-400">{error}</p>}
+      <p className="text-xs text-muted">{testNote}</p>
+      {error && <p role="alert" className="text-sm text-danger">{error}</p>}
     </div>
   );
 }

@@ -146,7 +146,7 @@ export default async function BillingWorkspace({query='',autopay='',plan=''}:{qu
     <Link prefetch={false} href={`/admin/crm/billing${buildQs({autopay:'on'})}`} aria-pressed={autopayFilter==='on'} className={`wp-crm-secondary ${autopayFilter==='on'?'is-current':''}`}>Auto-pay on</Link>
     <Link prefetch={false} href={`/admin/crm/billing${buildQs({autopay:'off'})}`} aria-pressed={autopayFilter==='off'} className={`wp-crm-secondary ${autopayFilter==='off'?'is-current':''}`}>Auto-pay off</Link>
    </div>
-   <p className="text-xs text-slate-400 my-5">{total} matching accounts · Showing {visibleUsers.length} of the latest {users.length}</p>
+   <p className="text-xs text-muted my-5">{total} matching accounts · Showing {visibleUsers.length} of the latest {users.length}</p>
    <div className="wp-growth-table-wrap">
     <table className="wp-growth-table">
      <thead>
@@ -172,16 +172,16 @@ export default async function BillingWorkspace({query='',autopay='',plan=''}:{qu
         <tr key={u.id}>
          <td>
           <strong>
-           <Link prefetch={false} href={`/admin/crm/customers/${u.id}`} className="hover:text-[#25D366] transition-colors">
+           <Link prefetch={false} href={`/admin/crm/customers/${u.id}`} className="hover:text-accent transition-colors">
             {u.name||u.email}
            </Link>
           </strong>
-          <p className="text-xs mt-1 text-slate-400">{u.email}</p>
-          {contact?.phone&&<p className="text-xs mt-0.5 text-slate-400">{contact.phone}</p>}
+          <p className="text-xs mt-1 text-muted">{u.email}</p>
+          {contact?.phone&&<p className="text-xs mt-0.5 text-muted">{contact.phone}</p>}
          </td>
          <td>
           <strong>{displayPlan}</strong>
-          <p className="text-xs mt-1 text-slate-400">{trial?'Trial':expired?'Previous access expired':plan==='free'?'Trial ended':payment?'Subscription recorded':'Access grant · payment unconfirmed'}</p>
+          <p className="text-xs mt-1 text-muted">{trial?'Trial':expired?'Previous access expired':plan==='free'?'Trial ended':payment?'Subscription recorded':'Access grant · payment unconfirmed'}</p>
          </td>
          <td>{(trial?u.trialEndsAt:u.planExpiresAt)?.toLocaleDateString('en-GB')||'No expiry recorded'}</td>
          <td>{autopayState===null?'—':autopayState?'On':'Off'}</td>
@@ -189,19 +189,19 @@ export default async function BillingWorkspace({query='',autopay='',plan=''}:{qu
           {payment?(
            <>
             <strong>{payment.method==='dodo'?'Dodo':'PayPal'} · {planDisplayName(payment.plan)}</strong>
-            <p className="text-xs text-slate-400 mt-1">{payment.currency} {payment.amount.toFixed(2)} · {payment.status} · {(payment.activatedAt||payment.createdAt).toLocaleDateString('en-GB')}</p>
+            <p className="text-xs text-muted mt-1">{payment.currency} {payment.amount.toFixed(2)} · {payment.status} · {(payment.activatedAt||payment.createdAt).toLocaleDateString('en-GB')}</p>
             <details className="text-xs mt-2">
              <summary>Payment reference</summary>
              <p className="break-all mt-2">{payment.txId}</p>
             </details>
            </>
           ):(
-           <span className="text-slate-400 text-xs">{u.payments[0]?`Latest record: ${u.payments[0].status} · ${u.payments[0].method}`:'No subscription payment recorded'}</span>
+           <span className="text-muted text-xs">{u.payments[0]?`Latest record: ${u.payments[0].status} · ${u.payments[0].method}`:'No subscription payment recorded'}</span>
           )}
          </td>
          <td>
           <div className="flex flex-col gap-2.5">
-           <Link prefetch={false} href={`/admin/crm/customers/${u.id}`} className="font-semibold text-xs text-[#25D366] hover:underline">Customer profile →</Link>
+           <Link prefetch={false} href={`/admin/crm/customers/${u.id}`} className="font-semibold text-xs text-accent hover:underline">Customer profile →</Link>
            <ChangePlanControl userId={u.id} currentPlan={plan}/>
            <CustomerPaymentsPanel userId={u.id}/>
            {contact&&<Link prefetch={false} href={`/admin/crm?lead=${contact.id}`}>CRM contact →</Link>}

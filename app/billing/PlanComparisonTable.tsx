@@ -46,12 +46,12 @@ export default function PlanComparisonTable() {
   ];
 
   return (
-    <section className="rounded-2xl border border-slate-800 bg-[#111811] p-5 sm:p-6" aria-label="Plan comparison">
-      <h2 className="text-lg font-semibold text-white">Compare plans</h2>
+    <section className="rounded-2xl border border-border bg-surface p-5 sm:p-6" aria-label="Plan comparison">
+      <h2 className="text-lg font-semibold text-text">Compare plans</h2>
       <div className="mt-4 overflow-x-auto">
         <table className="w-full min-w-[520px] text-left text-sm">
           <thead>
-            <tr className="border-b border-slate-800 text-xs uppercase tracking-wide text-slate-500">
+            <tr className="border-b border-border text-xs uppercase tracking-wide text-muted">
               <th className="py-2 pr-4">Feature</th>
               {PLAN_COLUMNS.map((key) => (
                 <th key={key} className="px-3 py-2 text-center">{PLAN_DISPLAY_NAME[key]}</th>
@@ -60,18 +60,18 @@ export default function PlanComparisonTable() {
           </thead>
           <tbody>
             {rows.map(({ label, cells }) => (
-              <tr key={label} className="border-b border-slate-900 last:border-0">
-                <td className="py-2.5 pr-4 text-slate-300">{label}</td>
+              <tr key={label} className="border-b border-border last:border-0">
+                <td className="py-2.5 pr-4 text-muted">{label}</td>
                 {cells.map((cell, i) => (
                   <td key={i} className="px-3 py-2.5 text-center">
                     {typeof cell === "boolean" ? (
                       cell ? (
-                        <Check className="mx-auto h-4 w-4 text-[#25D366]" aria-label="Included" />
+                        <Check className="mx-auto h-4 w-4 text-accent" aria-label="Included" />
                       ) : (
-                        <X className="mx-auto h-4 w-4 text-slate-600" aria-label="Not included" />
+                        <X className="mx-auto h-4 w-4 text-muted" aria-label="Not included" />
                       )
                     ) : (
-                      <span className="text-slate-200">{cell}</span>
+                      <span className="text-text">{cell}</span>
                     )}
                   </td>
                 ))}

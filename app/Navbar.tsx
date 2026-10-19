@@ -1,10 +1,11 @@
 "use client";
-import BrandLogo from "./components/BrandLogo";
 
-import { LanguageSelector } from "./localization/SiteLocale";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { Menu } from "lucide-react";
+import BrandLogo from "./components/BrandLogo";
+import { LanguageSelector } from "./localization/SiteLocale";
+import { buttonClasses } from "./ui/Button";
 
 const navigation = [
   { label: "Live demo", href: "/#demo" },
@@ -13,28 +14,50 @@ const navigation = [
   { label: "Pricing", href: "/pricing" },
 ];
 
+/** Light site header. Keeps the shared LanguageSelector and the same links as the legacy Navbar. */
 export default function Navbar() {
   const { data: session } = useSession();
   const accountHref = session?.user ? "/dashboard" : "/login";
   const accountLabel = session?.user ? "Dashboard" : "Log in";
+
   return (
-    <nav aria-label="Main navigation" className="sticky top-0 z-50 border-b border-green-900/20 bg-[#0a0f0a]/92 backdrop-blur-md">
-      <div className="mx-auto max-w-6xl px-4 h-14 flex items-center justify-between">
-        <Link href="/" aria-label="Wazap home" className="flex items-center gap-2 max-[360px]:w-[116px] max-[360px]:[&>svg]:w-full">
-          <BrandLogo />
+    <nav aria-label="Main navigation" className="ds-light sticky top-0 z-50 border-b border-border bg-bg/85 backdrop-blur-md">
+      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 px-4 sm:px-6">
+        <Link href="/" aria-label="Wazap home" className="flex items-center max-[360px]:w-[104px]">
+          <BrandLogo tone="onLight" />
         </Link>
-        <div className="flex items-center gap-3 max-[360px]:gap-1 sm:gap-6">
-        <div className="hidden sm:flex items-center gap-6 text-sm">
-          {navigation.map(item => <Link key={item.href} href={item.href} className="text-slate-300 hover:text-[#25D366] transition-colors">{item.label}</Link>)}
-        </div>
-        <LanguageSelector />
-        <Link href={accountHref} style={{ color: "#0a0f0a" }} className="max-w-[90px] sm:max-w-none text-center leading-tight rounded-full bg-[#25D366] px-4 py-2 text-sm font-semibold text-black hover:bg-[#1fba58] transition-colors">{accountLabel}</Link>
-        <details className="sm:hidden relative">
-          <summary className="cursor-pointer rounded-full border border-green-900 p-2 text-sm text-slate-300" aria-label="Open navigation"><Menu size={19} /></summary>
-          <div className="absolute right-0 top-12 w-48 rounded-2xl border border-green-900 bg-[#101810] p-4 flex flex-col gap-4 text-sm">
-            {navigation.map(item => <Link key={item.href} href={item.href} className="text-slate-300 hover:text-[#25D366] transition-colors" onClick={event => event.currentTarget.closest("details")?.removeAttribute("open")}>{item.label}</Link>)}
+        <div className="flex items-center gap-2 sm:gap-6">
+          <div className="hidden items-center gap-7 text-[15px] sm:flex">
+            {navigation.map((item) => (
+              <Link key={item.href} href={item.href} className="font-medium text-muted transition-colors hover:text-text">
+                {item.label}
+              </Link>
+            ))}
           </div>
-        </details>
+          <LanguageSelector />
+          <Link href={accountHref} className={buttonClasses("primary", "sm", "max-w-[96px] text-center leading-tight sm:max-w-none")}>
+            {accountLabel}
+          </Link>
+          <details className="relative sm:hidden">
+            <summary
+              className="grid size-11 cursor-pointer list-none place-items-center rounded-full border border-border-strong text-text [&::-webkit-details-marker]:hidden"
+              aria-label="Open navigation"
+            >
+              <Menu size={19} />
+            </summary>
+            <div className="absolute end-0 top-14 flex w-52 flex-col gap-1 rounded-2xl border border-border bg-surface p-2 shadow-float">
+              {navigation.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="rounded-xl px-3 py-3 text-[15px] font-medium text-text hover:bg-surface-2"
+                  onClick={(event) => event.currentTarget.closest("details")?.removeAttribute("open")}
+                >
+                  {item.label}
+                </Link>
+              ))}
+            </div>
+          </details>
         </div>
       </div>
     </nav>

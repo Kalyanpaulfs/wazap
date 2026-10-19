@@ -126,55 +126,55 @@ export default async function BillingPage({
     <main className="px-4 py-7 sm:px-7 sm:py-9">
       <div className="mx-auto max-w-4xl space-y-6">
         <header>
-          <h1 className="text-2xl font-bold text-white sm:text-3xl">Plan & billing</h1>
-          <p className="mt-1 text-slate-400">Your plan, usage, payment method and payment history.</p>
+          <h1 className="text-2xl font-bold text-text sm:text-3xl">Plan & billing</h1>
+          <p className="mt-1 text-muted">Your plan, usage, payment method and payment history.</p>
         </header>
 
-        <section className="rounded-2xl border border-slate-800 bg-[#111811] p-5 sm:p-6">
+        <section className="rounded-2xl border border-border bg-surface p-5 sm:p-6">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <h2 className="text-xl font-bold text-white">
+            <h2 className="text-xl font-bold text-text">
               {accountPlanLabel(user)}
             </h2>
-            <span className="text-lg font-semibold text-slate-300">{plan === "free" || inTrial ? "$0/mo" : `$${planPrice}/mo`}</span>
+            <span className="text-lg font-semibold text-muted">{plan === "free" || inTrial ? "$0/mo" : `$${planPrice}/mo`}</span>
           </div>
-          <p className="mt-2 text-sm leading-relaxed text-slate-300">{statusSentence}</p>
+          <p className="mt-2 text-sm leading-relaxed text-muted">{statusSentence}</p>
 
           {!inTrial && billingSummary.plan !== "free" && (
             <dl className="mt-5 grid gap-4 sm:grid-cols-2">
               <div>
-                <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Subscription started</dt>
-                <dd className="mt-1 text-sm text-slate-200">{subscriptionStartDate || "Not recorded"}</dd>
+                <dt className="text-xs font-semibold uppercase tracking-wide text-muted">Subscription started</dt>
+                <dd className="mt-1 text-sm text-text">{subscriptionStartDate || "Not recorded"}</dd>
               </div>
               <div>
-                <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Days left this period</dt>
-                <dd className="mt-1 text-sm text-slate-200">{daysLeftOnPeriod !== null ? `${daysLeftOnPeriod} day${daysLeftOnPeriod !== 1 ? "s" : ""}` : "—"}</dd>
+                <dt className="text-xs font-semibold uppercase tracking-wide text-muted">Days left this period</dt>
+                <dd className="mt-1 text-sm text-text">{daysLeftOnPeriod !== null ? `${daysLeftOnPeriod} day${daysLeftOnPeriod !== 1 ? "s" : ""}` : "—"}</dd>
               </div>
               <div>
-                <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Next payment</dt>
-                <dd className="mt-1 text-sm text-slate-200">
+                <dt className="text-xs font-semibold uppercase tracking-wide text-muted">Next payment</dt>
+                <dd className="mt-1 text-sm text-text">
                   {nextPaymentDate && nextPaymentAmount !== null ? `$${nextPaymentAmount} on ${nextPaymentDate}` : "None scheduled"}
                 </dd>
               </div>
               <div>
-                <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Payment method</dt>
-                <dd className="mt-1 text-sm text-slate-200">{providerLabel}</dd>
+                <dt className="text-xs font-semibold uppercase tracking-wide text-muted">Payment method</dt>
+                <dd className="mt-1 text-sm text-text">{providerLabel}</dd>
               </div>
             </dl>
           )}
 
           {/* Usage: same numbers as /links. */}
-          <dl className="mt-5 grid gap-4 sm:grid-cols-3 border-t border-slate-800 pt-5">
+          <dl className="mt-5 grid gap-4 sm:grid-cols-3 border-t border-border pt-5">
             <div>
-              <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Links used</dt>
-              <dd className="mt-1 text-sm text-slate-200">{linksLimit > 0 ? `${linksUsed} of ${linksLimit} links used` : `${linksUsed} of 0 — choose a plan`}</dd>
+              <dt className="text-xs font-semibold uppercase tracking-wide text-muted">Links used</dt>
+              <dd className="mt-1 text-sm text-text">{linksLimit > 0 ? `${linksUsed} of ${linksLimit} links used` : `${linksUsed} of 0 — choose a plan`}</dd>
             </div>
             <div>
-              <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Salespeople per lead rotator</dt>
-              <dd className="mt-1 text-sm text-slate-200">Up to {numbersLimit} salespeople</dd>
+              <dt className="text-xs font-semibold uppercase tracking-wide text-muted">Salespeople per lead rotator</dt>
+              <dd className="mt-1 text-sm text-text">Up to {numbersLimit} salespeople</dd>
             </div>
             <div>
-              <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Ad links</dt>
-              <dd className="mt-1 text-sm text-slate-200">{hasAdLinks ? "✓ Included" : "✗ Not on this plan"}</dd>
+              <dt className="text-xs font-semibold uppercase tracking-wide text-muted">Ad links</dt>
+              <dd className="mt-1 text-sm text-text">{hasAdLinks ? "✓ Included" : "✗ Not on this plan"}</dd>
             </div>
           </dl>
 
@@ -197,13 +197,13 @@ export default async function BillingPage({
           )}
 
           {!showBillingManager && (
-            <div className="mt-5 rounded-xl border border-slate-800 bg-slate-950/40 p-4">
-              <p className="text-sm text-slate-300">
+            <div className="mt-5 rounded-xl border border-border bg-bg/40 p-4">
+              <p className="text-sm text-muted">
                 {inTrial
                   ? `You're on a free trial — there's nothing to bill yet. ${daysLeft} day${daysLeft !== 1 ? "s" : ""} left.`
                   : "Your free trial has ended — there's no billing to manage until you choose a plan."}
               </p>
-              <a href="#plans" className="mt-2 inline-block text-sm font-semibold text-[#25D366] hover:underline">
+              <a href="#plans" className="mt-2 inline-block text-sm font-semibold text-accent hover:underline">
                 See plans ↓
               </a>
             </div>
@@ -211,7 +211,7 @@ export default async function BillingPage({
 
           {/* BillingManager has its own "Change plan" link when plan changes are on. */}
           {showBillingManager && process.env.BILLING_PLAN_CHANGES_ENABLED !== "true" && (
-            <a href="#plans" className="mt-4 block text-sm font-semibold text-[#25D366] hover:underline">
+            <a href="#plans" className="mt-4 block text-sm font-semibold text-accent hover:underline">
               Change plan ↓
             </a>
           )}
@@ -260,15 +260,15 @@ export default async function BillingPage({
           />
         </section>
 
-        <section className="rounded-2xl border border-slate-800 bg-[#111811] p-5 sm:p-6">
-          <h2 className="text-lg font-semibold text-white">Payment history</h2>
+        <section className="rounded-2xl border border-border bg-surface p-5 sm:p-6">
+          <h2 className="text-lg font-semibold text-text">Payment history</h2>
           {payments.length === 0 ? (
-            <p className="mt-3 text-sm text-slate-400">No payments recorded yet.</p>
+            <p className="mt-3 text-sm text-muted">No payments recorded yet.</p>
           ) : (
             <div className="mt-4 overflow-x-auto">
               <table className="w-full text-left text-sm">
                 <thead>
-                  <tr className="border-b border-slate-800 text-xs uppercase tracking-wide text-slate-500">
+                  <tr className="border-b border-border text-xs uppercase tracking-wide text-muted">
                     <th className="py-2 pr-4">Date</th>
                     <th className="py-2 pr-4">Plan</th>
                     <th className="py-2 pr-4">Amount</th>
@@ -278,14 +278,14 @@ export default async function BillingPage({
                 </thead>
                 <tbody>
                   {payments.map((p) => (
-                    <tr key={p.id} className="border-b border-slate-900 last:border-0">
-                      <td className="py-2 pr-4 text-slate-300">{formatDate(p.activatedAt || p.createdAt)}</td>
-                      <td className="py-2 pr-4 text-slate-300">{BILLING_PLAN_LABELS[p.plan] || p.plan}</td>
-                      <td className="py-2 pr-4 text-slate-300">
+                    <tr key={p.id} className="border-b border-border last:border-0">
+                      <td className="py-2 pr-4 text-muted">{formatDate(p.activatedAt || p.createdAt)}</td>
+                      <td className="py-2 pr-4 text-muted">{BILLING_PLAN_LABELS[p.plan] || p.plan}</td>
+                      <td className="py-2 pr-4 text-muted">
                         {p.currency} {p.amount.toFixed(2)}
                       </td>
-                      <td className="py-2 pr-4 text-slate-300">{p.method === "dodo" ? "Card via Dodo" : "PayPal"}</td>
-                      <td className="py-2 pr-4 text-slate-300">{paymentStatusLabel(p.status, p.createdAt)}</td>
+                      <td className="py-2 pr-4 text-muted">{p.method === "dodo" ? "Card via Dodo" : "PayPal"}</td>
+                      <td className="py-2 pr-4 text-muted">{paymentStatusLabel(p.status, p.createdAt)}</td>
                     </tr>
                   ))}
                 </tbody>

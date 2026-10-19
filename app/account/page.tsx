@@ -27,7 +27,7 @@ export default async function AccountPage() {
     where: { email: user.email.toLowerCase() },
     select: { marketingStatus: true, doNotContact: true, emailSuppressedAt: true },
   });
-  return <><div className="mx-auto max-w-5xl px-4 pt-6"><Link className="text-[#25D366]" href="/account/security">Manage two-factor authentication →</Link></div><AccountClient initial={{
+  return <><div className="mx-auto max-w-5xl px-4 pt-6"><Link className="text-accent" href="/account/security">Manage two-factor authentication →</Link></div><AccountClient initial={{
     requestedAt: user.accountDeletionRequestedAt?.toISOString() || null,
     scheduledFor: user.accountDeletionScheduledFor?.toISOString() || null,
     graceDays: ACCOUNT_DELETION_GRACE_DAYS,

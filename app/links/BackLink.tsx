@@ -7,7 +7,7 @@ import { ArrowLeft } from "lucide-react";
 // breadcrumb style as the rest of the app.
 export default function BackLink({ href, label }: { href: string; label: string }) {
   return (
-    <Link href={href} className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-400 hover:text-white">
+    <Link href={href} className="inline-flex items-center gap-1.5 text-sm font-semibold text-muted hover:text-text">
       <ArrowLeft className="h-4 w-4" /> {label}
     </Link>
   );

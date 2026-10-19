@@ -1,1 +1,7 @@
-{"release": "wazap-crm-growth-20261007-v4", "design": "approved motion prototype", "palette": "dark green and black"}
+{
+  "release": "wazap-premium-light-20261019",
+  "design": "premium light design system v1",
+  "palette": "Midnight Jade (light): paper #F7F8F5, ink #0E1726, jade #087F50, saffron #E9A23B",
+  "tokens": "app/theme/tokens.css",
+  "docs": "docs/design-system.md"
+}

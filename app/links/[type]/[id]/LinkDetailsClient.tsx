@@ -140,16 +140,16 @@ export default function LinkDetailsClient({
         <header className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-2xl font-bold text-white sm:text-3xl">{name}</h1>
-              <span className="rounded-full border border-slate-700 px-2.5 py-1 text-xs text-slate-300">{LINK_KIND_NAME[kind]}</span>
+              <h1 className="text-2xl font-bold text-text sm:text-3xl">{name}</h1>
+              <span className="rounded-full border border-border-strong px-2.5 py-1 text-xs text-muted">{LINK_KIND_NAME[kind]}</span>
             </div>
-            <p className="mt-1 text-sm text-slate-500">Created {createdLabel}</p>
+            <p className="mt-1 text-sm text-muted">Created {createdLabel}</p>
           </div>
           <div className="flex flex-col items-end gap-2">
             {paused ? (
-              <span className="rounded-full border border-amber-400/30 bg-amber-400/10 px-3 py-1.5 text-xs font-semibold text-amber-300">{statusText}</span>
+              <span className="rounded-full border border-warning/30 bg-highlight-soft px-3 py-1.5 text-xs font-semibold text-warning">{statusText}</span>
             ) : (
-              <span className="rounded-full border border-[#25D366]/30 bg-[#25D366]/10 px-3 py-1.5 text-xs font-semibold text-[#25D366]">● Live</span>
+              <span className="rounded-full border border-accent/30 bg-accent-soft px-3 py-1.5 text-xs font-semibold text-accent">● Live</span>
             )}
             <PauseResumeButton kind={kind} id={id} manuallyPaused={manuallyPaused} />
           </div>
@@ -159,40 +159,40 @@ export default function LinkDetailsClient({
             from the status pill + Pause/Resume button above, with no
             upgrade pitch (there's nothing to buy to fix a self-pause). */}
         {pauseReason && (
-          <section className="rounded-2xl border border-amber-400/30 bg-amber-400/10 p-5" aria-label="Link paused">
+          <section className="rounded-2xl border border-warning/30 bg-highlight-soft p-5" aria-label="Link paused">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-3">
-                <AlertTriangle className="h-5 w-5 shrink-0 text-amber-400" />
-                <p className="text-sm font-semibold text-white">This link is paused: {pauseReason}.</p>
+                <AlertTriangle className="h-5 w-5 shrink-0 text-warning" />
+                <p className="text-sm font-semibold text-text">This link is paused: {pauseReason}.</p>
               </div>
-              <Link href="/billing#plans" className="rounded-full bg-[#25D366] px-4 py-1.5 text-xs font-semibold text-black hover:bg-[#1fba58]">
+              <Link href="/billing#plans" className="rounded-full bg-accent px-4 py-1.5 text-xs font-semibold text-on-accent hover:bg-accent-hover">
                 Choose a plan
               </Link>
             </div>
           </section>
         )}
 
-        <section className="rounded-3xl border border-slate-800 bg-[#111811] p-5 sm:p-7">
+        <section className="rounded-3xl border border-border bg-surface p-5 sm:p-7">
           <div className="flex flex-col gap-6 sm:flex-row">
             <div className="flex-1 space-y-4">
               <div>
-                <p className="text-xs text-slate-500">Public address</p>
-                <p className="mt-1 break-all rounded-xl bg-slate-900 px-3 py-2.5 font-mono text-sm text-white">{addressDisplay}</p>
+                <p className="text-xs text-muted">Public address</p>
+                <p className="mt-1 break-all rounded-xl bg-surface px-3 py-2.5 font-mono text-sm text-text">{addressDisplay}</p>
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
                   onClick={copyLink}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-slate-700 px-3.5 py-1.5 text-xs font-semibold text-slate-200 hover:border-[#25D366] hover:text-white"
+                  className="inline-flex items-center gap-1.5 rounded-full border border-border-strong px-3.5 py-1.5 text-xs font-semibold text-text hover:border-accent hover:text-text"
                 >
-                  {copied ? <Check className="h-3.5 w-3.5 text-[#25D366]" /> : <Copy className="h-3.5 w-3.5" />}
+                  {copied ? <Check className="h-3.5 w-3.5 text-accent" /> : <Copy className="h-3.5 w-3.5" />}
                   {copied ? "Copied" : "Copy"}
                 </button>
                 <button
                   type="button"
                   onClick={downloadQR}
                   disabled={!qrDataUrl}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-slate-700 px-3.5 py-1.5 text-xs font-semibold text-slate-200 hover:border-[#25D366] hover:text-white disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 rounded-full border border-border-strong px-3.5 py-1.5 text-xs font-semibold text-text hover:border-accent hover:text-text disabled:opacity-50"
                 >
                   <Download className="h-3.5 w-3.5" />
                   Download QR
@@ -201,39 +201,39 @@ export default function LinkDetailsClient({
                   href={publicUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 rounded-full border border-slate-700 px-3.5 py-1.5 text-xs font-semibold text-slate-200 hover:border-[#25D366] hover:text-white"
+                  className="inline-flex items-center gap-1.5 rounded-full border border-border-strong px-3.5 py-1.5 text-xs font-semibold text-text hover:border-accent hover:text-text"
                 >
                   <ExternalLink className="h-3.5 w-3.5" />
                   Open
                 </a>
               </div>
-              {qrError && <p role="alert" className="text-xs text-red-400">{qrError}</p>}
+              {qrError && <p role="alert" className="text-xs text-danger">{qrError}</p>}
 
               <div className="flex flex-wrap items-center gap-6 pt-2">
                 <div>
-                  <p className="text-xs text-slate-500">Clicks</p>
-                  <p className="text-xl font-bold text-white">{metric.toLocaleString()}</p>
+                  <p className="text-xs text-muted">Clicks</p>
+                  <p className="text-xl font-bold text-text">{metric.toLocaleString()}</p>
                 </div>
-                <Link href={`/results?link=${kind}:${id}`} className="text-xs font-semibold text-[#25D366] hover:underline">
+                <Link href={`/results?link=${kind}:${id}`} className="text-xs font-semibold text-accent hover:underline">
                   See in Results →
                 </Link>
               </div>
             </div>
 
             {qrDataUrl && (
-              <img src={qrDataUrl} alt={`QR code for ${name}`} className="mx-auto h-36 w-36 shrink-0 rounded-xl border border-slate-800 bg-white p-2 sm:mx-0" />
+              <img src={qrDataUrl} alt={`QR code for ${name}`} className="mx-auto h-36 w-36 shrink-0 rounded-xl border border-border bg-surface p-2 sm:mx-0" />
             )}
           </div>
         </section>
 
         {kind === "rotator" && rotator && rotator.salespeople.length > 0 && (
-          <section className="rounded-3xl border border-slate-800 bg-[#111811] p-5 sm:p-7">
-            <h2 className="text-sm font-semibold text-white">Salespeople - last 30 days</h2>
+          <section className="rounded-3xl border border-border bg-surface p-5 sm:p-7">
+            <h2 className="text-sm font-semibold text-text">Salespeople - last 30 days</h2>
             <div className="mt-3 space-y-2">
               {rotator.salespeople.map((sp) => (
-                <div key={sp.number} className="flex items-center justify-between rounded-xl bg-slate-900 px-4 py-2.5 text-sm">
-                  <span className="text-slate-200">{sp.name || sp.number}</span>
-                  <span className="text-slate-400">{sp.last30Days.toLocaleString()} clicks</span>
+                <div key={sp.number} className="flex items-center justify-between rounded-xl bg-surface px-4 py-2.5 text-sm">
+                  <span className="text-text">{sp.name || sp.number}</span>
+                  <span className="text-muted">{sp.last30Days.toLocaleString()} clicks</span>
                 </div>
               ))}
             </div>
@@ -262,12 +262,12 @@ function SaveBar({ saving, success, error, disabled = false }: { saving: boolean
       <button
         type="submit"
         disabled={saving || disabled}
-        className="rounded-full bg-[#25D366] hover:bg-[#1fba58] disabled:opacity-50 px-6 py-2.5 text-sm font-bold text-black transition-colors"
+        className="rounded-full bg-accent hover:bg-accent-hover disabled:opacity-50 px-6 py-2.5 text-sm font-bold text-on-accent transition-colors"
       >
         {saving ? "Saving…" : "Save changes"}
       </button>
-      {success && <span className="text-sm font-semibold text-[#25D366]">Saved.</span>}
-      {error && <p role="alert" className="text-sm text-red-400">{error}</p>}
+      {success && <span className="text-sm font-semibold text-accent">Saved.</span>}
+      {error && <p role="alert" className="text-sm text-danger">{error}</p>}
     </div>
   );
 }
@@ -359,22 +359,22 @@ function RotatorEditSection({
   }
 
   return (
-    <form onSubmit={submit} className="space-y-5 rounded-2xl border border-slate-800 bg-[#111811] p-6">
-      <h2 className="text-sm font-semibold text-white">Edit lead rotator</h2>
+    <form onSubmit={submit} className="space-y-5 rounded-2xl border border-border bg-surface p-6">
+      <h2 className="text-sm font-semibold text-text">Edit lead rotator</h2>
       <div>
-        <label className="block text-xs text-slate-400 mb-1" htmlFor="edit-rotator-name">Name</label>
+        <label className="block text-xs text-muted mb-1" htmlFor="edit-rotator-name">Name</label>
         <input
           id="edit-rotator-name"
           value={name}
           onChange={(e) => setName(e.target.value)}
           maxLength={100}
           required
-          className="w-full rounded-xl bg-slate-900 border border-slate-700 px-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#25D366]"
+          className="w-full rounded-xl bg-surface border border-border-strong px-4 py-2.5 text-sm text-text placeholder:text-muted/70 focus:outline-none focus:border-accent"
         />
       </div>
 
       <div className="space-y-2">
-        <label className="block text-xs text-slate-400">Salespeople (name is optional)</label>
+        <label className="block text-xs text-muted">Salespeople (name is optional)</label>
         {rows.map((row, i) => (
           <div key={i} className="flex gap-2">
             <input
@@ -382,7 +382,7 @@ function RotatorEditSection({
               onChange={(e) => setRows((prev) => prev.map((v, j) => (j === i ? { ...v, name: e.target.value } : v)))}
               placeholder={`Salesperson ${i + 1} name`}
               aria-label={`Salesperson ${i + 1} name (optional)`}
-              className="min-w-0 w-28 sm:w-36 shrink-0 self-start rounded-xl bg-slate-900 border border-slate-700 px-3 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#25D366]"
+              className="min-w-0 w-28 sm:w-36 shrink-0 self-start rounded-xl bg-surface border border-border-strong px-3 py-2.5 text-sm text-text placeholder:text-muted/70 focus:outline-none focus:border-accent"
             />
             <div className="min-w-0 flex-1">
               <PhoneInput
@@ -397,7 +397,7 @@ function RotatorEditSection({
               <button
                 type="button"
                 onClick={() => removeRow(i)}
-                className="shrink-0 self-start text-slate-600 hover:text-red-400 p-2 transition-colors"
+                className="shrink-0 self-start text-muted hover:text-danger p-2 transition-colors"
                 aria-label={`Remove salesperson ${i + 1}`}
               >
                 <Trash2 className="h-4 w-4" />
@@ -405,17 +405,17 @@ function RotatorEditSection({
             )}
           </div>
         ))}
-        <p className="text-xs text-slate-500">{salespeopleCounterText(rows.length, rotator.numbersLimit, planLabel, rotator.nextPlanHint)}</p>
+        <p className="text-xs text-muted">{salespeopleCounterText(rows.length, rotator.numbersLimit, planLabel, rotator.nextPlanHint)}</p>
         {canAddMore ? (
           <button
             type="button"
             onClick={addRow}
-            className="inline-flex items-center gap-1 text-xs font-semibold text-[#25D366] hover:underline"
+            className="inline-flex items-center gap-1 text-xs font-semibold text-accent hover:underline"
           >
             <Plus className="h-3.5 w-3.5" /> Add salesperson
           </button>
         ) : (
-          <p className="text-xs text-amber-400">
+          <p className="text-xs text-warning">
             Your {planLabel} plan allows {rotator.numbersLimit} salespeople per rotator.{" "}
             {rotator.nextPlanHint && (
               <Link href="/billing#plans" className="underline">
@@ -427,14 +427,14 @@ function RotatorEditSection({
       </div>
 
       <div>
-        <label className="block text-xs text-slate-400 mb-1" htmlFor="edit-rotator-message">First message (optional)</label>
+        <label className="block text-xs text-muted mb-1" htmlFor="edit-rotator-message">First message (optional)</label>
         <textarea
           id="edit-rotator-message"
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           maxLength={2000}
           rows={2}
-          className="w-full rounded-xl bg-slate-900 border border-slate-700 px-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#25D366]"
+          className="w-full rounded-xl bg-surface border border-border-strong px-4 py-2.5 text-sm text-text placeholder:text-muted/70 focus:outline-none focus:border-accent"
         />
       </div>
 
@@ -497,24 +497,24 @@ function ShortlinkEditSection({
   }
 
   return (
-    <form onSubmit={submit} className="space-y-5 rounded-2xl border border-slate-800 bg-[#111811] p-6">
-      <h2 className="text-sm font-semibold text-white">Edit WhatsApp link</h2>
-      <p className="text-xs text-slate-500">The address can&apos;t change, so printed QR codes and shared links keep working.</p>
+    <form onSubmit={submit} className="space-y-5 rounded-2xl border border-border bg-surface p-6">
+      <h2 className="text-sm font-semibold text-text">Edit WhatsApp link</h2>
+      <p className="text-xs text-muted">The address can&apos;t change, so printed QR codes and shared links keep working.</p>
 
       <div>
-        <label className="block text-xs text-slate-400 mb-1" htmlFor="edit-sl-name">Name</label>
+        <label className="block text-xs text-muted mb-1" htmlFor="edit-sl-name">Name</label>
         <input
           id="edit-sl-name"
           value={name}
           onChange={(e) => setName(e.target.value)}
           maxLength={60}
           required
-          className="w-full rounded-xl bg-slate-900 border border-slate-700 px-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#25D366]"
+          className="w-full rounded-xl bg-surface border border-border-strong px-4 py-2.5 text-sm text-text placeholder:text-muted/70 focus:outline-none focus:border-accent"
         />
       </div>
 
       <div>
-        <label className="block text-xs text-slate-400 mb-1" id="edit-sl-phone-label">WhatsApp number</label>
+        <label className="block text-xs text-muted mb-1" id="edit-sl-phone-label">WhatsApp number</label>
         <PhoneInput
           defaultCountry={defaultCountry}
           initialValue={shortlink.phone}
@@ -525,14 +525,14 @@ function ShortlinkEditSection({
       </div>
 
       <div>
-        <label className="block text-xs text-slate-400 mb-1" htmlFor="edit-sl-message">First message (optional)</label>
+        <label className="block text-xs text-muted mb-1" htmlFor="edit-sl-message">First message (optional)</label>
         <textarea
           id="edit-sl-message"
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           maxLength={600}
           rows={2}
-          className="w-full rounded-xl bg-slate-900 border border-slate-700 px-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#25D366]"
+          className="w-full rounded-xl bg-surface border border-border-strong px-4 py-2.5 text-sm text-text placeholder:text-muted/70 focus:outline-none focus:border-accent"
         />
       </div>
 
@@ -620,23 +620,23 @@ function AdlinkEditSection({
   }
 
   return (
-    <form onSubmit={submit} className="space-y-5 rounded-2xl border border-slate-800 bg-[#111811] p-6">
-      <h2 className="text-sm font-semibold text-white">Edit ad link</h2>
+    <form onSubmit={submit} className="space-y-5 rounded-2xl border border-border bg-surface p-6">
+      <h2 className="text-sm font-semibold text-text">Edit ad link</h2>
 
       <div>
-        <label className="block text-xs text-slate-400 mb-1" htmlFor="edit-ad-name">Name</label>
+        <label className="block text-xs text-muted mb-1" htmlFor="edit-ad-name">Name</label>
         <input
           id="edit-ad-name"
           value={name}
           onChange={(e) => setName(e.target.value)}
           maxLength={100}
           required
-          className="w-full rounded-xl bg-slate-900 border border-slate-700 px-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#25D366]"
+          className="w-full rounded-xl bg-surface border border-border-strong px-4 py-2.5 text-sm text-text placeholder:text-muted/70 focus:outline-none focus:border-accent"
         />
       </div>
 
       <div>
-        <label className="block text-xs text-slate-400 mb-1" id="edit-ad-number-label">WhatsApp number</label>
+        <label className="block text-xs text-muted mb-1" id="edit-ad-number-label">WhatsApp number</label>
         <PhoneInput
           defaultCountry={defaultCountry}
           initialValue={adlink.number}
@@ -647,17 +647,17 @@ function AdlinkEditSection({
       </div>
 
       <div>
-        <label className="block text-xs text-slate-400 mb-1" htmlFor="edit-ad-message">First message (optional)</label>
+        <label className="block text-xs text-muted mb-1" htmlFor="edit-ad-message">First message (optional)</label>
         <input
           id="edit-ad-message"
           value={message}
           onChange={(e) => setMessage(e.target.value)}
-          className="w-full rounded-xl bg-slate-900 border border-slate-700 px-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#25D366]"
+          className="w-full rounded-xl bg-surface border border-border-strong px-4 py-2.5 text-sm text-text placeholder:text-muted/70 focus:outline-none focus:border-accent"
         />
       </div>
 
       <div>
-        <label className="block text-xs text-slate-400 mb-2">Where does this ad run?</label>
+        <label className="block text-xs text-muted mb-2">Where does this ad run?</label>
         <div className="flex flex-wrap gap-2">
           {AD_SOURCE_PRESETS.map((preset) => (
             <button
@@ -666,7 +666,7 @@ function AdlinkEditSection({
               onClick={() => setSource(preset)}
               aria-pressed={source === preset}
               className={`rounded-full border px-3.5 py-1.5 text-xs font-semibold ${
-                source === preset ? "border-[#25D366] bg-[#25D366]/10 text-[#25D366]" : "border-slate-700 text-slate-300 hover:border-slate-500"
+                source === preset ? "border-accent bg-accent-soft text-accent" : "border-border-strong text-muted hover:border-border-strong"
               }`}
             >
               {preset}
@@ -679,18 +679,18 @@ function AdlinkEditSection({
             onChange={(e) => setCustomSource(e.target.value)}
             placeholder="Where does this ad run?"
             maxLength={60}
-            className="mt-2 w-full rounded-xl bg-slate-900 border border-slate-700 px-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#25D366]"
+            className="mt-2 w-full rounded-xl bg-surface border border-border-strong px-4 py-2.5 text-sm text-text placeholder:text-muted/70 focus:outline-none focus:border-accent"
           />
         )}
       </div>
 
       <div>
-        <label className="block text-xs text-slate-400 mb-1" htmlFor="edit-ad-campaign">Campaign name (optional)</label>
+        <label className="block text-xs text-muted mb-1" htmlFor="edit-ad-campaign">Campaign name (optional)</label>
         <input
           id="edit-ad-campaign"
           value={campaign}
           onChange={(e) => setCampaign(e.target.value)}
-          className="w-full rounded-xl bg-slate-900 border border-slate-700 px-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#25D366]"
+          className="w-full rounded-xl bg-surface border border-border-strong px-4 py-2.5 text-sm text-text placeholder:text-muted/70 focus:outline-none focus:border-accent"
         />
       </div>
 
@@ -698,19 +698,19 @@ function AdlinkEditSection({
         <button
           type="button"
           onClick={() => setShowMore((v) => !v)}
-          className="inline-flex items-center gap-1 text-xs font-semibold text-slate-400 hover:text-white"
+          className="inline-flex items-center gap-1 text-xs font-semibold text-muted hover:text-text"
         >
           {showMore ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
           More tracking options
         </button>
         {showMore && (
           <div className="mt-2">
-            <label className="block text-xs text-slate-400 mb-1" htmlFor="edit-ad-medium">Ad placement (optional)</label>
+            <label className="block text-xs text-muted mb-1" htmlFor="edit-ad-medium">Ad placement (optional)</label>
             <input
               id="edit-ad-medium"
               value={utmMedium}
               onChange={(e) => setUtmMedium(e.target.value)}
-              className="w-full rounded-xl bg-slate-900 border border-slate-700 px-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#25D366]"
+              className="w-full rounded-xl bg-surface border border-border-strong px-4 py-2.5 text-sm text-text placeholder:text-muted/70 focus:outline-none focus:border-accent"
             />
           </div>
         )}
@@ -754,12 +754,12 @@ function PauseResumeButton({ kind, id, manuallyPaused }: { kind: LinkKind; id: s
   if (confirming) {
     return (
       <div className="flex flex-wrap items-center justify-end gap-2 text-xs">
-        <span className="text-slate-300">Pause this link? People who click it will see a &quot;paused&quot; page.</span>
+        <span className="text-muted">Pause this link? People who click it will see a &quot;paused&quot; page.</span>
         <button
           type="button"
           onClick={toggle}
           disabled={saving}
-          className="rounded-full bg-amber-500/90 px-3 py-1.5 font-semibold text-black hover:bg-amber-500 disabled:opacity-50"
+          className="rounded-full bg-highlight-soft px-3 py-1.5 font-semibold text-ink hover:bg-highlight disabled:opacity-50"
         >
           {saving ? "Pausing…" : "Yes, pause"}
         </button>
@@ -767,7 +767,7 @@ function PauseResumeButton({ kind, id, manuallyPaused }: { kind: LinkKind; id: s
           type="button"
           onClick={() => setConfirming(false)}
           disabled={saving}
-          className="rounded-full border border-slate-700 px-3 py-1.5 text-slate-300 hover:border-slate-500"
+          className="rounded-full border border-border-strong px-3 py-1.5 text-muted hover:border-border-strong"
         >
           Cancel
         </button>
@@ -781,12 +781,12 @@ function PauseResumeButton({ kind, id, manuallyPaused }: { kind: LinkKind; id: s
         type="button"
         onClick={() => (manuallyPaused ? toggle() : setConfirming(true))}
         disabled={saving}
-        className="inline-flex items-center gap-1.5 rounded-full border border-slate-700 px-3.5 py-1.5 text-xs font-semibold text-slate-200 hover:border-[#25D366] hover:text-white disabled:opacity-50"
+        className="inline-flex items-center gap-1.5 rounded-full border border-border-strong px-3.5 py-1.5 text-xs font-semibold text-text hover:border-accent hover:text-text disabled:opacity-50"
       >
         {manuallyPaused ? <Play className="h-3.5 w-3.5" /> : <PauseIcon className="h-3.5 w-3.5" />}
         {saving ? "Saving…" : manuallyPaused ? "Resume" : "Pause"}
       </button>
-      {error && <span className="text-xs text-red-400">{error}</span>}
+      {error && <span className="text-xs text-danger">{error}</span>}
     </div>
   );
 }
@@ -819,18 +819,18 @@ function DangerZone({ kind, id }: { kind: LinkKind; id: string }) {
   }
 
   return (
-    <section className="rounded-2xl border border-red-500/20 bg-red-500/5 p-6">
-      <h2 className="text-sm font-semibold text-red-300">Danger zone</h2>
-      <p className="mt-1 text-xs text-slate-500">Deleting a link stops it working immediately. This cannot be undone.</p>
+    <section className="rounded-2xl border border-danger/20 bg-danger/10 p-6">
+      <h2 className="text-sm font-semibold text-danger">Danger zone</h2>
+      <p className="mt-1 text-xs text-muted">Deleting a link stops it working immediately. This cannot be undone.</p>
       <div className="mt-4">
         {confirming ? (
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm text-slate-300">Delete this link for good?</span>
+            <span className="text-sm text-muted">Delete this link for good?</span>
             <button
               type="button"
               onClick={confirmDelete}
               disabled={deleting}
-              className="rounded-full bg-red-500/90 px-4 py-2 text-xs font-semibold text-white hover:bg-red-500 disabled:opacity-50"
+              className="rounded-full bg-danger/10 px-4 py-2 text-xs font-semibold text-text hover:bg-danger disabled:opacity-50"
             >
               {deleting ? "Deleting…" : "Yes, delete"}
             </button>
@@ -838,7 +838,7 @@ function DangerZone({ kind, id }: { kind: LinkKind; id: string }) {
               type="button"
               onClick={() => setConfirming(false)}
               disabled={deleting}
-              className="rounded-full border border-slate-700 px-4 py-2 text-xs font-semibold text-slate-300 hover:border-slate-500"
+              className="rounded-full border border-border-strong px-4 py-2 text-xs font-semibold text-muted hover:border-border-strong"
             >
               Cancel
             </button>
@@ -847,12 +847,12 @@ function DangerZone({ kind, id }: { kind: LinkKind; id: string }) {
           <button
             type="button"
             onClick={() => setConfirming(true)}
-            className="inline-flex items-center gap-1.5 rounded-full border border-red-500/40 px-4 py-2 text-xs font-semibold text-red-300 hover:bg-red-500/10"
+            className="inline-flex items-center gap-1.5 rounded-full border border-danger/40 px-4 py-2 text-xs font-semibold text-danger hover:bg-danger/10"
           >
             <Trash2 className="h-3.5 w-3.5" /> Delete this link
           </button>
         )}
-        {error && <p role="alert" className="mt-2 text-xs text-red-400">{error}</p>}
+        {error && <p role="alert" className="mt-2 text-xs text-danger">{error}</p>}
       </div>
     </section>
   );

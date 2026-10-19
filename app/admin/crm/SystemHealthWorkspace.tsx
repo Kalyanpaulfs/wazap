@@ -21,18 +21,18 @@ export default async function SystemHealthWorkspace(){
  const emailHint=(failed24h>0||stuck)?'Emails are stuck — login codes may not reach customers.':null;
  const backupTone=backup.status==='healthy'?'green':backup.status==='failed'?'red':backup.status==='missing'?'grey':'amber';
  const backupHeadline=backup.status==='healthy'?`Your data is safely backed up — last tested ${fmt(backup.verifiedAt!)}.`:backup.status==='failed'?`Backup check failed — ${backup.reason||'the last restore test did not succeed.'}`:backup.status==='missing'?'No backup check found yet.':`Backup check is stale — last tested ${backup.verifiedAt?fmt(backup.verifiedAt):'never'}.`;
- const tones:Record<string,string>={green:'border-[#25D366]/30 bg-[#25D366]/5 text-[#25D366]',amber:'border-amber-500/30 bg-amber-500/5 text-amber-300',red:'border-red-500/30 bg-red-500/5 text-red-300',grey:'border-slate-700 bg-slate-900/40 text-slate-400'};
+ const tones:Record<string,string>={green:'border-accent/30 bg-accent-soft text-accent',amber:'border-warning/30 bg-highlight-soft text-warning',red:'border-danger/30 bg-danger/10 text-danger',grey:'border-border-strong bg-surface/40 text-muted'};
  return <main className="wp-growth">
  <div className="wp-admin-heading"><div><p className="wp-eyebrow">WAZAP · SYSTEM HEALTH</p><h1>System health</h1><p>Two plain checks: can we recover your data, and are emails actually going out.</p></div></div>
  <div className="grid gap-4 mt-6 lg:grid-cols-2">
   <section className={`rounded-2xl border p-5 ${tones[backupTone]}`}>
-   <h2 className="font-semibold text-white">Backups</h2>
-   <p className="mt-2 text-sm text-slate-200">{backupHeadline}</p>
-   {backup.durationSeconds!=null&&backup.status==='healthy'&&<p className="mt-2 text-xs text-slate-400">Restore verified in {backup.durationSeconds}s{backup.backup?` · ${backup.backup}`:''}.</p>}
+   <h2 className="font-semibold text-text">Backups</h2>
+   <p className="mt-2 text-sm text-text">{backupHeadline}</p>
+   {backup.durationSeconds!=null&&backup.status==='healthy'&&<p className="mt-2 text-xs text-muted">Restore verified in {backup.durationSeconds}s{backup.backup?` · ${backup.backup}`:''}.</p>}
   </section>
   <section className={`rounded-2xl border p-5 ${tones[emailTone]}`}>
-   <h2 className="font-semibold text-white">Emails</h2>
-   <p className="mt-2 text-sm text-slate-200">{emailHeadline}</p>
+   <h2 className="font-semibold text-text">Emails</h2>
+   <p className="mt-2 text-sm text-text">{emailHeadline}</p>
    {emailHint&&<p className="mt-1 text-xs font-semibold">{emailHint}</p>}
    <div className="wp-growth-stats mt-4">
     <div className="wp-crm-stat"><span>Sent · 24h</span><strong>{sent24h}</strong></div>

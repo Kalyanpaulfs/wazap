@@ -28,6 +28,7 @@ const jsonLd = {
 };
 
 const content: ProductLandingContent = {
+  art: { src: "/art/products/product-short-links.webp", alt: "A long tangled chain becoming one short neat link with a click counter" },
   icon: Link2,
   eyebrow: "WhatsApp short links",
   h1: "Short, branded WhatsApp links with",

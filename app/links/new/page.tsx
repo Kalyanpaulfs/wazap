@@ -110,13 +110,13 @@ export default async function NewLinkPage() {
       <div className="mx-auto max-w-5xl space-y-8">
         <BackLink href="/links" label="My links" />
         <header>
-          <h1 className="text-2xl font-bold text-white sm:text-3xl">Create a link</h1>
-          <p className="mt-1 text-slate-400">What do you want to do?</p>
-          <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-500">
-            <span className="mr-1 text-slate-400">Every link includes:</span>
+          <h1 className="text-2xl font-bold text-text sm:text-3xl">Create a link</h1>
+          <p className="mt-1 text-muted">What do you want to do?</p>
+          <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted">
+            <span className="mr-1 text-muted">Every link includes:</span>
             {includedChips.map(({ Icon, label }) => (
-              <span key={label} className="inline-flex items-center gap-1.5 rounded-full border border-slate-800 bg-[#111811] px-3 py-1">
-                <Icon className="h-3.5 w-3.5 text-[#25D366]" />
+              <span key={label} className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1">
+                <Icon className="h-3.5 w-3.5 text-accent" />
                 {label}
               </span>
             ))}
@@ -124,10 +124,10 @@ export default async function NewLinkPage() {
         </header>
 
         {!canCreate && (
-          <section className="rounded-2xl border border-amber-400/30 bg-amber-400/10 p-5" aria-label="Pool full">
+          <section className="rounded-2xl border border-warning/30 bg-highlight-soft p-5" aria-label="Pool full">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <p className="text-sm font-semibold text-white">{poolFullMessage(plan, used, limit)}</p>
-              <Link href="/billing#plans" className="rounded-full bg-[#25D366] px-4 py-1.5 text-xs font-semibold text-black hover:bg-[#1fba58]">
+              <p className="text-sm font-semibold text-text">{poolFullMessage(plan, used, limit)}</p>
+              <Link href="/billing#plans" className="rounded-full bg-accent px-4 py-1.5 text-xs font-semibold text-on-accent hover:bg-accent-hover">
                 See plans
               </Link>
             </div>
@@ -136,8 +136,8 @@ export default async function NewLinkPage() {
 
         <section className="space-y-3">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <h2 className="text-sm font-semibold text-white">Links</h2>
-            <p className="text-sm text-slate-400">{formatUsageLine(planLabel, used, limit)}</p>
+            <h2 className="text-sm font-semibold text-text">Links</h2>
+            <p className="text-sm text-muted">{formatUsageLine(planLabel, used, limit)}</p>
           </div>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {linkCards.map(({ question, name, desc, href, Icon, locked }) => {
@@ -149,17 +149,17 @@ export default async function NewLinkPage() {
                   href={target}
                   aria-disabled={disabled ? "true" : undefined}
                   className={`flex flex-col gap-3 rounded-2xl border p-5 ${
-                    disabled ? "border-slate-800 bg-[#0d130e] opacity-70" : "border-slate-800 bg-[#111811] hover:border-[#25D366]"
+                    disabled ? "border-border bg-surface-2 opacity-70" : "border-border bg-surface hover:border-accent"
                   }`}
                 >
-                  <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-700 bg-slate-950 text-[#25D366]">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-border-strong bg-bg text-accent">
                     {locked ? <Lock className="h-5 w-5" /> : <Icon className="h-5 w-5" />}
                   </span>
                   <div>
-                    <p className="text-sm text-slate-400">{question}</p>
-                    <p className="mt-1 font-bold text-white">{name}</p>
+                    <p className="text-sm text-muted">{question}</p>
+                    <p className="mt-1 font-bold text-text">{name}</p>
                   </div>
-                  <p className="text-xs text-slate-500">{!canCreate && !locked ? poolFullMessage(plan, used, limit) : desc}</p>
+                  <p className="text-xs text-muted">{!canCreate && !locked ? poolFullMessage(plan, used, limit) : desc}</p>
                 </Link>
               );
             })}
@@ -168,8 +168,8 @@ export default async function NewLinkPage() {
 
         <section className="space-y-3">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <h2 className="text-sm font-semibold text-white">Free tools</h2>
-            <p className="text-sm text-slate-400">Never counted against your plan.</p>
+            <h2 className="text-sm font-semibold text-text">Free tools</h2>
+            <p className="text-sm text-muted">Never counted against your plan.</p>
           </div>
           <div className="grid gap-4 sm:grid-cols-3">
             {freeCards.map(({ question, name, desc, href, Icon, locked, lockedText, badge, note }) => (
@@ -178,35 +178,35 @@ export default async function NewLinkPage() {
                 href={locked ? "/billing#plans" : href}
                 aria-disabled={locked ? "true" : undefined}
                 className={`flex flex-col gap-3 rounded-2xl border p-5 ${
-                  locked ? "border-slate-800 bg-[#0d130e] opacity-70" : "border-slate-800 bg-[#111811] hover:border-[#25D366]"
+                  locked ? "border-border bg-surface-2 opacity-70" : "border-border bg-surface hover:border-accent"
                 }`}
               >
                 <div className="flex items-start justify-between gap-2">
-                  <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-700 bg-slate-950 text-[#25D366]">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-border-strong bg-bg text-accent">
                     {locked ? <Lock className="h-5 w-5" /> : <Icon className="h-5 w-5" />}
                   </span>
                   {!locked && (
-                    <span className="rounded-full border border-[#25D366]/30 bg-[#25D366]/10 px-2.5 py-1 text-xs font-semibold text-[#25D366]">
+                    <span className="rounded-full border border-accent/30 bg-accent-soft px-2.5 py-1 text-xs font-semibold text-accent">
                       {badge}
                     </span>
                   )}
                 </div>
                 <div>
-                  <p className="text-sm text-slate-400">{question}</p>
-                  <p className="mt-1 font-bold text-white">{name}</p>
+                  <p className="text-sm text-muted">{question}</p>
+                  <p className="mt-1 font-bold text-text">{name}</p>
                 </div>
-                <p className="text-xs text-slate-500">{locked ? lockedText : desc}</p>
-                {!locked && note && <p className="text-xs text-slate-600">{note}</p>}
+                <p className="text-xs text-muted">{locked ? lockedText : desc}</p>
+                {!locked && note && <p className="text-xs text-muted">{note}</p>}
               </Link>
             ))}
-            <div className="flex flex-col gap-3 rounded-2xl border border-dashed border-slate-800 bg-[#0d130e] p-5 opacity-70">
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-700 bg-slate-950 text-slate-500">
+            <div className="flex flex-col gap-3 rounded-2xl border border-dashed border-border bg-surface-2 p-5 opacity-70">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-border-strong bg-bg text-muted">
                 <Sparkles className="h-5 w-5" />
               </span>
               <div>
-                <p className="mt-1 font-bold text-slate-400">More free tools coming soon</p>
+                <p className="mt-1 font-bold text-muted">More free tools coming soon</p>
               </div>
-              <p className="text-xs text-slate-500">We&apos;re building more. Nothing to do here yet.</p>
+              <p className="text-xs text-muted">We&apos;re building more. Nothing to do here yet.</p>
             </div>
           </div>
         </section>

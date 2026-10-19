@@ -33,43 +33,43 @@ export default function FreePlanStrip({
   note?: React.ReactNode;
 }) {
   return (
-    <div className="relative min-w-0 rounded-2xl border border-slate-800 bg-[#111811] p-6 flex flex-col">
+    <div className="relative min-w-0 rounded-2xl border border-border bg-surface p-6 flex flex-col">
       <div>
         <div className="flex items-center gap-2">
-          <h2 className="text-xl font-bold text-white">Free trial</h2>
+          <h2 className="text-xl font-bold text-text">Free trial</h2>
           {trialDaysLeft != null && (
-            <span className="rounded-full border border-[#25D366]/40 bg-[#25D366]/10 px-2.5 py-0.5 text-xs font-semibold text-[#25D366]">
+            <span className="rounded-full border border-accent/40 bg-accent-soft px-2.5 py-0.5 text-xs font-semibold text-accent">
               Current plan · {trialDaysLeft} day{trialDaysLeft !== 1 ? "s" : ""} left
             </span>
           )}
           {isCurrent && (
-            <span className="rounded-full border border-amber-400/40 bg-amber-400/10 px-2.5 py-0.5 text-xs font-semibold text-amber-300">
+            <span className="rounded-full border border-warning/40 bg-highlight-soft px-2.5 py-0.5 text-xs font-semibold text-warning">
               Trial ended
             </span>
           )}
         </div>
-        <p className="text-slate-500 text-sm mt-1">3 days, everything in Solo, no card needed</p>
+        <p className="text-muted text-sm mt-1">3 days, everything in Solo, no card needed</p>
         <div className="mt-5 mb-6 flex flex-wrap items-baseline gap-x-2">
-          <span className="text-4xl font-bold tracking-tight text-white">$0</span>
-          <span className="text-slate-500 text-sm">for 3 days</span>
+          <span className="text-4xl font-bold tracking-tight text-text">$0</span>
+          <span className="text-muted text-sm">for 3 days</span>
         </div>
       </div>
 
       <ul className="space-y-3 flex-1 mb-8">
         {FREE_FEATURES.map((feature) => (
-          <li key={feature} className="flex items-start gap-2.5 text-sm text-slate-300">
-            <span className="text-[#25D366] mt-0.5 shrink-0">✓</span>
+          <li key={feature} className="flex items-start gap-2.5 text-sm text-muted">
+            <span className="text-accent mt-0.5 shrink-0">✓</span>
             {feature}
           </li>
         ))}
       </ul>
 
       {isCurrent ? (
-        <p className="rounded-full border border-amber-400/40 bg-amber-400/10 py-3 text-center text-sm font-semibold text-amber-300">Trial ended — links paused</p>
+        <p className="rounded-full border border-warning/40 bg-highlight-soft py-3 text-center text-sm font-semibold text-warning">Trial ended — links paused</p>
       ) : note ? (
-        <p className="text-center text-xs text-slate-500">{note}</p>
+        <p className="text-center text-xs text-muted">{note}</p>
       ) : ctaHref ? (
-        <Link href={ctaHref} className="flex w-full items-center justify-center rounded-full border border-slate-700 py-3 text-sm font-semibold text-slate-300 transition-colors hover:border-[#25D366] hover:text-white">
+        <Link href={ctaHref} className="flex w-full items-center justify-center rounded-full border border-border-strong py-3 text-sm font-semibold text-muted transition-colors hover:border-accent hover:text-text">
           {ctaLabel}
         </Link>
       ) : null}

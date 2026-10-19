@@ -89,7 +89,7 @@ export default async function AdminCustomersPage({
       </form>
 
       <div className="flex flex-wrap gap-2 mt-4" role="group" aria-label="Plan filters">
-        <span className="text-xs text-slate-400 self-center mr-1">Plan:</span>
+        <span className="text-xs text-muted self-center mr-1">Plan:</span>
         {[
           ["", "All plans"],
           ["free", "Trial or no plan"],
@@ -110,7 +110,7 @@ export default async function AdminCustomersPage({
       </div>
 
       <div className="flex flex-wrap gap-2 mt-2" role="group" aria-label="Trial filters">
-        <span className="text-xs text-slate-400 self-center mr-1">Trial:</span>
+        <span className="text-xs text-muted self-center mr-1">Trial:</span>
         {[
           ["", "All"],
           ["active", "Trial active"],
@@ -129,7 +129,7 @@ export default async function AdminCustomersPage({
       </div>
 
       <div className="flex flex-wrap gap-2 mt-2" role="group" aria-label="Account status filters">
-        <span className="text-xs text-slate-400 self-center mr-1">Account:</span>
+        <span className="text-xs text-muted self-center mr-1">Account:</span>
         {[
           ["", "All accounts"],
           ["active", "Active"],
@@ -148,7 +148,7 @@ export default async function AdminCustomersPage({
         ))}
       </div>
 
-      <p className="text-xs text-slate-400 my-5">
+      <p className="text-xs text-muted my-5">
         {total} matching customer accounts · Page {page} of {totalPages}
       </p>
 
@@ -178,40 +178,40 @@ export default async function AdminCustomersPage({
                       <Link
                         prefetch={false}
                         href={`/admin/crm/customers/${c.id}`}
-                        className="hover:text-[#25D366] transition-colors"
+                        className="hover:text-accent transition-colors"
                       >
                         {c.name || c.email}
                       </Link>
                     </strong>
-                    <p className="text-xs text-slate-400 mt-1">{c.email}</p>
+                    <p className="text-xs text-muted mt-1">{c.email}</p>
                   </td>
-                  <td>{c.phone || <span className="text-slate-500">—</span>}</td>
+                  <td>{c.phone || <span className="text-muted">—</span>}</td>
                   <td>
                     <span className="font-semibold">{c.displayPlan}</span>
                     {c.trialActive && (
-                      <p className="text-xs text-[#25D366] mt-0.5">Active trial</p>
+                      <p className="text-xs text-accent mt-0.5">Active trial</p>
                     )}
                   </td>
                   <td>
                     {expiryDate
                       ? new Date(expiryDate).toLocaleDateString("en-GB")
-                      : <span className="text-slate-500">No expiry recorded</span>}
+                      : <span className="text-muted">No expiry recorded</span>}
                   </td>
                   <td>{new Date(c.createdAt).toLocaleDateString("en-GB")}</td>
                   <td>
-                    <span className="text-slate-500">{c.lastLogin || "—"}</span>
+                    <span className="text-muted">{c.lastLogin || "—"}</span>
                   </td>
                   <td>
                     {c.accountStatus === "active" && (
                       <span className="wp-crm-pill">Active</span>
                     )}
                     {c.accountStatus === "closing" && (
-                      <span className="wp-crm-pill border-amber-500 text-amber-300">
+                      <span className="wp-crm-pill border-warning text-warning">
                         Closing {c.scheduledDeletionFor ? new Date(c.scheduledDeletionFor).toLocaleDateString("en-GB") : ""}
                       </span>
                     )}
                     {c.accountStatus === "deleted" && (
-                      <span className="wp-crm-pill border-red-500 text-red-400">
+                      <span className="wp-crm-pill border-danger text-danger">
                         Deleted
                       </span>
                     )}

@@ -3,8 +3,10 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { ArrowUpRight, BarChart3, ChevronRight, CreditCard, Headphones, LayoutDashboard, Link2, MessageCircle, Settings, Users } from "lucide-react";
+import { ArrowUpRight, BarChart3, ChevronRight, CreditCard, Headphones, LayoutDashboard, Link2, Settings, Users } from "lucide-react";
 import Navbar from "../Navbar";
+import BrandLogo from "../components/BrandLogo";
+import Footer from "../Footer";
 import CrmNavigation from "../admin/crm/CrmNavigation";
 import SignOutButton from "../dashboard/SignOutButton";
 
@@ -15,12 +17,12 @@ const destinations = [
 ];
 const privateRoutes = /^\/(dashboard|account|admin|workspace|reports|analytics|operations|partners|performance|plans|billing|links|results)(\/|$)/;
 
-export default function AppFrame({children,footer}:{children:React.ReactNode;footer:React.ReactNode}) {
+export default function AppFrame({children}:{children:React.ReactNode}) {
   const path = usePathname();
   const {data:session} = useSession();
   const appRoute = privateRoutes.test(path) || Boolean(session?.user && /^\/(tools|support|qr)(\/|$)/.test(path));
   if (/^\/(login|signup|register)(\/|$)/.test(path)) return <>{children}</>;
-  if (!appRoute) return <><Navbar />{children}{footer}</>;
+  if (!appRoute) return <div className="ds-light flex flex-1 flex-col bg-bg text-text"><Navbar />{children}<Footer /></div>;
   const isAdmin = Boolean((session?.user as {isAdmin?:boolean}|undefined)?.isAdmin);
   const staffRoute=isAdmin && path.startsWith("/admin");
   const active = (href:string) => path===href || (href!=="/dashboard" && path.startsWith(href+"/"));
@@ -30,7 +32,7 @@ export default function AppFrame({children,footer}:{children:React.ReactNode;foo
   const staffLinks=<><p className="wp-nav-label">WAZAP CRM</p><CrmNavigation/><p className="wp-nav-label wp-nav-manage">WORKSPACE PREVIEW</p><Link className="wp-nav-link" href="/dashboard?workspace=1"><LayoutDashboard size={18}/>Preview my workspace</Link><Link className="wp-nav-link" href="/account"><Settings size={18}/>My account</Link></>;
   const links=staffRoute?staffLinks:customerLinks;
   return <div className="wp-shell">
-    <aside className="wp-sidebar"><Link href={isAdmin?"/admin/crm/overview":"/dashboard"} className="wp-brand"><MessageCircle size={27}/><span>Wazap<span className="wp-brand-caption">{staffRoute?"WAZAP OPERATIONS":"BUSINESS WORKSPACE"}</span></span></Link><nav aria-label="Workspace navigation">{links}</nav><div className="wp-sidebar-bottom"><Link href="/" className="wp-site-link">Visit website <ArrowUpRight size={15}/></Link><SignOutButton/></div></aside>
+    <aside className="wp-sidebar"><Link href={isAdmin?"/admin/crm/overview":"/dashboard"} className="wp-brand"><BrandLogo tone="onLight" width={124}/><span className="wp-brand-caption">{staffRoute?"WAZAP OPERATIONS":"BUSINESS WORKSPACE"}</span></Link><nav aria-label="Workspace navigation">{links}</nav><div className="wp-sidebar-bottom"><Link href="/" className="wp-site-link">Visit website <ArrowUpRight size={15}/></Link><SignOutButton/></div></aside>
     <div className="wp-main"><header className="wp-topbar"><div className="wp-breadcrumb"><span>{staffRoute?"Wazap operations":"Workspace"}</span><ChevronRight size={14}/><strong>{title}</strong></div><Link className="wp-profile" href="/account" aria-label="Open account settings"><span className="wp-avatar">{(session?.user?.name||session?.user?.email||"W").slice(0,1).toUpperCase()}</span><span>{session?.user?.name||"My account"}</span></Link></header>
       <details className="wp-mobile-nav"><summary>{staffRoute?"Operations menu":"Workspace menu"} <ChevronRight size={16}/></summary><nav aria-label="Mobile workspace navigation" onClick={event=>{if((event.target as HTMLElement).closest("a"))event.currentTarget.closest("details")?.removeAttribute("open");}}>{links}<SignOutButton/></nav></details>
       <div className="wp-content">{children}</div>

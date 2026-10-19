@@ -46,10 +46,10 @@ export default function UpgradeSuccessBanner({ plan, expiresAt, expectedPlan, ch
   }, [isScheduled, activated, expectedPlan, router]);
 
   if (hidden) return null;
-  return <div role="status" className="relative rounded-2xl border border-[#25D366]/40 bg-[#25D366]/10 p-5 pr-12">
-    <button onClick={() => { setHidden(true); router.replace('/dashboard'); }} aria-label="Dismiss payment status" className="absolute top-3 right-3 text-slate-400 hover:text-white"><X className="h-4 w-4" /></button>
-    <p className="font-bold text-white text-lg">{isScheduled ? 'Your plan change is scheduled' : activated ? `${LABEL[activePlan] || activePlan} access is active` : waiting ? 'Checking your subscription…' : 'Your subscription is still awaiting confirmation'}</p>
-    <p className="text-sm text-slate-300 mt-2">{isScheduled ? <>It will apply automatically on your next billing date. Manage this anytime on the <Link href="/billing" className="underline font-semibold">billing page</Link>.</> : activated ? <>Your account has paid access. Manage renewal and cancellation on the <Link href="/billing" className="underline font-semibold">billing page</Link>.</> : waiting ? 'We are waiting for the payment provider to confirm your subscription. This page checks automatically for up to a minute.' : 'If you completed payment, please do not pay again. Check billing or contact support so we can verify your payment.'}</p>
-    {!isScheduled && !activated && !waiting && <div className="mt-3 flex gap-4 text-sm text-[#25D366]"><button onClick={() => window.location.reload()}>Check again</button><Link href="/support">Get billing help →</Link></div>}
+  return <div role="status" className="relative rounded-2xl border border-accent/40 bg-accent-soft p-5 pr-12">
+    <button onClick={() => { setHidden(true); router.replace('/dashboard'); }} aria-label="Dismiss payment status" className="absolute top-3 right-3 text-muted hover:text-text"><X className="h-4 w-4" /></button>
+    <p className="font-bold text-text text-lg">{isScheduled ? 'Your plan change is scheduled' : activated ? `${LABEL[activePlan] || activePlan} access is active` : waiting ? 'Checking your subscription…' : 'Your subscription is still awaiting confirmation'}</p>
+    <p className="text-sm text-muted mt-2">{isScheduled ? <>It will apply automatically on your next billing date. Manage this anytime on the <Link href="/billing" className="underline font-semibold">billing page</Link>.</> : activated ? <>Your account has paid access. Manage renewal and cancellation on the <Link href="/billing" className="underline font-semibold">billing page</Link>.</> : waiting ? 'We are waiting for the payment provider to confirm your subscription. This page checks automatically for up to a minute.' : 'If you completed payment, please do not pay again. Check billing or contact support so we can verify your payment.'}</p>
+    {!isScheduled && !activated && !waiting && <div className="mt-3 flex gap-4 text-sm text-accent"><button onClick={() => window.location.reload()}>Check again</button><Link href="/support">Get billing help →</Link></div>}
   </div>;
 }

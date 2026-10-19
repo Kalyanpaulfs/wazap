@@ -47,23 +47,23 @@ export default function ChangePlanControl({userId,currentPlan}:{userId:string;cu
   finally{setBusy(false);}
  }
 
- if(!open)return <div><button onClick={startOpen} className="wp-crm-secondary">Change plan</button>{success&&<p className="text-xs text-emerald-400 mt-1">{success}</p>}{warning&&<p className="text-xs text-amber-300 mt-1">{warning}</p>}</div>;
+ if(!open)return <div><button onClick={startOpen} className="wp-crm-secondary">Change plan</button>{success&&<p className="text-xs text-accent mt-1">{success}</p>}{warning&&<p className="text-xs text-warning mt-1">{warning}</p>}</div>;
 
  const targetLabel = planOptions.find(([v])=>v===selected)?.[1] || selected;
 
  return <div className="flex flex-col gap-2">
   <select value={selected} onChange={e=>{setSelected(e.target.value);setConfirming(false);}} disabled={busy}
-   className="w-36 rounded-lg border border-slate-700 bg-slate-800 px-2 py-1.5 text-xs text-white focus:border-[#25D366] focus:outline-none">
+   className="w-36 rounded-lg border border-border-strong bg-surface-2 px-2 py-1.5 text-xs text-text focus:border-accent focus:outline-none">
    {planOptions.map(([value,label])=><option key={value} value={value} disabled={value === "business" && selected !== "business"}>{label}</option>)}
   </select>
   <div className="flex gap-2">
    {!confirming
     ?<button onClick={()=>setConfirming(true)} disabled={busy||selected===currentPlan||selected==="business"} className="wp-crm-secondary disabled:opacity-50">Set to {targetLabel}</button>
     :<button onClick={apply} disabled={busy||selected==="business"} className="wp-primary disabled:opacity-50">{busy?"Saving…":"Confirm"}</button>}
-   <button onClick={cancel} disabled={busy} className="text-xs text-slate-400 hover:text-slate-200">Cancel</button>
+   <button onClick={cancel} disabled={busy} className="text-xs text-muted hover:text-text">Cancel</button>
   </div>
-  {confirming&&<p className="text-xs text-amber-300">This changes the customer’s live plan access immediately. Click Confirm to proceed.</p>}
-  {error&&<p role="alert" className="text-xs text-red-400">{error}</p>}
+  {confirming&&<p className="text-xs text-warning">This changes the customer’s live plan access immediately. Click Confirm to proceed.</p>}
+  {error&&<p role="alert" className="text-xs text-danger">{error}</p>}
  </div>;
 }
 
