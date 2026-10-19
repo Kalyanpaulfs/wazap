@@ -33,6 +33,14 @@ const DIAL_CODES = [...new Set(COUNTRIES.map((c) => c.dial.replace("+", "")))].s
  * (e.g. a US number starting "1202…" - "20" is Egypt's dial code).
  */
 function looksDoublePrefixed(digits: string): string | null {
+  // A number that is valid as it stands is never flagged: plenty of real
+  // numbers (e.g. Italian mobiles "39 324…") leave a remainder that also
+  // happens to parse as some other country's number.
+  try {
+    if (isValidPhoneNumber("+" + digits)) return null;
+  } catch {
+    /* fall through to the remainder check */
+  }
   for (const first of DIAL_CODES) {
     if (!digits.startsWith(first)) continue;
     const rest = digits.slice(first.length);
