@@ -124,7 +124,7 @@ export default async function DashboardPage({
           <header className="wp-overview-heading">
             <div>
               <p className="wp-eyebrow">YOUR BUSINESS WORKSPACE</p>
-              <h1>{session.user.name ? `Hi, ${session.user.name}` : "Home"}</h1>
+              <h1>{session.user.name ? `Hi, ${session.user.name}` : "Hi there"}</h1>
               <p>Keep your conversations moving. Start with what needs your attention.</p>
             </div>
             <Link prefetch={false} href="/links/new" className="wp-primary">
@@ -148,10 +148,10 @@ export default async function DashboardPage({
                   </p>
                   <p className="mt-0.5 text-xs text-slate-400">
                     {trialEnded
-                      ? "Choose a plan and your lead rotators, brand links and ad links start working again."
+                      ? "Choose a plan and your lead rotators, WhatsApp links and ad links start working again."
                       : trialCapHit
                       ? `You've used the ${TRIAL_ROUTED_LEADS} leads in your free trial. Choose a plan to keep routing.`
-                      : "After that, your lead rotators, brand links and ad links stop working until you choose a plan."}
+                      : "After that, your lead rotators, WhatsApp links and ad links stop working until you choose a plan."}
                   </p>
                 </div>
                 <Link
@@ -181,7 +181,7 @@ export default async function DashboardPage({
                       : `Your ${PLAN_LABELS[plan]} plan expires in ${daysLeft} day${daysLeft !== 1 ? "s" : ""}`}
                   </p>
                   <p className="mt-0.5 text-xs text-slate-400">
-                    When it ends, your lead rotators, brand links and ad links stop working. Renew to keep them running.
+                    When it ends, your lead rotators, WhatsApp links and ad links stop working. Renew to keep them running.
                   </p>
                 </div>
                 <Link

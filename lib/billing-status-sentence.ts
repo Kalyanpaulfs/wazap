@@ -74,9 +74,10 @@ export function billingStatusSentence(input: BillingStatusSentenceInput): string
 
   if (input.plan === "free") {
     if (input.inTrial) {
-      const trialLabel = planLabel((input.trialPlan || "basic").toLowerCase());
+      // Every Free trial gives Solo's features. A stored trialPlan can still
+      // say "pro" on accounts from the old Growth trial, so it isn't shown.
       const endsAt = formatDate(input.trialEndsAt);
-      return `Free trial of ${trialLabel}${endsAt ? ` — ends ${endsAt}` : ""}`;
+      return `Free trial (Solo features)${endsAt ? ` — ends ${endsAt}` : ""}`;
     }
     return "Free trial ended — no billing";
   }
