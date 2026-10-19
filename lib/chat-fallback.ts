@@ -1,6 +1,6 @@
 import { promises as fs } from 'node:fs';
 import { createHash, randomUUID } from 'node:crypto';
-const root=process.env.WAZAP_CHAT_FALLBACK_DIR||'/var/lib/wazap-chat-fallback';
+const root=process.env.WAZAP_CHAT_FALLBACK_DIR||'/opt/wazap-private/chat-fallback';
 const file=(visitorId:string)=>`${root}/${createHash('sha256').update(visitorId).digest('hex')}.json`;
 export function validFallback(language:unknown,reply:unknown):boolean{
  return typeof language==='string'&&/^[a-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$/.test(language)&&typeof reply==='string'&&reply.trim().length>0&&reply.length<=1500&&!/https?:|www\.|<[^>]*>|javascript:|data:/i.test(reply)&&!/[\w.+-]+@[\w.-]+\.[a-z]{2,}/i.test(reply);

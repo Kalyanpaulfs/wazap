@@ -3,7 +3,7 @@ import path from "node:path";
 import { randomUUID } from "node:crypto";
 
 export type CachedRoute = { code: string; numbers: string[]; fallbackNumber?: string | null; message?: string | null; currentIdx: number; cachedAt: string };
-const cacheDir = process.env.WAZAP_ROUTING_CACHE_DIR || "/opt/wazap-routing-cache";
+const cacheDir = process.env.WAZAP_ROUTING_CACHE_DIR || "/opt/wazap-private/routing-cache";
 const safeCode = (code: string) => code.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 20);
 const fileFor = (code: string) => path.join(cacheDir, `${safeCode(code)}.json`);
 

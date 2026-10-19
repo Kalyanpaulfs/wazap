@@ -9,7 +9,7 @@ export default async function SystemHealthWorkspace(){
  const now=new Date();const since24h=new Date(now.getTime()-24*3600000);
  const [backup,sent24h,waitingNow,oldestWaiting,failed24h]=await Promise.all([
   backupRestoreStatus(),
-  prisma.outboundEmail.count({where:{status:{in:['accepted','sent']},sentAt:{gte:since24h}}}),
+  prisma.outboundEmail.count({where:{status:{in:['accepted','sent','delivered']},sentAt:{gte:since24h}}}),
   prisma.outboundEmail.count({where:{status:'queued'}}),
   prisma.outboundEmail.findFirst({where:{status:'queued'},orderBy:{createdAt:'asc'},select:{createdAt:true}}),
   prisma.outboundEmail.count({where:{status:{in:['failed','deferred','unknown']},createdAt:{gte:since24h},NOT:[{recipient:{endsWith:'.invalid'}},{recipient:{endsWith:'@example.com'}},{type:{startsWith:'delivery_test'}}]}}),

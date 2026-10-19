@@ -7,16 +7,16 @@ case "$route" in
   *) echo "Unsupported Wazap cron route" >&2; exit 64 ;;
 esac
 
-# Email and support configuration follows this installation in either host or isolated runtime.
-# Other jobs retain their existing behavior pending a separate processing review.
-app_dir="/opt/wazap"
+# Configuration follows this installation in either host or isolated runtime.
+# (Was hardcoded to /opt/wazap for most jobs; the app moved to /wazap, so
+# those jobs found no .env and silently stopped from ~11 Oct 2026.)
+app_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
+if [[ ! -r "$app_dir/.env" ]]; then
+  echo "$(date -Is) $route: cron configuration file is missing or unreadable" >&2
+  exit 78
+fi
 if [[ "$route" == "email-delivery" || "$route" == "zoho-inbox" || "$route" == "support-monitor" ]]; then
-  app_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
   trap 'rc=$?; if (( rc != 0 )); then printf "%s %s failed exit=%s\n" "$(date -Is)" "$route" "$rc" >&2; fi' EXIT
-  if [[ ! -r "$app_dir/.env" ]]; then
-    echo "Cron configuration file is missing or unreadable" >&2
-    exit 78
-  fi
 fi
 secret="$(sed -n 's/^CRON_SECRET=//p' "$app_dir/.env" | head -1)"
 secret="${secret#\"}"
