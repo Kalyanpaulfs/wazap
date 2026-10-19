@@ -28,20 +28,24 @@ export const authOptions: NextAuthOptions = {
       async profile(profile) {
         const identity = trustedGoogleIdentity(profile);
         if (!identity) throw new Error("Unverified Google identity");
+        // Accounts first made by email code have no name; fill it from Google
+        // (never overwrite a name the customer already has).
+        const googleName = String(profile.name || "").trim().slice(0, 100) || null;
         const user = await prisma.$transaction(async tx => {
           const linked = await tx.user.findUnique({ where: { googleSubject: identity.subject } });
-          if (linked) return linked;
+          if (linked) return !linked.name && googleName ? tx.user.update({ where: { id: linked.id }, data: { name: googleName } }) : linked;
           if (!identity.authoritative) throw new Error("Email ownership requires additional verification");
           const existing = await tx.user.findUnique({ where: { email: identity.email } });
           if (existing) {
             if (existing.googleSubject) throw new Error("Account already linked to another Google identity");
             // An unverified legacy account may have been pre-registered by someone
             // else: Google proves ownership, so drop any password and old sessions.
+            const fillName = !existing.name && googleName ? { name: googleName } : {};
             return tx.user.update({ where: { id: existing.id }, data: existing.emailVerifiedAt
-              ? { googleSubject: identity.subject }
-              : { googleSubject: identity.subject, emailVerifiedAt: new Date(), password: null, sessionVersion: { increment: 1 } } });
+              ? { googleSubject: identity.subject, ...fillName }
+              : { googleSubject: identity.subject, emailVerifiedAt: new Date(), password: null, sessionVersion: { increment: 1 }, ...fillName } });
           }
-          const created = await tx.user.create({ data: { email: identity.email, name: String(profile.name || "").slice(0, 100) || null, googleSubject: identity.subject, emailVerifiedAt: new Date(), ...newProductTrial() } });
+          const created = await tx.user.create({ data: { email: identity.email, name: googleName, googleSubject: identity.subject, emailVerifiedAt: new Date(), ...newProductTrial() } });
           const workspace = await tx.workspace.create({ data: { name: `${created.name || identity.email.split("@")[0]}'s workspace`, slug: `workspace-${created.id.slice(-12).toLowerCase()}`, ownerId: created.id } });
           await tx.workspaceMember.create({ data: { workspaceId: workspace.id, userId: created.id, role: "owner" } });
           return tx.user.update({ where: { id: created.id }, data: { activeWorkspaceId: workspace.id } });
