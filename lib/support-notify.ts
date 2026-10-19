@@ -8,7 +8,7 @@ export async function queueSupportAlert(input: { eventKey: string; name?: string
   await db.outboundEmail.createMany({ skipDuplicates: true, data: ['support@wazap.lt', 'joseph@wazap.lt'].map(recipient => ({
     id: `support_team_${event}_${recipient.split('@')[0]}`, recipient, type: 'support_live_team_alert',
     subject: input.subject,
-    html: serviceEmail({ subject: input.subject, heading: input.subject, channel: 'support', body: `Name: ${input.name || 'Website visitor'}\nEmail: ${input.email || 'Not provided'}\n\n${input.message}\n\nOpen support: ${input.link || 'https://wazap.lt/admin/crm/support'}` }),
+    html: serviceEmail({ subject: input.subject, heading: input.subject, channel: 'support', body: `${input.name || input.email ? `Name: ${input.name || 'Website visitor'}\nEmail: ${input.email || 'Not provided'}\n\n` : ''}${input.message}\n\nOpen support: ${input.link || 'https://wazap.lt/admin/crm/support'}` }),
   })) });
 }
 
