@@ -5,6 +5,7 @@ import {
   numbersPerRotatorLimit,
   adLinksAvailable,
   widgetAvailable,
+  audienceAvailable,
   supportLabel,
   type PlanKey,
 } from "@/lib/plan-limits";
@@ -40,8 +41,10 @@ export default function PlanComparisonTable() {
     row("Ad link", PLAN_COLUMNS.map((key) => adLinksAvailable(key)) as [Cell, Cell, Cell]),
     row("Website button", PLAN_COLUMNS.map((key) => widgetAvailable(key)) as [Cell, Cell, Cell]),
     row("WhatsApp QR code", [true, true, true]),
+    row("Text formatter", [true, true, true]),
     row("Unlimited routed leads", [true, true, true]),
     row("Reports", PLAN_COLUMNS.map((key) => REPORTS_ROW[key]) as [Cell, Cell, Cell]),
+    row("Audience (device, OS, country & city)", PLAN_COLUMNS.map((key) => audienceAvailable(key)) as [Cell, Cell, Cell]),
     row("Support", PLAN_COLUMNS.map((key) => supportLabel(key)) as [Cell, Cell, Cell]),
   ];
 
