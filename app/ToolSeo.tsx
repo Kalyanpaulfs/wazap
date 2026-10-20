@@ -17,7 +17,7 @@ export default function ToolSeo({ k, children }: { k: string; children?: React.R
     description: d.appDesc,
     applicationCategory: "BusinessApplication",
     operatingSystem: "Web",
-    offers: ["link", "qr"].includes(k) ? { "@type": "Offer", price: "0", priceCurrency: "USD" } : publicOffers,
+    offers: ["link", "qr", "formatter"].includes(k) ? { "@type": "Offer", price: "0", priceCurrency: "USD" } : publicOffers,
   };
   const breadcrumbLd = {
     "@context": "https://schema.org",
@@ -28,10 +28,15 @@ export default function ToolSeo({ k, children }: { k: string; children?: React.R
       { "@type": "ListItem", position: 3, name: d.name, item: `https://wazap.lt${d.href}` },
     ],
   };
+  const ld = <>
+    <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(appLd) }} />
+    <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }} />
+  </>;
+  // Nothing to explain (e.g. the text formatter): keep the search data, skip the empty "How it works" box.
+  if (!guide && !children) return ld;
   return (
     <section className="border-t border-slate-800/60 py-10">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(appLd) }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }} />
+      {ld}
       <ToolGuideSection>
         {children}
         {guide && <div className="mb-12">

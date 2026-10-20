@@ -122,11 +122,6 @@ const nextConfig: NextConfig = {
         permanent: true,
       },
       {
-        source: "/tools/formatter",
-        destination: "/tools",
-        permanent: true,
-      },
-      {
         source: "/tools/bulk",
         destination: "/tools",
         permanent: true,

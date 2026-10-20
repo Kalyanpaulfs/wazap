@@ -19,7 +19,7 @@
 import { adLinksAvailable, numbersPerRotatorLimit, normalizePlanKey } from "./plan-limits";
 import { poolFullMessage } from "./my-links";
 
-export type ToolIconKey = "users" | "message-circle" | "fingerprint" | "megaphone" | "qr-code" | "globe";
+export type ToolIconKey = "users" | "message-circle" | "fingerprint" | "megaphone" | "qr-code" | "globe" | "type";
 
 export type ToolCard = {
   id: string;
@@ -153,6 +153,16 @@ export function getToolCatalog({ plan, used, limit }: ToolCatalogInput): ToolCat
       description: "Add a WhatsApp button to any website. As many as you like, free for every plan.",
       href: "/tools/widget",
       iconKey: "globe",
+      locked: false,
+      badge: "Free · unlimited",
+    },
+    {
+      id: "text-formatter",
+      name: "Text formatter",
+      question: "Make my message stand out",
+      description: "Add bold, italic, strikethrough and monospace to a WhatsApp message, see a preview, then copy it.",
+      href: "/tools/formatter",
+      iconKey: "type",
       locked: false,
       badge: "Free · unlimited",
     },

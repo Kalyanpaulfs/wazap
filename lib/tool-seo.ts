@@ -19,6 +19,10 @@ export const TOOL_SEO: Record<string, ToolSeoData> = {
     name: "WhatsApp Link Rotator", href: "/tools/rotator",
     appDesc: "One trackable link that rotates click-to-chat handoffs across configured WhatsApp team numbers.",
   },
+  formatter: {
+    name: "WhatsApp Text Formatter", href: "/tools/formatter",
+    appDesc: "Format WhatsApp messages with bold, italic, strikethrough and monospace.",
+  },
   qr: {
     name: "WhatsApp QR Code Generator", href: "/qr",
     appDesc: "Create a custom WhatsApp QR code for any number, with a pre-filled message.",

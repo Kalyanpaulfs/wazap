@@ -1,4 +1,4 @@
-import { Users, MessageCircle, Fingerprint, Megaphone, QrCode, Globe2, type LucideIcon } from "lucide-react";
+import { Users, MessageCircle, Fingerprint, Megaphone, QrCode, Globe2, Type, type LucideIcon } from "lucide-react";
 import type { ToolIconKey } from "@/lib/tool-catalog";
 
 // Maps lib/tool-catalog.ts's string iconKey to an actual lucide icon -
@@ -11,4 +11,5 @@ export const TOOL_ICONS: Record<ToolIconKey, LucideIcon> = {
   megaphone: Megaphone,
   "qr-code": QrCode,
   globe: Globe2,
+  type: Type,
 };
