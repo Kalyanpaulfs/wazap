@@ -81,7 +81,8 @@ export function detectDevice(
   return { device, os, isBot };
 }
 
-export type AudienceRow = { label: string; count: number; pct: number };
+// `code` = ISO2 country of the row (countries, and the city's country) for the badge on the card.
+export type AudienceRow = { label: string; count: number; pct: number; code?: string };
 export type AudienceSummary = {
   devices: AudienceRow[];
   os: AudienceRow[];
@@ -106,17 +107,22 @@ function regionDisplayName(isoCode: string): string {
   }
 }
 
-function summarizeDimension(values: (string | null)[], { isCountry = false }: { isCountry?: boolean } = {}): AudienceRow[] {
-  const counts = new Map<string, number>();
-  for (const raw of values) {
-    const label = raw ? (isCountry && /^[A-Z]{2,3}$/.test(raw) ? regionDisplayName(raw) : raw) : PRIVATE_NETWORK_LABEL;
-    counts.set(label, (counts.get(label) || 0) + 1);
+type Item = { label: string; code?: string | null };
+
+function summarizeDimension(items: Item[]): AudienceRow[] {
+  const counts = new Map<string, { count: number; code?: string }>();
+  for (const { label, code } of items) {
+    const entry = counts.get(label) || { count: 0, code: code || undefined };
+    entry.count += 1;
+    counts.set(label, entry);
   }
-  const total = values.length;
+  const total = items.length;
   return [...counts.entries()]
-    .map(([label, count]) => ({ label, count, pct: total ? Math.round((count / total) * 100) : 0 }))
+    .map(([label, { count, code }]) => ({ label, count, pct: total ? Math.round((count / total) * 100) : 0, ...(code ? { code } : {}) }))
     .sort((a, b) => b.count - a.count);
 }
+
+const isIso = (code: string | null): code is string => !!code && /^[A-Z]{2}$/.test(code);
 
 /**
  * Aggregates raw ConversationStart rows into the 4 Audience panels (Devices,
@@ -132,10 +138,13 @@ export function summarizeAudience(rows: AudienceSourceRow[]): AudienceSummary {
   // private/local address (office network, localhost) or a lookup gap; a
   // missing city falls back to the country ("Elsewhere in India").
   return {
-    devices: summarizeDimension(real.map((row) => row.device || "Desktop")),
-    os: summarizeDimension(real.map((row) => (!row.os || row.os === "Other" ? OTHER_OS_LABEL : row.os))),
-    countries: summarizeDimension(real.map((row) => row.country || PRIVATE_NETWORK_LABEL), { isCountry: true }),
-    cities: summarizeDimension(real.map((row) => row.city || (row.country ? `Elsewhere in ${regionDisplayName(row.country)}` : PRIVATE_NETWORK_LABEL))),
+    devices: summarizeDimension(real.map((row) => ({ label: row.device || "Desktop" }))),
+    os: summarizeDimension(real.map((row) => ({ label: !row.os || row.os === "Other" ? OTHER_OS_LABEL : row.os }))),
+    countries: summarizeDimension(real.map((row) => ({ label: row.country ? regionDisplayName(row.country) : PRIVATE_NETWORK_LABEL, code: isIso(row.country) ? row.country : null }))),
+    cities: summarizeDimension(real.map((row) => ({
+      label: row.city || (row.country ? `Elsewhere in ${regionDisplayName(row.country)}` : PRIVATE_NETWORK_LABEL),
+      code: isIso(row.country) ? row.country : null,
+    }))),
   };
 }
 

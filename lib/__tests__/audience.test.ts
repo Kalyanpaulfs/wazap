@@ -114,7 +114,7 @@ describe("summarizeAudience", () => {
   it("expands an ISO2 country code to its display name", () => {
     const rows = [{ device: "Desktop", os: "Windows", country: "IN", city: "Mumbai" }];
     const summary = summarizeAudience(rows);
-    expect(summary.countries).toEqual([{ label: "India", count: 1, pct: 100 }]);
+    expect(summary.countries).toEqual([{ label: "India", count: 1, pct: 100, code: "IN" }]);
   });
 
   it("falls back to the raw code if Intl.DisplayNames can't expand it", () => {
@@ -132,7 +132,7 @@ describe("summarizeAudience", () => {
     ];
     const summary = summarizeAudience(rows);
     expect(summary.devices).toEqual([{ label: "Mobile", count: 1, pct: 100 }]);
-    expect(summary.countries).toEqual([{ label: "India", count: 1, pct: 100 }]);
+    expect(summary.countries).toEqual([{ label: "India", count: 1, pct: 100, code: "IN" }]);
   });
 
   it("returns empty lists for no rows", () => {
