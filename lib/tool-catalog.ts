@@ -4,22 +4,27 @@
 // or a brand-new tool, only needs editing in ONE place.
 //
 // HOW TO ADD A NEW TOOL:
-// - Paid (counts against the shared link pool): add one object to the
-//   `rawPaid` array below with a unique id, name, question, desc, href and
-//   iconKey. If it needs its own lock rule beyond "pool full" / "plan
-//   lapsed" (like Ad link's "only on Growth+"), set `individuallyLocked`
-//   and a matching `href`/`desc` for the locked state.
+// - Paid (counts against the shared link pool, creates a trackable link):
+//   add one object to the `rawPaid` array below with a unique id, name,
+//   question, desc, href and iconKey. If it needs its own lock rule beyond
+//   "pool full" / "plan lapsed" (like Ad link's "only on Growth+"), set
+//   `individuallyLocked` and a matching `href`/`desc` for the locked state.
+//   Picked up by BOTH app/links/new/page.tsx (the "Create a link" chooser)
+//   and app/tools/AllTools.tsx.
+// - Feature (plan-gated, but NOT a link - no pool, no "pool full" lock, and
+//   must NOT appear in app/links/new since there's nothing to create): add
+//   one object to the `rawFeatures` array instead, with its own
+//   `available`/`lockedHref`/`lockedDesc`. Picked up ONLY by
+//   app/tools/AllTools.tsx (see its `features` list).
 // - Free (always unlocked, never counted against the pool): add one object
 //   to the `free` array with a unique id, name, question, description,
 //   href and iconKey, plus the "Free · unlimited" badge.
-// Both app/links/new/page.tsx and app/tools/AllTools.tsx pick up the new
-// entry automatically - map the new iconKey to a lucide icon in
-// app/components/tool-icons.tsx too.
+// Map any new iconKey to a lucide icon in app/components/tool-icons.tsx too.
 
-import { adLinksAvailable, numbersPerRotatorLimit, normalizePlanKey } from "./plan-limits";
+import { adLinksAvailable, audienceAvailable, numbersPerRotatorLimit, normalizePlanKey } from "./plan-limits";
 import { poolFullMessage } from "./my-links";
 
-export type ToolIconKey = "users" | "message-circle" | "fingerprint" | "megaphone" | "qr-code" | "globe" | "type";
+export type ToolIconKey = "users" | "message-circle" | "fingerprint" | "megaphone" | "qr-code" | "globe" | "type" | "map-pin";
 
 export type ToolCard = {
   id: string;
@@ -44,6 +49,9 @@ export type ToolCatalogInput = {
 
 export type ToolCatalog = {
   paid: ToolCard[];
+  // Plan-gated, non-link features (e.g. Audience) - see the HOW TO ADD
+  // comment above. Rendered only by app/tools/AllTools.tsx.
+  features: ToolCard[];
   free: ToolCard[];
 };
 
@@ -132,6 +140,24 @@ export function getToolCatalog({ plan, used, limit }: ToolCatalogInput): ToolCat
     };
   });
 
+  // Features: plan-gated like Ad link, but not a link - no pool involved,
+  // so "pool full" never locks these, and they're left out of
+  // app/links/new entirely (there's nothing to create). See audienceAvailable
+  // in lib/plan-limits.ts (Growth/Agency only).
+  const audienceOn = audienceAvailable(plan);
+  const features: ToolCard[] = [
+    {
+      id: "audience",
+      name: "Audience",
+      question: "See where my clicks come from",
+      description: audienceOn ? "Device, operating system, country and city of the people who click your links." : "Available on Growth",
+      href: audienceOn ? "/results#audience" : "/billing#plans",
+      iconKey: "map-pin",
+      locked: !audienceOn,
+      lockReason: audienceOn ? undefined : (planLapsed ? "Choose a plan" : "Available on Growth"),
+    },
+  ];
+
   // Free tools: never counted against the link pool, always usable even
   // when the pool above is full or the plan has lapsed.
   const free: ToolCard[] = [
@@ -168,5 +194,5 @@ export function getToolCatalog({ plan, used, limit }: ToolCatalogInput): ToolCat
     },
   ];
 
-  return { paid, free };
+  return { paid, features, free };
 }

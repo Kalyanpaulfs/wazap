@@ -1,8 +1,9 @@
 import {prisma} from "./prisma";
 import {ensurePersonalWorkspace} from "./workspaces";
 import {routerQuota, TRIAL_METERED_ASSET_TYPES} from "./router-entitlements";
+import {clean, type AudienceFields} from "./conversations";
 type Router={id:string;userId:string;name?:string;code:string;numbers:string[];fallbackNumber?:string|null;message?:string|null;currentIdx:number};
-export async function claimRouterHandoff(router:Router,now=new Date()){
+export async function claimRouterHandoff(router:Router,now=new Date(),audience?:AudienceFields){
  const membership=await ensurePersonalWorkspace(router.userId);
  return prisma.$transaction(async tx=>{
   // Serialize quota checks and reservation across every router belonging to this owner.
@@ -17,7 +18,7 @@ export async function claimRouterHandoff(router:Router,now=new Date()){
   if(!numbers.length&&!fallback)return {allowed:false as const,invalid:true};
   const claimed=await tx.rotatorLink.update({where:{id:router.id},data:{currentIdx:{increment:1},totalClicks:{increment:1}},select:{currentIdx:true}});
   const destination=numbers.length?numbers[(claimed.currentIdx-1)%numbers.length]:fallback;
-  await tx.conversationStart.create({data:{userId:router.userId,workspaceId:membership.workspaceId,assetType:"rotator",assetId:router.id,assetName:router.name||null,source:"Wazap rotator",destination,createdAt:now}});
+  await tx.conversationStart.create({data:{userId:router.userId,workspaceId:membership.workspaceId,assetType:"rotator",assetId:router.id,assetName:router.name||null,source:"Wazap rotator",destination,createdAt:now,device:clean(audience?.device,20),os:clean(audience?.os,20),country:clean(audience?.country,2),city:clean(audience?.city,80)}});
   return {allowed:true as const,destination};
  },{timeout:3000});
 }
@@ -42,7 +43,7 @@ type ShortLink={id:string;userId:string;name?:string|null;code:string;phone:stri
 // quota check, then record). There is no rotation to advance - just a
 // single destination number - so this increments ShortLink.clicks instead
 // of currentIdx/totalClicks.
-export async function claimShortLinkHandoff(link:ShortLink,now=new Date()){
+export async function claimShortLinkHandoff(link:ShortLink,now=new Date(),audience?:AudienceFields){
  const membership=await ensurePersonalWorkspace(link.userId);
  return prisma.$transaction(async tx=>{
   await tx.$queryRaw`SELECT id FROM "User" WHERE id=${link.userId} FOR UPDATE`;
@@ -50,7 +51,7 @@ export async function claimShortLinkHandoff(link:ShortLink,now=new Date()){
   const used=await tx.conversationStart.count({where:{userId:link.userId,assetType:{in:[...TRIAL_METERED_ASSET_TYPES]}}});
   if(!routerQuota(owner,used,now).allowed)return {allowed:false as const};
   await tx.shortLink.update({where:{id:link.id},data:{clicks:{increment:1}}});
-  await tx.conversationStart.create({data:{userId:link.userId,workspaceId:membership.workspaceId,assetType:"short_link",assetId:link.id,assetName:link.name||null,source:"Wazap short link",destination:link.phone,createdAt:now}});
+  await tx.conversationStart.create({data:{userId:link.userId,workspaceId:membership.workspaceId,assetType:"short_link",assetId:link.id,assetName:link.name||null,source:"Wazap short link",destination:link.phone,createdAt:now,device:clean(audience?.device,20),os:clean(audience?.os,20),country:clean(audience?.country,2),city:clean(audience?.city,80)}});
   return {allowed:true as const};
  },{timeout:3000});
 }

@@ -4,6 +4,7 @@ import { claimShortLinkHandoff, routerQuotaAllowed } from "@/lib/router-claim";
 import { rateLimit } from "@/lib/rate-limit";
 import { requestIp } from "@/lib/request-ip";
 import { canRouteLinks, OWNER_ENTITLEMENT_SELECT } from "@/lib/router-entitlements";
+import { captureAudience } from "@/lib/audience-capture";
 
 // Bot protection (FEAT-PLAN-LIMITS): see app/r/[code]/route.ts for the
 // rationale. A real visitor is always redirected; over ~10 hits/minute for
@@ -30,7 +31,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ code: st
     // does the locked quota check + count + record, same as
     // claimRouterHandoff in app/r/[code]/route.ts.
     try {
-      const claim = await claimShortLinkHandoff({ id: link.id, userId: link.userId, name: link.name, code: link.code, phone: link.phone, message: link.message });
+      const audience = captureAudience(req.headers, ip);
+      const claim = await claimShortLinkHandoff({ id: link.id, userId: link.userId, name: link.name, code: link.code, phone: link.phone, message: link.message }, new Date(), audience);
       if (!claim.allowed) blocked = true;
     } catch {
       console.warn("[router] short-link metering unavailable; preserving public fallback");

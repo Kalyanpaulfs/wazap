@@ -21,8 +21,8 @@ export default async function AllTools({ userId }: { userId: string }) {
   const planLabel = accountPlanLabel(entitlementUser);
   const { used, limit } = await getMyLinks(userId, plan);
 
-  const { paid, free } = getToolCatalog({ plan, used, limit });
-  const anyLocked = paid.some((card) => card.locked);
+  const { paid, features, free } = getToolCatalog({ plan, used, limit });
+  const anyLocked = paid.some((card) => card.locked) || features.some((card) => card.locked);
 
   return (
     <main className="px-4 py-7 sm:px-7 sm:py-9">
@@ -46,6 +46,9 @@ export default async function AllTools({ userId }: { userId: string }) {
           </div>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {paid.map((card) => (
+              <ToolCardLink key={card.id} card={card} Icon={TOOL_ICONS[card.iconKey]} />
+            ))}
+            {features.map((card) => (
               <ToolCardLink key={card.id} card={card} Icon={TOOL_ICONS[card.iconKey]} />
             ))}
           </div>

@@ -181,7 +181,7 @@ export default function ProductLandingPage({ content }: { content: ProductLandin
               </tbody>
             </table>
           </div>
-          <p className="mt-4 text-xs text-slate-500">New accounts get a 3-day free trial with 100 routed leads. After the trial, a paid plan is required to keep routing. Location and device tracking is coming soon on Growth and Agency.</p>
+          <p className="mt-4 text-xs text-slate-500">New accounts get a 3-day free trial with 100 routed leads. After the trial, a paid plan is required to keep routing. Audience (device, OS, country & city) is included on Growth and Agency.</p>
         </div>
       </section>
 

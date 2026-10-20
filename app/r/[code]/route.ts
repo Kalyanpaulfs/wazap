@@ -5,6 +5,7 @@ import { cacheRoute, readCachedRoute, removeCachedRoute } from "@/lib/routing-ca
 import { rateLimit } from "@/lib/rate-limit";
 import { requestIp } from "@/lib/request-ip";
 import { canRouteLinks, OWNER_ENTITLEMENT_SELECT } from "@/lib/router-entitlements";
+import { captureAudience } from "@/lib/audience-capture";
 
 // Bot protection (FEAT-PLAN-LIMITS): a per-IP+code speed limit of ~10 hits/
 // minute. A real visitor is never blocked from the redirect itself — once
@@ -59,7 +60,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ code: st
   let blocked=false;
   if(rotator.id&&rotator.userId){
     if(withinSpeedLimit){
-      try{const claim=await claimRouterHandoff({...rotator,id:rotator.id,userId:rotator.userId});if(!claim.allowed)blocked=true;else number=claim.destination;}
+      try{const audience=captureAudience(req.headers,ip);const claim=await claimRouterHandoff({...rotator,id:rotator.id,userId:rotator.userId},new Date(),audience);if(!claim.allowed)blocked=true;else number=claim.destination;}
       catch{console.warn("[router] metering unavailable; preserving public fallback");}
     } else {
       // Over the speed limit: skip rotation/counting (bot protection), but

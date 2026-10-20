@@ -2,7 +2,7 @@ import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import Link from "next/link";
-import { BarChart3, Check, Download, Link2, Lock, TrendingUp, Users, Zap } from "lucide-react";
+import { BarChart3, Check, Download, Link2, Lock, Users, Zap } from "lucide-react";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { PLAN_PRICES } from "@/lib/billing";
@@ -13,6 +13,7 @@ import { getResultsPageData, type ResultsPageData } from "@/lib/reports-data";
 import { RESULTS_PERIODS, RESULTS_PERIOD_LABELS, formatChange, sanitizeTimeZone, type Change } from "@/lib/reports";
 import TzSync from "@/app/results/TzSync";
 import LinkFilterSelect from "@/app/results/LinkFilterSelect";
+import { AudienceCard, AudienceCardLocked } from "@/app/results/AudienceCard";
 
 export const metadata = { title: "Results — Wazap", robots: { index: false, follow: false } };
 
@@ -31,7 +32,7 @@ const FULL_FEATURES = [
   "Ads & campaigns breakdown",
   "Compare with previous period",
   "Any custom date range (up to 1 year)",
-  "Location & device — coming soon",
+  "Audience — device, OS, country & city",
 ];
 
 // Static, clearly-fake preview rows shown (blurred) on Basic's locked
@@ -587,13 +588,7 @@ export default async function ResultsPage({
           )
         )}
 
-        {tier === "full" && (
-          <section className="rounded-2xl border border-slate-800 bg-slate-950/40 p-4 text-sm text-slate-500" aria-label="Location and device tracking">
-            <span className="inline-flex items-center gap-1.5">
-              <TrendingUp className="h-4 w-4" /> Location &amp; device tracking — coming soon
-            </span>
-          </section>
-        )}
+        {data.audience ? <AudienceCard audience={data.audience} /> : <AudienceCardLocked />}
       </div>
     </main>
   );

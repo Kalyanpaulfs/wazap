@@ -13,7 +13,8 @@ import { prisma } from "@/lib/prisma";
 import { getActiveWorkspace } from "@/lib/workspaces";
 import { getAssetDirectory } from "@/lib/performance";
 import { salespersonName } from "@/lib/salesperson-names";
-import { PLAN_DISPLAY_NAME, normalizePlanKey, reportsTier, type ReportsTier } from "@/lib/plan-limits";
+import { PLAN_DISPLAY_NAME, normalizePlanKey, reportsTier, audienceAvailable, type ReportsTier } from "@/lib/plan-limits";
+import { summarizeAudience, type AudienceSummary } from "@/lib/audience";
 import {
   dayKeyInTz,
   resolveResultsSelection,
@@ -118,6 +119,9 @@ export type ResultsPageData =
       periodText: string;
       compareText: string | null;
       linkFilter: LinkFilter | null;
+      // FEAT-AUDIENCE: only populated on tier "full" plans (audienceAvailable
+      // in lib/plan-limits.ts) - Solo's locked card needs no real data.
+      audience: AudienceSummary | null;
       linkOptions: LinkOption[];
       todayInputValue: string;
       earliestCustomDate: string;
@@ -179,7 +183,19 @@ export async function getResultsPageData(
         createdAt: { gte: previous.start, lt: current.end },
         ...(linkFilter ? { assetId: linkFilter.id, assetType: filterAssetType! } : {}),
       },
-      select: { assetType: true, assetId: true, assetName: true, source: true, campaign: true, destination: true, createdAt: true },
+      select: {
+        assetType: true,
+        assetId: true,
+        assetName: true,
+        source: true,
+        campaign: true,
+        destination: true,
+        createdAt: true,
+        device: true,
+        os: true,
+        country: true,
+        city: true,
+      },
       orderBy: { createdAt: "asc" },
     }),
   ]);
@@ -289,6 +305,15 @@ export async function getResultsPageData(
 
   const isEmpty = currentStarts.length === 0;
 
+  // FEAT-AUDIENCE: Solo (tier "basic") shows a locked card with no real
+  // data, so skip the aggregation entirely there - audienceAvailable mirrors
+  // tier === "full" exactly (both pro and ultimate), kept as its own check
+  // since it's a plan-gated feature, not a reports-tier one.
+  // Rows with device === null predate the feature (prisma/audience_tracking_
+  // 20261021.sql) and are excluded rather than counted as "Unknown" - the
+  // footnote on the card explains why older clicks don't show up here.
+  const audience = audienceAvailable(plan) ? summarizeAudience(currentStarts.filter((item) => item.device !== null)) : null;
+
   const periodText = describePeriodText(selection);
   const compareText = describeCompareText(selection);
   const summarySentence = buildSummarySentence({
@@ -314,6 +339,7 @@ export async function getResultsPageData(
     periodText,
     compareText,
     linkFilter,
+    audience,
     linkOptions,
     todayInputValue,
     earliestCustomDate,

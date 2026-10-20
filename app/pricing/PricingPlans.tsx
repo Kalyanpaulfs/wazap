@@ -35,7 +35,7 @@ const PLANS = [
     name: "Growth",
     price: PLAN_PRICES.pro,
     description: "Run multiple campaigns and sales teams",
-    features: ["20 links, any type — including ad links", "Up to 10 salespeople per lead rotator", "Everything in Solo, plus ad links", "Full reports — sources, campaigns & date range", "Standard support · location & device tracking (coming soon)"],
+    features: ["20 links, any type — including ad links", "Up to 10 salespeople per lead rotator", "Everything in Solo, plus ad links", "Full reports — sources, campaigns & date range", "Audience — device, OS, country & city", "Standard support"],
     highlighted: true,
     salesOnly: false,
   },

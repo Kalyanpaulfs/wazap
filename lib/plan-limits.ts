@@ -92,12 +92,14 @@ export const WIDGET_AVAILABLE: Record<PlanKey, boolean> = { free: true, basic: t
 export type ReportsTier = "none" | "basic" | "full";
 export const REPORTS_TIER: Record<PlanKey, ReportsTier> = { free: "none", basic: "basic", pro: "full", ultimate: "full" };
 
-export type TrackingAvailability = "unavailable" | "coming_soon";
+// FEAT-AUDIENCE: device/OS/country/city of link clickers (app/results
+// AudienceCard), shipped on Growth/Agency - see audienceAvailable below.
+export type TrackingAvailability = "unavailable" | "available";
 export const LOCATION_DEVICE_TRACKING: Record<PlanKey, TrackingAvailability> = {
   free: "unavailable",
   basic: "unavailable",
-  pro: "coming_soon",
-  ultimate: "coming_soon",
+  pro: "available",
+  ultimate: "available",
 };
 
 export const SUPPORT_LABEL: Record<PlanKey, string> = { free: "Basic", basic: "Basic", pro: "Standard", ultimate: "Priority" };
@@ -116,6 +118,9 @@ export function widgetAvailable(plan: string | null | undefined): boolean {
 }
 export function reportsTier(plan: string | null | undefined): ReportsTier {
   return REPORTS_TIER[normalizePlanKey(plan)];
+}
+export function audienceAvailable(plan: string | null | undefined): boolean {
+  return LOCATION_DEVICE_TRACKING[normalizePlanKey(plan)] === "available";
 }
 export function supportLabel(plan: string | null | undefined): string {
   return SUPPORT_LABEL[normalizePlanKey(plan)];

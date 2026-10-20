@@ -5,6 +5,7 @@ import { rateLimit } from "@/lib/rate-limit";
 import { requestIp } from "@/lib/request-ip";
 import { canRouteLinks, linkPlan, OWNER_ENTITLEMENT_SELECT } from "@/lib/router-entitlements";
 import { adLinksAvailable } from "@/lib/plan-limits";
+import { captureAudience } from "@/lib/audience-capture";
 
 const PUBLIC_BASE = "https://wazap.lt";
 
@@ -50,9 +51,10 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     // Bot protection (FEAT-PLAN-LIMITS): ~10 hits/minute per IP+link; a real
     // visitor is always redirected either way (see the return below).
     if (rateLimit(`ad-click:${ip}:${id}`, 10, 60_000)) {
+      const audience = captureAudience(req.headers, ip);
       await Promise.allSettled([
         prisma.$transaction([
-          prisma.adLinkClick.create({ data: { adLinkId: link.id } }),
+          prisma.adLinkClick.create({ data: { adLinkId: link.id, country: audience.country } }),
           prisma.adLink.update({ where: { id: link.id }, data: { clicks: { increment: 1 } } }),
         ]),
         recordConversationStart({
@@ -63,6 +65,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
           source: link.utmSource || link.utmMedium || "Wazap ad link",
           campaign: link.utmCampaign,
           destination: link.number,
+          audience,
         }),
       ]);
     }

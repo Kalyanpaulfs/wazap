@@ -300,6 +300,15 @@ model ConversationStart {
   source      String?
   campaign    String?
   destination String?
+  // Audience feature (FEAT-AUDIENCE, Growth/Agency only - lib/audience.ts /
+  // lib/geo-city.ts). Derived labels only, never a raw IP or user-agent;
+  // null on every row recorded before this feature shipped (2026-10-21) and
+  // on rows where detection/geo lookup failed. device is "Bot" for bot
+  // clicks, which the Audience aggregation excludes.
+  device      String?
+  os          String?
+  country     String?
+  city        String?
   createdAt   DateTime   @default(now())
   user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   workspace   Workspace? @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
