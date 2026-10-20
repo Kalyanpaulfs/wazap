@@ -7,7 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { accountClosureBlockers, ACCOUNT_DELETION_GRACE_DAYS } from "@/lib/account-lifecycle";
 
 export const metadata = {
-  title: "Account & Data — Wazap",
+  title: "Account & Data",
   robots: { index: false, follow: false },
 };
 

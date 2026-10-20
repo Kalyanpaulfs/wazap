@@ -3,7 +3,7 @@ import Link from "next/link";
 import { MessageCircle } from "lucide-react";
 
 export const metadata: Metadata = {
-  title: "Refund Policy — Wazap",
+  title: "Refund Policy",
   description: "Understand Wazap subscription cancellations, renewal timing, refund eligibility, provider processing, and how to request billing support.",
   alternates: { canonical: "https://wazap.lt/refund" },
 };

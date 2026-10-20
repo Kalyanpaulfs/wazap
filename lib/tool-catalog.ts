@@ -84,8 +84,8 @@ export function getToolCatalog({ plan, used, limit }: ToolCatalogInput): ToolCat
     {
       id: "rotator",
       name: "Lead rotator",
-      question: "Share chats across my team",
-      desc: `Each new chat goes to the next salesperson. Up to ${numbersLimit} salespeople on your plan.`,
+      question: "Share clicks across my team",
+      desc: `Each new click goes to the next salesperson. Up to ${numbersLimit} salespeople on your plan.`,
       href: "/links/new/rotator",
       iconKey: "users",
       individuallyLocked: false,
@@ -111,7 +111,7 @@ export function getToolCatalog({ plan, used, limit }: ToolCatalogInput): ToolCat
     {
       id: "ad-link",
       name: "Ad link",
-      question: "Track which ad brings chats",
+      question: "Track which ad brings clicks",
       desc: adsAvailable ? "See exactly how many clicks each campaign brings." : "Available on Growth",
       href: adsAvailable ? "/links/new/ad" : "/billing#plans",
       iconKey: "megaphone",

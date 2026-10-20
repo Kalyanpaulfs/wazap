@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { AlertTriangle, ArrowRight } from "lucide-react";
 
-export const metadata = { title: "Link paused | Wazap", robots: { index: false, follow: false } };
+export const metadata = { title: "Link paused", robots: { index: false, follow: false } };
 
 // Shared paused page for every public link/page type (rotator, short link,
 // ad link). Three distinct reasons land here:

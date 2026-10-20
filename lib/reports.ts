@@ -84,9 +84,13 @@ export function lastNDaysRange(days: number, now: Date = new Date()): DateRange 
 
 // ---------------------------------------------------------------------------
 // Custom date range (full tier only). "from"/"to" are inclusive calendar days
-// in "YYYY-MM-DD" form, interpreted as UTC. All limits below are rules, not
-// UI-only hints: app/reports/page.tsx and app/api/reports/export/route.ts
-// both go through resolveFullTierSelection so they stay in sync.
+// in "YYYY-MM-DD" form. resolveFullTierSelection (old /reports) always
+// resolves them as UTC days; resolveResultsSelection (/results) passes the
+// visitor's `tz` so a custom range is made of calendar days in *their*
+// timezone, matching the Today/7 days/30 days chips. All limits below are
+// rules, not UI-only hints: app/reports/page.tsx and
+// app/api/reports/export/route.ts both go through resolveFullTierSelection
+// (or resolveResultsSelection) so they stay in sync.
 // ---------------------------------------------------------------------------
 
 export const CUSTOM_RANGE_MAX_DAYS = 366;
@@ -107,20 +111,22 @@ export function parseDateParam(value: string | null | undefined): Date | null {
 }
 
 export type CustomRangeOutcome =
-  | { ok: true; range: DateRange; clampedToToday: boolean }
+  | { ok: true; range: DateRange; clampedToToday: boolean; fromValue: string; toValue: string }
   | { ok: false; reason: string };
 
 /**
  * Validates and resolves a custom "from"/"to" range (both inclusive calendar
- * days). Rules: both dates must parse; `to` in the future is clamped to
- * today (not an error); `from` must be on or before the (possibly clamped)
- * `to`; the range may span at most CUSTOM_RANGE_MAX_DAYS days; `from` may
- * not be earlier than CUSTOM_RANGE_MAX_YEARS_BACK years before today.
+ * days, in `tz`). Rules: both dates must parse; `to` in the future (in `tz`)
+ * is clamped to today there (not an error); `from` must be on or before the
+ * (possibly clamped) `to`; the range may span at most CUSTOM_RANGE_MAX_DAYS
+ * days; `from` may not be earlier than CUSTOM_RANGE_MAX_YEARS_BACK years
+ * before today (in `tz`).
  */
 export function resolveCustomRange(
   fromParam: string | null | undefined,
   toParam: string | null | undefined,
-  now: Date = new Date()
+  now: Date = new Date(),
+  tz: string = "UTC"
 ): CustomRangeOutcome {
   const fromDate = parseDateParam(fromParam);
   const toDateRaw = parseDateParam(toParam);
@@ -128,7 +134,15 @@ export function resolveCustomRange(
     return { ok: false, reason: "Enter a valid From and To date (YYYY-MM-DD)." };
   }
 
-  const today = utcMidnight(now);
+  // `fromDate`/`toDateRaw` (and `today` below) are UTC-midnight
+  // *placeholders* for calendar-day keys (parseDateParam/dayKeyInTz never
+  // look at `tz`) - safe for calendar-day arithmetic (diffing, min/max,
+  // formatting back to "YYYY-MM-DD" via toDateInputValue), but not real
+  // instants: reinterpreting a date's own UTC midnight as if it were already
+  // a `tz` instant would drift the boundary by a day for zones behind UTC.
+  // placeholderToLocalDayStart below converts a placeholder to the real
+  // instant it starts at in `tz`.
+  const today = parseDateParam(dayKeyInTz(now, tz))!;
   const clampedToToday = toDateRaw.getTime() > today.getTime();
   const toDate = clampedToToday ? today : toDateRaw;
 
@@ -141,13 +155,36 @@ export function resolveCustomRange(
     return { ok: false, reason: `Custom ranges can start at most ${CUSTOM_RANGE_MAX_YEARS_BACK} years back.` };
   }
 
-  const end = new Date(toDate.getTime() + DAY_MS); // exclusive end, including the To day
-  const rangeDays = Math.round((end.getTime() - fromDate.getTime()) / DAY_MS);
+  const endPlaceholder = new Date(toDate.getTime() + DAY_MS); // exclusive end placeholder, including the To day
+  const rangeDays = Math.round((endPlaceholder.getTime() - fromDate.getTime()) / DAY_MS);
   if (rangeDays > CUSTOM_RANGE_MAX_DAYS) {
     return { ok: false, reason: `Custom ranges can span at most ${CUSTOM_RANGE_MAX_DAYS} days.` };
   }
 
-  return { ok: true, range: { start: fromDate, end }, clampedToToday };
+  const start = placeholderToLocalDayStart(fromDate, tz, now);
+  const end = addDaysInTz(placeholderToLocalDayStart(toDate, tz, now), 1, tz); // exclusive end, the day after the (possibly clamped) To day
+
+  return {
+    ok: true,
+    range: { start, end },
+    clampedToToday,
+    fromValue: toDateInputValue(fromDate),
+    toValue: toDateInputValue(toDate),
+  };
+}
+
+/**
+ * Converts a "YYYY-MM-DD" calendar-day placeholder (a UTC-midnight `Date` for
+ * that key, as produced by `parseDateParam`/`dayKeyInTz`) into the real UTC
+ * instant that day starts at in `tz`. Anchored on `now`'s own placeholder
+ * (today's key, via `dayKeyInTz`) rather than on `dayPlaceholder` itself, and
+ * reuses the same `startOfDayInTz`/`addDaysInTz` stepping `resultsPeriodRange`
+ * uses for the period chips, so there's one tz-math implementation for both.
+ */
+export function placeholderToLocalDayStart(dayPlaceholder: Date, tz: string, now: Date): Date {
+  const todayPlaceholder = parseDateParam(dayKeyInTz(now, tz))!;
+  const diffDays = Math.round((dayPlaceholder.getTime() - todayPlaceholder.getTime()) / DAY_MS);
+  return addDaysInTz(startOfDayInTz(now, tz), diffDays, tz);
 }
 
 /** The comparison range for a custom range: the same length immediately
@@ -194,8 +231,8 @@ export function resolveFullTierSelection(
         isCustom: true,
         customError: null,
         clampedToToday: outcome.clampedToToday,
-        fromValue: toDateInputValue(outcome.range.start),
-        toValue: toDateInputValue(new Date(outcome.range.end.getTime() - DAY_MS)),
+        fromValue: outcome.fromValue,
+        toValue: outcome.toValue,
       };
     }
     const fallback = getPeriodBoundaries(period, now);
@@ -481,7 +518,7 @@ export function resolveResultsSelection(
   const hasRangeParams = tier === "full" && Boolean(params.from || params.to);
 
   if (hasRangeParams) {
-    const outcome = resolveCustomRange(params.from, params.to, now);
+    const outcome = resolveCustomRange(params.from, params.to, now, tz);
     if (outcome.ok) {
       return {
         period,
@@ -490,8 +527,8 @@ export function resolveResultsSelection(
         isCustom: true,
         customError: null,
         clampedToToday: outcome.clampedToToday,
-        fromValue: toDateInputValue(outcome.range.start),
-        toValue: toDateInputValue(new Date(outcome.range.end.getTime() - DAY_MS)),
+        fromValue: outcome.fromValue,
+        toValue: outcome.toValue,
         canCompare,
       };
     }

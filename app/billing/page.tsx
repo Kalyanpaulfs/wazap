@@ -15,7 +15,7 @@ import { normalizePlanKey, linkLimit, numbersPerRotatorLimit, adLinksAvailable }
 import { linkPlan } from "@/lib/router-entitlements";
 import { countLiveLinks } from "@/lib/link-pool";
 
-export const metadata = { title: "Plan & billing — Wazap", robots: { index: false, follow: false } };
+export const metadata = { title: "Plan & billing", robots: { index: false, follow: false } };
 
 // Real charges only: subscription pointer rows (subscription_active /
 // subscription_inactive) are $0 bookkeeping, never a payment the customer

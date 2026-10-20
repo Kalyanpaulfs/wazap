@@ -11,7 +11,7 @@ import { defaultCountryForUser } from "@/lib/default-country";
 import BackLink from "@/app/links/BackLink";
 import RotatorForm from "./RotatorForm";
 
-export const metadata = { title: "Create a lead rotator — Wazap", robots: { index: false, follow: false } };
+export const metadata = { title: "Create a lead rotator", robots: { index: false, follow: false } };
 
 export default async function NewRotatorPage() {
   const session = await getServerSession(authOptions);
@@ -41,7 +41,7 @@ export default async function NewRotatorPage() {
         <BackLink href="/links/new" label="Create a link" />
         <header>
           <h1 className="text-2xl font-bold text-white sm:text-3xl">Lead rotator</h1>
-          <p className="mt-1 text-slate-400">Each new chat goes to the next salesperson in your list.</p>
+          <p className="mt-1 text-slate-400">Each new click goes to the next salesperson in your list.</p>
         </header>
         <RotatorForm planLabel={planLabel} used={used} limit={limit} numbersLimit={numbersLimit} nextPlanHint={nextPlanHint} defaultCountry={defaultCountry} />
       </div>

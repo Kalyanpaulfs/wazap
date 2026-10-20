@@ -3,7 +3,7 @@ import Link from "next/link";
 import { MessageCircle } from "lucide-react";
 
 export const metadata: Metadata = {
-  title: "Acceptable Use Policy — Wazap",
+  title: "Acceptable Use Policy",
   description: "Rules for lawful, consent-based use of Wazap WhatsApp tools, APIs, marketplace packages, AI assistance, and automations.",
   alternates: { canonical: "https://wazap.lt/acceptable-use" },
 };

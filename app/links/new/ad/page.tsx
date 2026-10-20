@@ -11,7 +11,7 @@ import { defaultCountryForUser } from "@/lib/default-country";
 import BackLink from "@/app/links/BackLink";
 import AdForm from "./AdForm";
 
-export const metadata = { title: "Create an ad link — Wazap", robots: { index: false, follow: false } };
+export const metadata = { title: "Create an ad link", robots: { index: false, follow: false } };
 
 export default async function NewAdLinkPage() {
   const session = await getServerSession(authOptions);

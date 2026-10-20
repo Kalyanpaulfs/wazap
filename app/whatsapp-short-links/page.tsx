@@ -3,7 +3,7 @@ import { Link2 } from "lucide-react";
 import ProductLandingPage, { type ProductLandingContent } from "@/app/components/ProductLandingPage";
 
 export const metadata: Metadata = {
-  title: "WhatsApp Short Links — Custom Slug, Click Counts | Wazap",
+  title: "WhatsApp Short Links — Custom Slug, Click Counts",
   description:
     "Create a short, custom WhatsApp link with your own slug and click counts, instead of a long wa.me link.",
   alternates: { canonical: "https://wazap.lt/whatsapp-short-links" },
@@ -61,8 +61,8 @@ const content: ProductLandingContent = {
     { q: "Is this different from the free link builder?", a: "Yes. The WhatsApp link builder at /tools/link is for a trial or active plan, and gives you a tracked WhatsApp link; only the QR maker at /qr stays free once a trial ends. Short links add a custom slug and click counts, and are included from the Solo plan." },
   ],
   crossLinks: [
-    { href: "/whatsapp-lead-routing", title: "WhatsApp lead routing", text: "Share incoming chats across your team in turn." },
-    { href: "/whatsapp-ad-tracking", title: "WhatsApp ad tracking", text: "See which ad or campaign is bringing in chats." },
+    { href: "/whatsapp-lead-routing", title: "WhatsApp lead routing", text: "Share incoming clicks across your team in turn." },
+    { href: "/whatsapp-ad-tracking", title: "WhatsApp ad tracking", text: "See which ad or campaign is bringing in clicks." },
     { href: "/whatsapp-website-widget", title: "Website chat widget", text: "Add a WhatsApp button to your website." },
   ],
 };

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { AlertTriangle, ArrowRight, MessageCircle } from "lucide-react";
 
-export const metadata = { title: "WhatsApp routing link paused | Wazap", robots: { index: false, follow: false } };
+export const metadata = { title: "WhatsApp routing link paused", robots: { index: false, follow: false } };
 
 export default function RouterLimitPage() {
   return (

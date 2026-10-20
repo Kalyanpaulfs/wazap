@@ -5,7 +5,7 @@ import { authOptions } from "@/lib/auth";
 import TicketsClient from "./TicketsClient";
 
 export const metadata: Metadata = {
-  title: "My tickets — Wazap",
+  title: "My tickets",
   robots: { index: false, follow: false },
 };
 

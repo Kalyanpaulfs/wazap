@@ -296,6 +296,54 @@ describe("resolveCustomRange", () => {
   });
 });
 
+// BUG-3: custom ranges must be calendar days in the visitor's own tz, not
+// always UTC days - e.g. in Asia/Dubai between 00:00 and 04:00, "today" is
+// already a later UTC date than it is in Dubai, so a custom range ending
+// "today" shouldn't be clamped, and its boundaries should be Dubai midnights.
+describe("resolveCustomRange (visitor tz)", () => {
+  // 2026-10-20T21:30Z = 2026-10-21T01:30 in Asia/Dubai (UTC+4) - already Oct
+  // 21 there, still Oct 20 in UTC.
+  const DUBAI_NOW = new Date("2026-10-20T21:30:00.000Z");
+
+  it("does not clamp To when it's today in the visitor's tz (even though it's tomorrow in UTC)", () => {
+    const outcome = resolveCustomRange("2026-10-21", "2026-10-21", DUBAI_NOW, "Asia/Dubai");
+    expect(outcome.ok).toBe(true);
+    if (outcome.ok) {
+      expect(outcome.clampedToToday).toBe(false);
+      expect(outcome.range.start.toISOString()).toBe("2026-10-20T20:00:00.000Z");
+      expect(outcome.range.end.toISOString()).toBe("2026-10-21T20:00:00.000Z");
+    }
+  });
+
+  it("clamps the same To date at the same instant when tz is UTC (today is still Oct 20 there)", () => {
+    const outcome = resolveCustomRange("2026-10-20", "2026-10-21", DUBAI_NOW, "UTC");
+    expect(outcome.ok).toBe(true);
+    if (outcome.ok) {
+      expect(outcome.clampedToToday).toBe(true);
+      expect(outcome.toValue).toBe("2026-10-20");
+    }
+  });
+
+  it("resolves America/New_York (behind UTC) calendar days correctly", () => {
+    // 2026-10-14T12:00:00Z is 2026-10-14T08:00 EDT (UTC-4) - still Oct 14 there.
+    const outcome = resolveCustomRange("2026-10-14", "2026-10-14", NOW, "America/New_York");
+    expect(outcome.ok).toBe(true);
+    if (outcome.ok) {
+      expect(outcome.clampedToToday).toBe(false);
+      // Local midnight Oct 14 in New York (EDT, UTC-4) is 2026-10-14T04:00Z.
+      expect(outcome.range.start.toISOString()).toBe("2026-10-14T04:00:00.000Z");
+      expect(outcome.range.end.toISOString()).toBe("2026-10-15T04:00:00.000Z");
+    }
+  });
+
+  it("a preset 'today' range and a custom from=to=today range start at the same instant, in a given tz", () => {
+    const today = resultsPeriodRange("today", DUBAI_NOW, "Asia/Dubai");
+    const custom = resolveCustomRange("2026-10-21", "2026-10-21", DUBAI_NOW, "Asia/Dubai");
+    expect(custom.ok).toBe(true);
+    if (custom.ok) expect(custom.range.start).toEqual(today.start);
+  });
+});
+
 describe("previousCustomRange", () => {
   it("returns a range of the same length immediately before start", () => {
     const range = { start: new Date("2026-09-01T00:00:00.000Z"), end: new Date("2026-10-01T00:00:00.000Z") };
@@ -439,6 +487,12 @@ describe("dayKeyInTz", () => {
     // 23:30 UTC is already 2026-10-15 05:00 in Asia/Kolkata.
     expect(dayKeyInTz(new Date("2026-10-14T23:30:00.000Z"), "Asia/Kolkata")).toBe("2026-10-15");
   });
+
+  it("matches the Custom-range date input's `todayInputValue` in a visitor's tz (BUG-3)", () => {
+    // 2026-10-20T21:30Z is 2026-10-21T01:30 in Asia/Dubai - lib/reports-data.ts
+    // builds todayInputValue from this same function.
+    expect(dayKeyInTz(new Date("2026-10-20T21:30:00.000Z"), "Asia/Dubai")).toBe("2026-10-21");
+  });
 });
 
 describe("sanitizeTimeZone", () => {
@@ -528,6 +582,17 @@ describe("resolveResultsSelection", () => {
     const selection = resolveResultsSelection("full", { from: "2026-10-20", to: "2026-10-10" }, NOW, "UTC");
     expect(selection.isCustom).toBe(false);
     expect(selection.customError).toMatch(/on or before/);
+  });
+
+  it("resolves a custom range as calendar days in the visitor's tz, not UTC (BUG-3)", () => {
+    const dubaiNow = new Date("2026-10-20T21:30:00.000Z"); // 2026-10-21T01:30 in Asia/Dubai
+    const selection = resolveResultsSelection("full", { from: "2026-10-21", to: "2026-10-21" }, dubaiNow, "Asia/Dubai");
+    expect(selection.isCustom).toBe(true);
+    expect(selection.clampedToToday).toBe(false);
+    expect(selection.fromValue).toBe("2026-10-21");
+    expect(selection.toValue).toBe("2026-10-21");
+    expect(selection.current.start.toISOString()).toBe("2026-10-20T20:00:00.000Z");
+    expect(selection.current.end.toISOString()).toBe("2026-10-21T20:00:00.000Z");
   });
 });
 

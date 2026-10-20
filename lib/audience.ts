@@ -8,6 +8,12 @@
 // Privacy: this file never sees a raw IP or stores a raw user-agent string
 // - it only ever returns the small derived labels below, which is all that
 // ends up on the ConversationStart row (see prisma/audience_tracking_20261021.sql).
+import { parseDateParam, placeholderToLocalDayStart } from "@/lib/reports";
+
+/** The calendar day (in the visitor's tz) audience tracking went live - see
+ * prisma/audience_tracking_20261021.sql. Single source of truth for both the
+ * card's footnote and periodEndsBeforeAudienceTracking below. */
+export const AUDIENCE_TRACKING_START = "2026-10-21";
 
 export type AudienceDevice = "Desktop" | "Mobile" | "Tablet" | "Bot";
 export type AudienceOs =
@@ -150,3 +156,14 @@ export function summarizeAudience(rows: AudienceSourceRow[]): AudienceSummary {
 
 export const PRIVATE_NETWORK_LABEL = "Private network";
 export const OTHER_OS_LABEL = "Private browser";
+
+/**
+ * True when the selected period's last day (in `tz`) falls entirely before
+ * AUDIENCE_TRACKING_START - i.e. there can be no device/location data for it
+ * at all, so the card should explain that rather than say "no clicks yet".
+ * `rangeEnd` is a DateRange's exclusive end (lib/reports.ts).
+ */
+export function periodEndsBeforeAudienceTracking(rangeEnd: Date, tz: string, now: Date = new Date()): boolean {
+  const trackingStart = placeholderToLocalDayStart(parseDateParam(AUDIENCE_TRACKING_START)!, tz, now);
+  return rangeEnd.getTime() <= trackingStart.getTime();
+}

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import WorkspaceFrame from "../product/WorkspaceFrame";
 
 export const metadata: Metadata = {
-  title: "Performance — Wazap",
+  title: "Performance",
   robots: { index: false, follow: false },
 };
 

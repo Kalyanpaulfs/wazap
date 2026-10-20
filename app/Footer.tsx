@@ -17,9 +17,16 @@ const groups = [
 
 const policies = [["/refund", "Refunds"], ["/cookie", "Cookies"], ["/acceptable-use", "Acceptable use"], ["/api-policy", "API policy"], ["/partner-terms", "Partner terms"]];
 
+// pb extended beyond the base pt-12/pb-7 rhythm: the floating support bubble
+// (app/components/ChatWidget.tsx) is fixed bottom-right (bottom-4/right-4,
+// 48px, growing to bottom-6/right-6, 56px, at sm+) on every page, right
+// where this footer's legal nav (Privacy/Terms/More policies, which
+// right-aligns at md+) ends up once a page is scrolled to the bottom - the
+// extra padding keeps that row clear of the bubble's footprint instead of
+// rendering underneath it.
 export default function Footer() {
   return (
-    <footer className="mt-auto border-t border-white/10 px-6 pt-12 pb-7 sm:px-8">
+    <footer className="mt-auto border-t border-white/10 px-6 pt-12 pb-24 sm:px-8 sm:pb-28">
       <div className="mx-auto max-w-6xl">
         <div className="grid grid-cols-2 gap-x-8 gap-y-10 pb-10 md:grid-cols-[minmax(0,1.1fr)_1fr_1fr_1fr] md:gap-12">
           <div className="col-span-2 md:col-span-1">

@@ -3,7 +3,7 @@ import { Code2 } from "lucide-react";
 import ProductLandingPage, { type ProductLandingContent } from "@/app/components/ProductLandingPage";
 
 export const metadata: Metadata = {
-  title: "WhatsApp Website Widget — Chat Button for Your Site | Wazap",
+  title: "WhatsApp Website Widget — Chat Button for Your Site",
   description:
     "Add a WhatsApp chat button to your website. Choose the colour, position and label, then copy one embed snippet.",
   alternates: { canonical: "https://wazap.lt/whatsapp-website-widget" },
@@ -61,8 +61,8 @@ const content: ProductLandingContent = {
     { q: "Does the button work on mobile?", a: "Yes — tapping it opens a WhatsApp chat on mobile just as clicking it does on desktop." },
   ],
   crossLinks: [
-    { href: "/whatsapp-lead-routing", title: "WhatsApp lead routing", text: "Share incoming chats across your team in turn." },
-    { href: "/whatsapp-ad-tracking", title: "WhatsApp ad tracking", text: "See which ad or campaign is bringing in chats." },
+    { href: "/whatsapp-lead-routing", title: "WhatsApp lead routing", text: "Share incoming clicks across your team in turn." },
+    { href: "/whatsapp-ad-tracking", title: "WhatsApp ad tracking", text: "See which ad or campaign is bringing in clicks." },
     { href: "/whatsapp-short-links", title: "WhatsApp short links", text: "A short, branded link with click counts." },
   ],
 };

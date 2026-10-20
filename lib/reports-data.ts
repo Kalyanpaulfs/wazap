@@ -14,9 +14,10 @@ import { getActiveWorkspace } from "@/lib/workspaces";
 import { getAssetDirectory } from "@/lib/performance";
 import { salespersonName } from "@/lib/salesperson-names";
 import { PLAN_DISPLAY_NAME, normalizePlanKey, reportsTier, audienceAvailable, type ReportsTier } from "@/lib/plan-limits";
-import { summarizeAudience, type AudienceSummary } from "@/lib/audience";
+import { summarizeAudience, periodEndsBeforeAudienceTracking, type AudienceSummary } from "@/lib/audience";
 import {
   dayKeyInTz,
+  parseDateParam,
   resolveResultsSelection,
   describePeriodText,
   describeCompareText,
@@ -122,6 +123,7 @@ export type ResultsPageData =
       // FEAT-AUDIENCE: only populated on tier "full" plans (audienceAvailable
       // in lib/plan-limits.ts) - Solo's locked card needs no real data.
       audience: AudienceSummary | null;
+      audiencePeriodBeforeTracking: boolean;
       linkOptions: LinkOption[];
       todayInputValue: string;
       earliestCustomDate: string;
@@ -313,6 +315,9 @@ export async function getResultsPageData(
   // 20261021.sql) and are excluded rather than counted as "Unknown" - the
   // footnote on the card explains why older clicks don't show up here.
   const audience = audienceAvailable(plan) ? summarizeAudience(currentStarts.filter((item) => item.device !== null)) : null;
+  // Whether the selected period ends entirely before tracking started, in
+  // which case the card should explain that rather than say "no clicks yet".
+  const audiencePeriodBeforeTracking = periodEndsBeforeAudienceTracking(current.end, tz, now);
 
   const periodText = describePeriodText(selection);
   const compareText = describeCompareText(selection);
@@ -325,8 +330,12 @@ export async function getResultsPageData(
     topSalespersonName: topSalesperson?.name ?? null,
   });
 
-  const todayInputValue = toDateInputValue(now);
-  const earliestDate = new Date(now);
+  // Both bound the date-input `max`/`min` for the Custom range form - computed
+  // in `tz` (not UTC) so "today" matches what resolveResultsSelection itself
+  // treats as today for this visitor (e.g. just after local midnight in a
+  // zone ahead of UTC, when the UTC date is still yesterday).
+  const todayInputValue = dayKeyInTz(now, tz);
+  const earliestDate = parseDateParam(todayInputValue)!;
   earliestDate.setUTCFullYear(earliestDate.getUTCFullYear() - CUSTOM_RANGE_MAX_YEARS_BACK);
   const earliestCustomDate = toDateInputValue(earliestDate);
   const exportQuery = buildResultsExportQuery(selection, params.link ?? null);
@@ -340,6 +349,7 @@ export async function getResultsPageData(
     compareText,
     linkFilter,
     audience,
+    audiencePeriodBeforeTracking,
     linkOptions,
     todayInputValue,
     earliestCustomDate,

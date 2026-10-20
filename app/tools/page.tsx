@@ -51,8 +51,8 @@ export default async function ToolsPage() {
   if (session?.user) return <AllTools userId={(session.user as { id: string }).id} />;
 
   const tools = [
-    { href: "/tools/rotator", icon: RefreshCw, title: "Lead rotator", desc: "One link that shares chats across your team's numbers.", action: "Create rotator" },
-    { href: "/tools/ad-builder", icon: Megaphone, title: "Ad link builder", desc: "Track which ad or campaign brings WhatsApp chats.", action: "Build ad link" },
+    { href: "/tools/rotator", icon: RefreshCw, title: "Lead rotator", desc: "One link that shares clicks across your team's numbers.", action: "Create rotator" },
+    { href: "/tools/ad-builder", icon: Megaphone, title: "Ad link builder", desc: "Track which ad or campaign brings WhatsApp clicks.", action: "Build ad link" },
     { href: "/tools/shortlink", icon: Link2, title: "Tracked short links", desc: "A short custom link with click counts.", action: "Create short link" },
     { href: "/tools/widget", icon: Code2, title: "Website chat widget", desc: "Add a WhatsApp button to your website.", action: "Get widget" },
     { href: "/tools/link", icon: MessageCircle, title: "WhatsApp link builder", desc: "A simple wa.me link for one number, with a ready message.", action: "Build link" },
@@ -70,7 +70,7 @@ export default async function ToolsPage() {
             Start with one job
           </div>
           <h1 className="text-4xl sm:text-5xl font-bold text-white mb-3">WhatsApp Tools</h1>
-          <p className="mx-auto max-w-2xl text-slate-400 text-lg">Share WhatsApp chats across your team, track your links, and add WhatsApp to your website. Choose a tool below.</p>
+          <p className="mx-auto max-w-2xl text-slate-400 text-lg">Share WhatsApp clicks across your team, track your links, and add WhatsApp to your website. Choose a tool below.</p>
         </div>
 
         <div className="mx-auto grid max-w-5xl grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">

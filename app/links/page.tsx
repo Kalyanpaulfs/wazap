@@ -9,7 +9,7 @@ import { accountPlanLabel } from "@/lib/entitlements";
 import { getMyLinks, filterLinks, formatUsageLine, linkKindFromFilterParam, LINK_FILTER_PARAM, LINK_KIND_NAME } from "@/lib/my-links";
 import LinkRowActions from "./LinkRowActions";
 
-export const metadata = { title: "My links — Wazap", robots: { index: false, follow: false } };
+export const metadata = { title: "My links", robots: { index: false, follow: false } };
 
 export default async function MyLinksPage({
   searchParams,

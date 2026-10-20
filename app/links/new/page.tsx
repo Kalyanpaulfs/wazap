@@ -12,7 +12,7 @@ import { TOOL_ICONS } from "@/app/components/tool-icons";
 import { ToolCardLink, ToolComingSoonCard } from "@/app/components/ToolCard";
 import BackLink from "@/app/links/BackLink";
 
-export const metadata = { title: "Create a link — Wazap", robots: { index: false, follow: false } };
+export const metadata = { title: "Create a link", robots: { index: false, follow: false } };
 
 export default async function NewLinkPage() {
   const session = await getServerSession(authOptions);

@@ -8,7 +8,7 @@ import CustomerPaymentsPanel from "@/app/admin/crm/CustomerPaymentsPanel";
 import { ArrowLeft, ArrowUpRight, AlertTriangle, ExternalLink } from "lucide-react";
 
 export const metadata = {
-  title: "Customer Detail — Admin CRM — Wazap",
+  title: "Customer Detail — Admin CRM",
   robots: { index: false, follow: false },
 };
 

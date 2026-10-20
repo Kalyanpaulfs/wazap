@@ -3,7 +3,7 @@ import Link from "next/link";
 import { MessageCircle } from "lucide-react";
 
 export const metadata: Metadata = {
-  title: "Cookie Policy — Wazap",
+  title: "Cookie Policy",
   description: "Learn how Wazap uses required authentication cookies, optional consent-based analytics, and browser local storage for private tool preferences.",
   alternates: { canonical: "https://wazap.lt/cookie" },
 };

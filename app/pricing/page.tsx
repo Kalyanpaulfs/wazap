@@ -6,6 +6,8 @@ import FreePlanStrip from "./FreePlanStrip";
 import PricingViewTracker from "./PricingViewTracker";
 import { currentSubscriptionRecord } from "@/lib/subscription-record";
 import { getBillingSummary } from "@/lib/billing-summary";
+import { prisma } from "@/lib/prisma";
+import { isProductTrialActive, trialDaysLeft } from "@/lib/entitlements";
 
 export const metadata: Metadata = {
   title: "Pricing — WhatsApp Lead Router Plans",
@@ -50,6 +52,11 @@ export default async function PricingPage({
   const activeSubscription = sessionUserId ? await currentSubscriptionRecord(sessionUserId) : null;
   const billingPlanChangesEnabled = process.env.BILLING_PLAN_CHANGES_ENABLED === "true";
   const billingSummary = sessionUserId ? await getBillingSummary(sessionUserId) : null;
+  // BUG-6: the signed-in banner needs trial state here too, same as /billing.
+  const trialUser = sessionUserId
+    ? await prisma.user.findUnique({ where: { id: sessionUserId }, select: { plan: true, trialPlan: true, trialEndsAt: true } })
+    : null;
+  const trialInfo = trialUser && isProductTrialActive(trialUser) ? { plan: (trialUser.trialPlan || "basic").toLowerCase(), daysLeft: trialDaysLeft(trialUser) } : null;
   const userEmail = session?.user?.email ?? null;
   // Same rule as /api/payment/dodo/create: test_mode only outside production.
   const cardCheckoutEnabled =
@@ -84,6 +91,7 @@ export default async function PricingPage({
             selectedPlan={selectedPlan}
             activeSubscriptionPlan={activeSubscription?.plan || null}
             billingPlanChangesEnabled={billingPlanChangesEnabled}
+            trialInfo={trialInfo}
             billing={
               billingSummary
                 ? {

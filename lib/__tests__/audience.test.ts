@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { detectDevice, summarizeAudience } from "@/lib/audience";
+import { detectDevice, summarizeAudience, periodEndsBeforeAudienceTracking, AUDIENCE_TRACKING_START } from "@/lib/audience";
 
 const UA = {
   windowsChrome:
@@ -138,5 +138,35 @@ describe("summarizeAudience", () => {
   it("returns empty lists for no rows", () => {
     const summary = summarizeAudience([]);
     expect(summary).toEqual({ devices: [], os: [], countries: [], cities: [] });
+  });
+});
+
+describe("periodEndsBeforeAudienceTracking", () => {
+  const NOW = new Date("2026-10-25T12:00:00.000Z");
+
+  it(`is true for a period that ends well before ${AUDIENCE_TRACKING_START}`, () => {
+    // Period [Oct 1, Oct 11) - ends 10 days before tracking started.
+    expect(periodEndsBeforeAudienceTracking(new Date("2026-10-11T00:00:00.000Z"), "UTC", NOW)).toBe(true);
+  });
+
+  it("is false for a period that overlaps the tracking start date", () => {
+    // Period [Oct 1, Oct 26) - includes Oct 21 onward.
+    expect(periodEndsBeforeAudienceTracking(new Date("2026-10-26T00:00:00.000Z"), "UTC", NOW)).toBe(false);
+  });
+
+  it("is false for a period entirely after the tracking start date", () => {
+    expect(periodEndsBeforeAudienceTracking(new Date("2026-10-25T12:00:00.000Z"), "UTC", NOW)).toBe(false);
+  });
+
+  it("is true when the period ends exactly at tracking-start local midnight (the day before is the last included day)", () => {
+    expect(periodEndsBeforeAudienceTracking(new Date("2026-10-21T00:00:00.000Z"), "UTC", NOW)).toBe(true);
+  });
+
+  it("uses the visitor's tz, not UTC, to place the tracking-start boundary", () => {
+    // In Asia/Dubai (UTC+4), tracking-start local midnight is 2026-10-20T20:00Z.
+    // A period ending at 2026-10-20T21:00Z (after that instant) already overlaps Oct 21 Dubai time.
+    expect(periodEndsBeforeAudienceTracking(new Date("2026-10-20T21:00:00.000Z"), "Asia/Dubai", NOW)).toBe(false);
+    // A period ending right at 2026-10-20T20:00Z does not yet reach Oct 21 Dubai time.
+    expect(periodEndsBeforeAudienceTracking(new Date("2026-10-20T20:00:00.000Z"), "Asia/Dubai", NOW)).toBe(true);
   });
 });

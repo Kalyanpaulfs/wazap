@@ -5,6 +5,7 @@ import Link from "next/link";
 import WazapCardPayment from "./WazapCardPayment";
 import PlanChangeAction from "./PlanChangeAction";
 import { PLAN_PRICES } from "@/lib/billing";
+import { normalizePlanKey, PLAN_DISPLAY_NAME } from "@/lib/plan-limits";
 import { formatLocalPrice, useLocalization, usePricingText } from "@/app/pricing/local-price";
 
 const PLAN_RANK: Record<string, number> = { free: 0, basic: 1, pro: 2, ultimate: 3, business: 4 };
@@ -86,6 +87,34 @@ export default function PricingPlans({
       }`
     : null;
 
+  // Joseph audit #6 (21 Oct): the signed-in banner must not always say "choose a plan" - an
+  // account that already pays (subscription OR a manually granted plan,
+  // i.e. billing.accessActive on a non-free plan) or is mid free-trial gets
+  // its own sentence instead. "Switch plans below" is only offered when
+  // starting another plan from this grid is actually possible - the same
+  // condition that already gates the "manage your existing plan first"
+  // banner below (activeSubscriptionPlan && !managedByPlanChanges blocks it).
+  const canSwitchPlans = !(activeSubscriptionPlan && !managedByPlanChanges);
+  const normalizedBillingPlan = billing ? normalizePlanKey(billing.plan) : "free";
+  const activePaidPlan = !!billing && normalizedBillingPlan !== "free" && billing.accessActive;
+  const activePlanLabel = PLAN_DISPLAY_NAME[normalizedBillingPlan] || normalizedBillingPlan;
+  const signedInMessage = activePaidPlan
+    ? [
+        renewsOrExpiresAtLabel
+          ? text.onPlanUntil.replace("{plan}", activePlanLabel).replace("{date}", renewsOrExpiresAtLabel)
+          : text.onPlanNoDate.replace("{plan}", activePlanLabel),
+        canSwitchPlans ? text.switchPlansBelow : null,
+      ].filter(Boolean).join(" ")
+    : trialInfo
+    ? (() => {
+        const trialText = text.onTrial.replace("{days}", String(trialInfo.daysLeft));
+        // Templates spell out "{days} <word for days> left" rather than a
+        // separately-pluralized noun - only English's own copy gets the
+        // singular-day correction, every other language keeps its fixed word.
+        return localization.language === "en" && trialInfo.daysLeft === 1 ? trialText.replace("1 days left", "1 day left") : trialText;
+      })()
+    : text.choosePlan;
+
   return (
     <>
       <div className="mb-6 flex items-center justify-center gap-2 text-center text-xs text-slate-500">
@@ -127,7 +156,7 @@ export default function PricingPlans({
         <div className="rounded-2xl border border-slate-800 bg-[#111811] p-4 mb-6 flex items-center gap-3">
           <div className="w-2 h-2 rounded-full bg-[#25D366]" />
           <p className="text-sm text-slate-300">
-            Signed in as <span className="text-white font-medium">{userEmail}</span> — {text.choosePlan}
+            Signed in as <span className="text-white font-medium">{userEmail}</span> — {signedInMessage}
           </p>
         </div>
       )}

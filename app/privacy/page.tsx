@@ -3,7 +3,7 @@ import Link from "next/link";
 import { MessageCircle } from "lucide-react";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy — Wazap",
+  title: "Privacy Policy",
   description: "How Wazap handles browser-only Open Chat inputs, accounts, billing, analytics, saved leads, shared inbox records, AI, APIs, and workspace data.",
   alternates: { canonical: "https://wazap.lt/privacy" },
 };

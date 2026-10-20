@@ -3,7 +3,7 @@ import Link from "next/link";
 import { MessageCircle } from "lucide-react";
 
 export const metadata: Metadata = {
-  title: "Terms of Use — Wazap",
+  title: "Terms of Use",
   description: "Terms governing Wazap accounts, WhatsApp workflow tools, subscriptions, APIs, AI assistance, and marketplace packages.",
   alternates: { canonical: "https://wazap.lt/terms" },
 };

@@ -1,6 +1,11 @@
 import Link from "next/link";
 import { Lock, Monitor, Shield, Smartphone, Tablet, type LucideIcon } from "lucide-react";
-import { PRIVATE_NETWORK_LABEL, type AudienceRow, type AudienceSummary } from "@/lib/audience";
+import { AUDIENCE_TRACKING_START, PRIVATE_NETWORK_LABEL, type AudienceRow, type AudienceSummary } from "@/lib/audience";
+
+// "21 Oct 2026" from "2026-10-21", for the footnote and the before-tracking message.
+const TRACKING_START_LABEL = new Intl.DateTimeFormat("en", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }).format(
+  new Date(`${AUDIENCE_TRACKING_START}T00:00:00.000Z`)
+);
 
 // "Audience" section on /results (FEAT-AUDIENCE, Growth/Agency only): device,
 // OS, country and city of the people who click a customer's links. Follows
@@ -95,7 +100,17 @@ function RankedList({ title, rows }: { title: string; rows: AudienceRow[] }) {
   );
 }
 
-export function AudienceCard({ audience }: { audience: AudienceSummary }) {
+export function AudienceCard({
+  audience,
+  periodBeforeTracking,
+  last7dHref,
+}: {
+  audience: AudienceSummary;
+  /** The selected period ends entirely before AUDIENCE_TRACKING_START - there's no data to wait for, so skip the usual empty-state copy. */
+  periodBeforeTracking: boolean;
+  /** Where the "See the last 7 days" link should point (same period chip the chips row uses). */
+  last7dHref: string;
+}) {
   const total = audience.devices.reduce((sum, row) => sum + row.count, 0);
   const countryCount = audience.countries.filter((row) => row.code).length;
 
@@ -106,7 +121,14 @@ export function AudienceCard({ audience }: { audience: AudienceSummary }) {
         {total ? `${total} click${total === 1 ? "" : "s"} from ${countryCount} countr${countryCount === 1 ? "y" : "ies"} in this period` : "Who clicks your links"}
       </p>
 
-      {total === 0 ? (
+      {total === 0 && periodBeforeTracking ? (
+        <div className="mt-5 rounded-2xl border border-dashed border-slate-800 p-6 text-center text-sm text-slate-500">
+          <p>Audience tracking started on {TRACKING_START_LABEL}, so there&apos;s no device or location data for these dates.</p>
+          <Link href={last7dHref} className="mt-3 inline-flex font-semibold text-[#25D366] hover:underline">
+            See the last 7 days
+          </Link>
+        </div>
+      ) : total === 0 ? (
         <p className="mt-5 rounded-2xl border border-dashed border-slate-800 p-6 text-center text-sm text-slate-500">No clicks in this period yet. Share a link and the first visitors show up here.</p>
       ) : (
         <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-5">
@@ -130,7 +152,7 @@ export function AudienceCard({ audience }: { audience: AudienceSummary }) {
       )}
 
       <p className="mt-4 text-xs text-slate-600">
-        Counted from 21 Oct 2026. Older clicks have no device or location. City data by{" "}
+        Counted from {TRACKING_START_LABEL}. Older clicks have no device or location. City data by{" "}
         <a href="https://db-ip.com" target="_blank" rel="noopener noreferrer" className="underline hover:text-slate-400">
           DB-IP
         </a>

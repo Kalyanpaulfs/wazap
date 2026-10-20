@@ -8,7 +8,7 @@ import { kindFromCreatedType, buildCreatedUrl, type CreatedLinkType } from "@/li
 import BackLink from "@/app/links/BackLink";
 import CreatedActions from "./CreatedActions";
 
-export const metadata = { title: "Link created — Wazap", robots: { index: false, follow: false } };
+export const metadata = { title: "Link created", robots: { index: false, follow: false } };
 
 // Honest, per-type note about what happens if you use "Test it now" -
 // rotators actually route a live chat (and spend a trial lead), unlike a

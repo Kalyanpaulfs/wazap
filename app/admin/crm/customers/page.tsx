@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { listAdminCustomers } from "@/lib/admin-customers-service";
 
 export const metadata = {
-  title: "Customers — Admin CRM — Wazap",
+  title: "Customers — Admin CRM",
   robots: { index: false, follow: false },
 };
 

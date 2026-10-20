@@ -10,7 +10,7 @@ import { defaultCountryForUser } from "@/lib/default-country";
 import BackLink from "@/app/links/BackLink";
 import BrandForm from "./BrandForm";
 
-export const metadata = { title: "Create a brand link — Wazap", robots: { index: false, follow: false } };
+export const metadata = { title: "Create a brand link", robots: { index: false, follow: false } };
 
 export default async function NewBrandLinkPage({
   searchParams,

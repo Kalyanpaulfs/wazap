@@ -10,6 +10,13 @@ export const PRICING_TEXT: Record<SupportedLanguage, {
   choosePlan: string;
   subscribePaypal: string;
   subscribeCard: string;
+  // Signed-in banner on /pricing and /billing when the account already has
+  // an active plan or an active free trial (BUG-6) - {plan}/{date}/{days}
+  // are substituted in app/pricing/PricingPlans.tsx, never shown raw.
+  onPlanUntil: string;
+  onPlanNoDate: string;
+  switchPlansBelow: string;
+  onTrial: string;
 }> = {
   en: {
     detected: "Localized automatically",
@@ -21,6 +28,10 @@ export const PRICING_TEXT: Record<SupportedLanguage, {
     choosePlan: "choose a monthly plan below to unlock your account.",
     subscribePaypal: "Subscribe with PayPal",
     subscribeCard: "Subscribe by card",
+    onPlanUntil: "you're on {plan} until {date}.",
+    onPlanNoDate: "you're on {plan}.",
+    switchPlansBelow: "Switch plans below.",
+    onTrial: "you're on your free trial ({days} days left). Choose a plan below to keep your links running after it ends.",
   },
   ar: {
     detected: "تم التخصيص تلقائيا",
@@ -32,6 +43,10 @@ export const PRICING_TEXT: Record<SupportedLanguage, {
     choosePlan: "اختر خطة شهرية بالأسفل لتفعيل حسابك.",
     subscribePaypal: "اشترك عبر PayPal",
     subscribeCard: "اشترك بالبطاقة",
+    onPlanUntil: "أنت على خطة {plan} حتى {date}.",
+    onPlanNoDate: "أنت على خطة {plan}.",
+    switchPlansBelow: "غيّر الخطة أدناه.",
+    onTrial: "أنت في فترتك التجريبية المجانية (تبقّى {days} يومًا). اختر خطة أدناه لمواصلة تشغيل روابطك بعد انتهائها.",
   },
   es: {
     detected: "Localizado automáticamente",
@@ -43,6 +58,10 @@ export const PRICING_TEXT: Record<SupportedLanguage, {
     choosePlan: "elige un plan mensual abajo para desbloquear tu cuenta.",
     subscribePaypal: "Suscribirse con PayPal",
     subscribeCard: "Suscribirse con tarjeta",
+    onPlanUntil: "tienes el plan {plan} hasta el {date}.",
+    onPlanNoDate: "tienes el plan {plan}.",
+    switchPlansBelow: "Cambia de plan abajo.",
+    onTrial: "estás en tu prueba gratuita ({days} días restantes). Elige un plan abajo para que tus enlaces sigan funcionando cuando termine.",
   },
   fr: {
     detected: "Localisé automatiquement",
@@ -54,6 +73,10 @@ export const PRICING_TEXT: Record<SupportedLanguage, {
     choosePlan: "choisissez un forfait mensuel ci-dessous pour débloquer votre compte.",
     subscribePaypal: "S'abonner avec PayPal",
     subscribeCard: "S'abonner par carte",
+    onPlanUntil: "vous êtes sur le forfait {plan} jusqu'au {date}.",
+    onPlanNoDate: "vous êtes sur le forfait {plan}.",
+    switchPlansBelow: "Changez de forfait ci-dessous.",
+    onTrial: "vous êtes en essai gratuit ({days} jours restants). Choisissez un forfait ci-dessous pour que vos liens restent actifs après la fin de l'essai.",
   },
   de: {
     detected: "Automatisch lokalisiert",
@@ -65,6 +88,10 @@ export const PRICING_TEXT: Record<SupportedLanguage, {
     choosePlan: "wählen Sie unten einen Monatsplan, um Ihr Konto freizuschalten.",
     subscribePaypal: "Mit PayPal abonnieren",
     subscribeCard: "Mit Karte abonnieren",
+    onPlanUntil: "Sie sind im Tarif {plan} bis zum {date}.",
+    onPlanNoDate: "Sie sind im Tarif {plan}.",
+    switchPlansBelow: "Tarif unten wechseln.",
+    onTrial: "Sie befinden sich in Ihrer kostenlosen Testphase (noch {days} Tage). Wählen Sie unten einen Plan, damit Ihre Links nach Ablauf weiter funktionieren.",
   },
   pt: {
     detected: "Localizado automaticamente",
@@ -76,6 +103,10 @@ export const PRICING_TEXT: Record<SupportedLanguage, {
     choosePlan: "escolha um plano mensal abaixo para desbloquear sua conta.",
     subscribePaypal: "Assinar com PayPal",
     subscribeCard: "Assinar com cartão",
+    onPlanUntil: "você está no plano {plan} até {date}.",
+    onPlanNoDate: "você está no plano {plan}.",
+    switchPlansBelow: "Troque de plano abaixo.",
+    onTrial: "você está no seu teste gratuito ({days} dias restantes). Escolha um plano abaixo para manter seus links funcionando depois que ele terminar.",
   },
   it: {
     detected: "Localizzato automaticamente",
@@ -87,6 +118,10 @@ export const PRICING_TEXT: Record<SupportedLanguage, {
     choosePlan: "scegli un piano mensile qui sotto per sbloccare il tuo account.",
     subscribePaypal: "Abbonati con PayPal",
     subscribeCard: "Abbonati con carta",
+    onPlanUntil: "hai il piano {plan} fino al {date}.",
+    onPlanNoDate: "hai il piano {plan}.",
+    switchPlansBelow: "Cambia piano qui sotto.",
+    onTrial: "sei nella tua prova gratuita ({days} giorni rimanenti). Scegli un piano qui sotto per continuare a usare i link dopo la fine della prova.",
   },
   tr: {
     detected: "Otomatik yerelleştirildi",
@@ -98,6 +133,10 @@ export const PRICING_TEXT: Record<SupportedLanguage, {
     choosePlan: "hesabınızı açmak için aşağıdan aylık plan seçin.",
     subscribePaypal: "PayPal ile abone ol",
     subscribeCard: "Kart ile abone ol",
+    onPlanUntil: "{date} tarihine kadar {plan} planındasınız.",
+    onPlanNoDate: "{plan} planındasınız.",
+    switchPlansBelow: "Planı aşağıdan değiştirin.",
+    onTrial: "ücretsiz deneme sürenizdesiniz ({days} gün kaldı). Deneme bittikten sonra linklerinizin çalışmaya devam etmesi için aşağıdan bir plan seçin.",
   },
   hi: {
     detected: "अपने आप स्थानीय बनाया गया",
@@ -109,6 +148,10 @@ export const PRICING_TEXT: Record<SupportedLanguage, {
     choosePlan: "खाता अनलॉक करने के लिए नीचे मासिक प्लान चुनें.",
     subscribePaypal: "PayPal से सदस्यता लें",
     subscribeCard: "कार्ड से सदस्यता लें",
+    onPlanUntil: "आप {date} तक {plan} प्लान पर हैं.",
+    onPlanNoDate: "आप {plan} प्लान पर हैं.",
+    switchPlansBelow: "नीचे से प्लान बदलें.",
+    onTrial: "आप अपने फ्री ट्रायल पर हैं ({days} दिन बाकी हैं). ट्रायल खत्म होने के बाद भी अपने लिंक चलाते रहने के लिए नीचे से एक प्लान चुनें.",
   },
   id: {
     detected: "Dilokalkan otomatis",
@@ -120,6 +163,10 @@ export const PRICING_TEXT: Record<SupportedLanguage, {
     choosePlan: "pilih paket bulanan di bawah untuk membuka akun Anda.",
     subscribePaypal: "Berlangganan dengan PayPal",
     subscribeCard: "Berlangganan dengan kartu",
+    onPlanUntil: "Anda menggunakan paket {plan} sampai {date}.",
+    onPlanNoDate: "Anda menggunakan paket {plan}.",
+    switchPlansBelow: "Ganti paket di bawah.",
+    onTrial: "Anda sedang dalam masa uji coba gratis (sisa {days} hari). Pilih paket di bawah agar tautan Anda tetap aktif setelah masa uji coba berakhir.",
   },
   ru: {
     detected: "Автоматическая локализация",
@@ -131,6 +178,10 @@ export const PRICING_TEXT: Record<SupportedLanguage, {
     choosePlan: "выберите месячный план ниже, чтобы открыть доступ.",
     subscribePaypal: "Подписаться через PayPal",
     subscribeCard: "Подписаться картой",
+    onPlanUntil: "у вас план {plan} до {date}.",
+    onPlanNoDate: "у вас план {plan}.",
+    switchPlansBelow: "Сменить план ниже.",
+    onTrial: "у вас активен бесплатный пробный период (осталось {days} дн.). Выберите план ниже, чтобы ссылки продолжали работать после его окончания.",
   },
   zh: {
     detected: "已自动本地化",
@@ -142,73 +193,94 @@ export const PRICING_TEXT: Record<SupportedLanguage, {
     choosePlan: "在下方选择月度方案以解锁账户。",
     subscribePaypal: "使用 PayPal 订阅",
     subscribeCard: "使用银行卡订阅",
+    onPlanUntil: "您当前使用 {plan} 方案，有效期至 {date}。",
+    onPlanNoDate: "您当前使用 {plan} 方案。",
+    switchPlansBelow: "在下方更换方案。",
+    onTrial: "您正在免费试用（剩余 {days} 天）。请在下方选择方案，以便试用结束后链接继续可用。",
   },
   lv: {
     detected: "Automātiski lokalizēts", estimated: "Aptuvenā cena jūsu valstij", billedUsd: "Maksājums tiek veikts USD", month: "mēnesī",
     accountRequired: "Izveidojiet kontu pirms maksājuma", paymentMethods: "PayPal un kartes maksājumi ir pieejami pēc pierakstīšanās.", choosePlan: "izvēlieties mēneša plānu zemāk.", subscribePaypal: "Abonēt ar PayPal", subscribeCard: "Abonēt ar karti",
+    onPlanUntil: "jums ir {plan} plāns līdz {date}.", onPlanNoDate: "jums ir {plan} plāns.", switchPlansBelow: "Nomainiet plānu zemāk.", onTrial: "jums ir bezmaksas izmēģinājuma periods (atlikušas {days} dienas). Izvēlieties plānu zemāk, lai saites turpinātu darboties pēc tā beigām.",
   },
   ms: {
     detected: "Dilokalkan secara automatik", estimated: "Anggaran untuk negara anda", billedUsd: "Pembayaran dicaj dalam USD", month: "bulan",
     accountRequired: "Cipta akaun sebelum membayar", paymentMethods: "Pilihan PayPal dan kad dipaparkan selepas log masuk.", choosePlan: "pilih pelan bulanan di bawah.", subscribePaypal: "Langgan dengan PayPal", subscribeCard: "Langgan dengan kad",
+    onPlanUntil: "anda menggunakan pelan {plan} sehingga {date}.", onPlanNoDate: "anda menggunakan pelan {plan}.", switchPlansBelow: "Tukar pelan di bawah.", onTrial: "anda sedang dalam tempoh percubaan percuma ({days} hari lagi). Pilih pelan di bawah supaya pautan anda terus berfungsi selepas tamat.",
   },
   nl: {
     detected: "Automatisch gelokaliseerd", estimated: "Schatting voor uw land", billedUsd: "Afrekenen gebeurt in USD", month: "maand",
     accountRequired: "Maak een account voordat u betaalt", paymentMethods: "PayPal en kaartbetaling verschijnen na het inloggen.", choosePlan: "kies hieronder een maandabonnement.", subscribePaypal: "Abonneren met PayPal", subscribeCard: "Abonneren met kaart",
+    onPlanUntil: "u heeft het {plan}-abonnement tot {date}.", onPlanNoDate: "u heeft het {plan}-abonnement.", switchPlansBelow: "Wijzig abonnement hieronder.", onTrial: "u heeft nog een gratis proefperiode ({days} dagen resterend). Kies hieronder een abonnement zodat uw links na afloop blijven werken.",
   },
   ka: {
     detected: "ავტომატურად ლოკალიზებულია", estimated: "სავარაუდო ფასი თქვენი ქვეყნისთვის", billedUsd: "გადახდა ხდება USD-ში", month: "თვე",
     accountRequired: "გადახდამდე შექმენით ანგარიში", paymentMethods: "PayPal და ბარათით გადახდა გამოჩნდება შესვლის შემდეგ.", choosePlan: "აირჩიეთ თვიური გეგმა ქვემოთ.", subscribePaypal: "გამოწერა PayPal-ით", subscribeCard: "გამოწერა ბარათით",
+    onPlanUntil: "თქვენ გაქვთ {plan} გეგმა {date}-მდე.", onPlanNoDate: "თქვენ გაქვთ {plan} გეგმა.", switchPlansBelow: "შეცვალეთ გეგმა ქვემოთ.", onTrial: "თქვენ იმყოფებით უფასო საცდელ პერიოდში (დარჩენილია {days} დღე). აირჩიეთ გეგმა ქვემოთ, რათა ბმულები გაგრძელდეს მუშაობა ვადის გასვლის შემდეგ.",
   },
   ja: {
     detected: "自動的にローカライズされました", estimated: "お住まいの国での概算", billedUsd: "決済は米ドルで請求されます", month: "月",
     accountRequired: "お支払い前にアカウントを作成してください", paymentMethods: "ログイン後にPayPalとカード決済が表示されます。", choosePlan: "以下から月額プランを選択してください。", subscribePaypal: "PayPalで登録", subscribeCard: "カードで登録",
+    onPlanUntil: "{plan}プランをご利用中です（{date}まで）。", onPlanNoDate: "{plan}プランをご利用中です。", switchPlansBelow: "以下からプランを変更できます。", onTrial: "無料トライアル中です（残り{days}日）。トライアル終了後もリンクを使い続けるには、以下からプランを選択してください。",
   },
   fa: {
     detected: "به‌صورت خودکار بومی‌سازی شد", estimated: "برآورد برای کشور شما", billedUsd: "پرداخت به دلار آمریکا انجام می‌شود", month: "ماه",
     accountRequired: "پیش از پرداخت حساب بسازید", paymentMethods: "گزینه‌های PayPal و کارت پس از ورود نمایش داده می‌شوند.", choosePlan: "یک طرح ماهانه انتخاب کنید.", subscribePaypal: "اشتراک با PayPal", subscribeCard: "اشتراک با کارت",
+    onPlanUntil: "شما در طرح {plan} هستید تا {date}.", onPlanNoDate: "شما در طرح {plan} هستید.", switchPlansBelow: "طرح را از پایین تغییر دهید.", onTrial: "شما در دوره آزمایشی رایگان هستید ({days} روز باقی مانده). برای ادامه کار لینک‌ها پس از پایان دوره آزمایشی، از پایین یک طرح انتخاب کنید.",
   },
   ur: {
     detected: "خودکار طور پر مقامی بنایا گیا", estimated: "آپ کے ملک کے لیے تخمینہ", billedUsd: "ادائیگی امریکی ڈالر میں ہوگی", month: "ماہ",
     accountRequired: "ادائیگی سے پہلے اکاؤنٹ بنائیں", paymentMethods: "لاگ اِن کے بعد PayPal اور کارڈ کے اختیارات دکھائی دیں گے۔", choosePlan: "ذیل میں ماہانہ پلان منتخب کریں۔", subscribePaypal: "PayPal سے سبسکرائب کریں", subscribeCard: "کارڈ سے سبسکرائب کریں",
+    onPlanUntil: "آپ {plan} پلان پر ہیں {date} تک.", onPlanNoDate: "آپ {plan} پلان پر ہیں.", switchPlansBelow: "نیچے سے پلان تبدیل کریں.", onTrial: "آپ اپنے فری ٹرائل پر ہیں ({days} دن باقی ہیں). ٹرائل ختم ہونے کے بعد بھی اپنے لنکس چلانے کے لیے نیچے سے ایک پلان منتخب کریں.",
   },
   bn: {
     detected: "স্বয়ংক্রিয়ভাবে স্থানীয় করা হয়েছে", estimated: "আপনার দেশের জন্য আনুমানিক", billedUsd: "চেকআউট USD-তে বিল করা হয়", month: "মাস",
     accountRequired: "পেমেন্টের আগে অ্যাকাউন্ট তৈরি করুন", paymentMethods: "লগইনের পরে PayPal ও কার্ড অপশন দেখা যাবে।", choosePlan: "নিচে মাসিক প্ল্যান বেছে নিন।", subscribePaypal: "PayPal দিয়ে সাবস্ক্রাইব করুন", subscribeCard: "কার্ড দিয়ে সাবস্ক্রাইব করুন",
+    onPlanUntil: "আপনি {date} পর্যন্ত {plan} প্ল্যানে আছেন.", onPlanNoDate: "আপনি {plan} প্ল্যানে আছেন.", switchPlansBelow: "নিচে থেকে প্ল্যান পরিবর্তন করুন.", onTrial: "আপনি আপনার ফ্রি ট্রায়ালে আছেন ({days} দিন বাকি). ট্রায়াল শেষ হওয়ার পরেও লিংক সচল রাখতে নিচে থেকে একটি প্ল্যান বেছে নিন.",
   },
   pl: {
     detected: "Automatycznie zlokalizowano", estimated: "Szacunkowo dla Twojego kraju", billedUsd: "Płatność jest rozliczana w USD", month: "miesiąc",
     accountRequired: "Utwórz konto przed płatnością", paymentMethods: "PayPal i karta są dostępne po zalogowaniu.", choosePlan: "wybierz plan miesięczny poniżej.", subscribePaypal: "Subskrybuj przez PayPal", subscribeCard: "Subskrybuj kartą",
+    onPlanUntil: "masz plan {plan} do {date}.", onPlanNoDate: "masz plan {plan}.", switchPlansBelow: "Zmień plan poniżej.", onTrial: "jesteś w bezpłatnym okresie próbnym (zostało {days} dni). Wybierz plan poniżej, aby Twoje linki działały dalej po jego zakończeniu.",
   },
   cs: {
     detected: "Automaticky lokalizováno", estimated: "Odhad pro vaši zemi", billedUsd: "Platba je účtována v USD", month: "měsíc",
     accountRequired: "Před platbou si vytvořte účet", paymentMethods: "PayPal a platba kartou se zobrazí po přihlášení.", choosePlan: "vyberte si měsíční tarif.", subscribePaypal: "Předplatit přes PayPal", subscribeCard: "Předplatit kartou",
+    onPlanUntil: "máte tarif {plan} do {date}.", onPlanNoDate: "máte tarif {plan}.", switchPlansBelow: "Změnit tarif níže.", onTrial: "jste ve zkušební verzi zdarma (zbývá {days} dní). Vyberte si tarif níže, aby vaše odkazy fungovaly i po jejím konci.",
   },
   ro: {
     detected: "Localizat automat", estimated: "Estimare pentru țara ta", billedUsd: "Plata este facturată în USD", month: "lună",
     accountRequired: "Creează un cont înainte de plată", paymentMethods: "PayPal și plata cu cardul apar după autentificare.", choosePlan: "alege un plan lunar mai jos.", subscribePaypal: "Abonează-te cu PayPal", subscribeCard: "Abonează-te cu cardul",
+    onPlanUntil: "ai planul {plan} până la {date}.", onPlanNoDate: "ai planul {plan}.", switchPlansBelow: "Schimbă planul mai jos.", onTrial: "ești în perioada de probă gratuită (au mai rămas {days} zile). Alege un plan mai jos ca linkurile tale să continue să funcționeze după ce se termină.",
   },
   uk: {
     detected: "Автоматично локалізовано", estimated: "Орієнтовно для вашої країни", billedUsd: "Оплата стягується в USD", month: "місяць",
     accountRequired: "Створіть обліковий запис перед оплатою", paymentMethods: "PayPal і картка доступні після входу.", choosePlan: "виберіть місячний план нижче.", subscribePaypal: "Підписатися через PayPal", subscribeCard: "Підписатися карткою",
+    onPlanUntil: "у вас план {plan} до {date}.", onPlanNoDate: "у вас план {plan}.", switchPlansBelow: "Змінити план нижче.", onTrial: "у вас активний безкоштовний пробний період (залишилось {days} дн.). Виберіть план нижче, щоб посилання продовжували працювати після його завершення.",
   },
   ko: {
     detected: "자동으로 현지화됨", estimated: "거주 국가 기준 예상 금액", billedUsd: "결제는 USD로 청구됩니다", month: "월",
     accountRequired: "결제 전에 계정을 만드세요", paymentMethods: "로그인 후 PayPal과 카드 결제가 표시됩니다.", choosePlan: "아래에서 월간 요금제를 선택하세요.", subscribePaypal: "PayPal로 구독", subscribeCard: "카드로 구독",
+    onPlanUntil: "{plan} 플랜을 이용 중입니다 ({date}까지).", onPlanNoDate: "{plan} 플랜을 이용 중입니다.", switchPlansBelow: "아래에서 플랜을 변경하세요.", onTrial: "무료 체험 중입니다 ({days}일 남음). 체험이 끝난 후에도 링크를 계속 사용하려면 아래에서 플랜을 선택하세요.",
   },
   th: {
     detected: "ปรับภาษาอัตโนมัติแล้ว", estimated: "ราคาโดยประมาณสำหรับประเทศของคุณ", billedUsd: "ชำระเงินจริงเป็น USD", month: "เดือน",
     accountRequired: "สร้างบัญชีก่อนชำระเงิน", paymentMethods: "ตัวเลือก PayPal และบัตรจะแสดงหลังเข้าสู่ระบบ", choosePlan: "เลือกแผนรายเดือนด้านล่าง", subscribePaypal: "สมัครด้วย PayPal", subscribeCard: "สมัครด้วยบัตร",
+    onPlanUntil: "คุณใช้แพ็กเกจ {plan} จนถึง {date}", onPlanNoDate: "คุณใช้แพ็กเกจ {plan}", switchPlansBelow: "เปลี่ยนแพ็กเกจด้านล่าง", onTrial: "คุณอยู่ในช่วงทดลองใช้ฟรี (เหลือ {days} วัน) เลือกแพ็กเกจด้านล่างเพื่อให้ลิงก์ของคุณยังใช้งานได้ต่อหลังจากทดลองใช้สิ้นสุด",
   },
   vi: {
     detected: "Đã tự động bản địa hóa", estimated: "Ước tính cho quốc gia của bạn", billedUsd: "Thanh toán được tính bằng USD", month: "tháng",
     accountRequired: "Tạo tài khoản trước khi thanh toán", paymentMethods: "PayPal và thẻ hiển thị sau khi đăng nhập.", choosePlan: "chọn gói hàng tháng bên dưới.", subscribePaypal: "Đăng ký bằng PayPal", subscribeCard: "Đăng ký bằng thẻ",
+    onPlanUntil: "bạn đang dùng gói {plan} đến {date}.", onPlanNoDate: "bạn đang dùng gói {plan}.", switchPlansBelow: "Đổi gói ở dưới.", onTrial: "bạn đang trong thời gian dùng thử miễn phí (còn {days} ngày). Chọn một gói ở dưới để liên kết của bạn tiếp tục hoạt động sau khi hết thời gian dùng thử.",
   },
   sw: {
     detected: "Imebadilishwa kiotomatiki", estimated: "Makadirio kwa nchi yako", billedUsd: "Malipo yanatozwa kwa USD", month: "mwezi",
     accountRequired: "Fungua akaunti kabla ya kulipa", paymentMethods: "PayPal na kadi huonekana baada ya kuingia.", choosePlan: "chagua mpango wa kila mwezi hapa chini.", subscribePaypal: "Jiunge kwa PayPal", subscribeCard: "Jiunge kwa kadi",
+    onPlanUntil: "unatumia mpango wa {plan} hadi {date}.", onPlanNoDate: "unatumia mpango wa {plan}.", switchPlansBelow: "Badilisha mpango hapa chini.", onTrial: "uko kwenye kipindi chako cha majaribio bure (siku {days} zilizobaki). Chagua mpango hapa chini ili viungo vyako viendelee kufanya kazi baada ya kipindi hicho kuisha.",
   },
   fil: {
     detected: "Awtomatikong isinalokalisa", estimated: "Tantya para sa iyong bansa", billedUsd: "USD ang sisingilin sa checkout", month: "buwan",
     accountRequired: "Gumawa ng account bago magbayad", paymentMethods: "Makikita ang PayPal at card pagkatapos mag-sign in.", choosePlan: "pumili ng buwanang plano sa ibaba.", subscribePaypal: "Mag-subscribe gamit ang PayPal", subscribeCard: "Mag-subscribe gamit ang card",
+    onPlanUntil: "nasa plano kang {plan} hanggang {date}.", onPlanNoDate: "nasa plano kang {plan}.", switchPlansBelow: "Palitan ang plano sa ibaba.", onTrial: "nasa libreng pagsubok ka ({days} araw na natitira). Pumili ng plano sa ibaba para patuloy na gumana ang iyong mga link pagkatapos ng pagsubok.",
   },
 };

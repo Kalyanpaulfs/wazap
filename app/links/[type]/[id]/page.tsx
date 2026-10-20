@@ -18,7 +18,7 @@ import { salespersonName } from "@/lib/salesperson-names";
 import { defaultCountryForUser } from "@/lib/default-country";
 import LinkDetailsClient from "./LinkDetailsClient";
 
-export const metadata = { title: "Link details — Wazap", robots: { index: false, follow: false } };
+export const metadata = { title: "Link details", robots: { index: false, follow: false } };
 
 const DAY = 86_400_000;
 

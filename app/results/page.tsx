@@ -15,7 +15,7 @@ import TzSync from "@/app/results/TzSync";
 import LinkFilterSelect from "@/app/results/LinkFilterSelect";
 import { AudienceCard, AudienceCardLocked } from "@/app/results/AudienceCard";
 
-export const metadata = { title: "Results — Wazap", robots: { index: false, follow: false } };
+export const metadata = { title: "Results", robots: { index: false, follow: false } };
 
 type Tab = "overview" | "salesperson" | "source" | "link";
 const TAB_KEYS: Tab[] = ["overview", "salesperson", "source", "link"];
@@ -588,7 +588,15 @@ export default async function ResultsPage({
           )
         )}
 
-        {data.audience ? <AudienceCard audience={data.audience} /> : <AudienceCardLocked />}
+        {data.audience ? (
+          <AudienceCard
+            audience={data.audience}
+            periodBeforeTracking={data.audiencePeriodBeforeTracking}
+            last7dHref={hrefFor({ period: "7d", from: undefined, to: undefined })}
+          />
+        ) : (
+          <AudienceCardLocked />
+        )}
       </div>
     </main>
   );
