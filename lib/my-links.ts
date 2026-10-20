@@ -103,6 +103,23 @@ export function statusLabel(paused: boolean, kind: LinkKind, plan: string): stri
   return `Paused: ${derivePauseReason(kind, plan)}`;
 }
 
+/**
+ * True when the owner's CURRENT plan/trial can't route this link kind at
+ * all - a lapsed trial/plan (every kind), or a plan that never offered ad
+ * links. This is a live read of `plan` (lib/router-entitlements.ts
+ * linkPlan), not the stored planPausedAt flag a cron sets - so My links can
+ * show "Paused" the instant a trial/plan lapses, before that cron next
+ * runs, the same way app/r, app/w and app/a already decide live at click
+ * time (canRouteLinks / adLinksAvailable). It deliberately does NOT cover
+ * "this plan's pool shrank and this link lost the ranking" - only the
+ * pause-sync cron decides which specific links lose that ranking.
+ */
+export function planCannotRouteKind(kind: LinkKind, plan: string): boolean {
+  if (normalizePlanKey(plan) === "free") return true;
+  if (kind === "adlink" && !adLinksAvailable(plan)) return true;
+  return false;
+}
+
 // Manual pause (owner feature request): the customer pauses/resumes their
 // own link independent of planPausedAt (lib/plan-limit-sync.ts never reads
 // or writes this - see RotatorLink.pausedAt in prisma/schema.prisma). When
@@ -111,7 +128,7 @@ export function statusLabel(paused: boolean, kind: LinkKind, plan: string): stri
 // WHY it's really off. `pausedAt` on its own (not plan-paused) shows the
 // distinct "⏸ Paused by you" status everywhere a customer sees it.
 export function combinedStatusText(planPausedAt: unknown, pausedAt: unknown, kind: LinkKind, plan: string): string {
-  if (planPausedAt) return statusLabel(true, kind, plan);
+  if (planPausedAt || planCannotRouteKind(kind, plan)) return statusLabel(true, kind, plan);
   if (pausedAt) return "⏸ Paused by you";
   return "Live";
 }
@@ -171,7 +188,7 @@ export function mergeLinks(
       addressDisplay: addressDisplay(origin, "rotator", r.code),
       publicUrl: buildPublicUrl(origin, "rotator", { code: r.code }),
       metric: r.totalClicks,
-      paused: Boolean(r.planPausedAt) || Boolean(r.pausedAt),
+      paused: Boolean(r.planPausedAt) || Boolean(r.pausedAt) || planCannotRouteKind("rotator", plan),
       manuallyPaused: Boolean(r.pausedAt),
       statusText: combinedStatusText(r.planPausedAt, r.pausedAt, "rotator", plan),
       editHref: linkDetailsHref("rotator", r.id),
@@ -184,7 +201,7 @@ export function mergeLinks(
       addressDisplay: addressDisplay(origin, "shortlink", s.code),
       publicUrl: buildPublicUrl(origin, "shortlink", { code: s.code }),
       metric: s.clicks,
-      paused: Boolean(s.planPausedAt) || Boolean(s.pausedAt),
+      paused: Boolean(s.planPausedAt) || Boolean(s.pausedAt) || planCannotRouteKind("shortlink", plan),
       manuallyPaused: Boolean(s.pausedAt),
       statusText: combinedStatusText(s.planPausedAt, s.pausedAt, "shortlink", plan),
       editHref: linkDetailsHref("shortlink", s.id),
@@ -197,7 +214,7 @@ export function mergeLinks(
       addressDisplay: addressDisplay(origin, "adlink", a.id),
       publicUrl: buildPublicUrl(origin, "adlink", { id: a.id, number: a.number, message: a.message }),
       metric: a.clicks,
-      paused: Boolean(a.planPausedAt) || Boolean(a.pausedAt),
+      paused: Boolean(a.planPausedAt) || Boolean(a.pausedAt) || planCannotRouteKind("adlink", plan),
       manuallyPaused: Boolean(a.pausedAt),
       statusText: combinedStatusText(a.planPausedAt, a.pausedAt, "adlink", plan),
       editHref: linkDetailsHref("adlink", a.id),

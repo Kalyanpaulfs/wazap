@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { AlertTriangle, ArrowRight, Crown, MessageCircle, Plus } from "lucide-react";
-import { linkPlan, routerQuota, TRIAL_ROUTED_LEADS } from "@/lib/router-entitlements";
+import { linkPlan, routerQuota, TRIAL_METERED_ASSET_TYPES, TRIAL_ROUTED_LEADS } from "@/lib/router-entitlements";
 import { getPlanDaysLeft, isPlanExpired } from "@/lib/billing";
 import { downgradeIfExpired } from "@/lib/billing-expiry";
 import { notifySupportReplySeen } from "@/lib/support-notify";
@@ -46,12 +46,12 @@ export default async function DashboardPage({
   const sessionPlan = sessionUser.plan ?? "free";
   const userEmail = (session.user.email ?? "").toLowerCase();
 
-  const [user, supportMessages, billingSummary, marketingLead, rotatorLeadsUsed] = await Promise.all([
+  const [user, supportMessages, billingSummary, marketingLead, trialLeadsUsed] = await Promise.all([
     prisma.user.findUnique({ where: { id: userId } }),
     Promise.resolve([] as import("@prisma/client").ContactMessage[]), // Guest enquiries need independently verified ownership.
     getBillingSummary(userId),
     prisma.crmLead.findUnique({ where: { email: userEmail }, select: { marketingStatus: true, doNotContact: true, emailSuppressedAt: true } }),
-    prisma.conversationStart.count({ where: { userId, assetType: "rotator" } }),
+    prisma.conversationStart.count({ where: { userId, assetType: { in: [...TRIAL_METERED_ASSET_TYPES] } } }),
   ]);
 
   const showConsentBanner = shouldShowConsentBanner({ isAdmin: sessionUser.isAdmin, marketingOptOutAt: user?.marketingOptOutAt ?? null, lead: marketingLead });
@@ -94,7 +94,7 @@ export default async function DashboardPage({
   const inTrial = isProductTrialActive(user);
   const productTrialDaysLeft = trialDaysLeft(user);
   const trialEnded = plan === "free" && !inTrial;
-  const routerQuotaInfo = routerQuota(user, rotatorLeadsUsed);
+  const routerQuotaInfo = routerQuota(user, trialLeadsUsed);
   // Trial still active by date, but the 100 routed leads are used up -
   // distinct from a trial that has actually ended (trialEnded above).
   const trialCapHit = inTrial && !routerQuotaInfo.allowed;

@@ -12,7 +12,7 @@ const headers={"Cache-Control":"no-store"};
 export async function GET(req:Request){
  if(!await admin())return NextResponse.json({error:"Forbidden"},{status:403});
  const params=new URL(req.url).searchParams;const id=crmText(params.get("id"));
- if(id){const lead=await prisma.crmLead.findUnique({where:{id},include:{activities:{orderBy:{createdAt:"desc"},take:100},tasks:{orderBy:[{completedAt:"asc"},{dueAt:"asc"}],take:100},conversations:{orderBy:{lastMessageAt:"desc"},take:20,select:{id:true,name:true,email:true,phone:true,status:true,lastMessageAt:true,messages:{orderBy:{createdAt:"asc"},take:100}}}}});return lead?NextResponse.json({lead},{headers}):NextResponse.json({error:"Contact not found."},{status:404});}
+ if(id){const lead=await prisma.crmLead.findUnique({where:{id},include:{activities:{orderBy:{createdAt:"desc"},take:100},tasks:{orderBy:[{completedAt:"asc"},{dueAt:"asc"}],take:100}}});if(!lead)return NextResponse.json({error:"Contact not found."},{status:404});const tickets=await prisma.supportTicket.findMany({where:{conversation:{crmLeadId:id}},orderBy:{createdAt:"desc"},take:20,select:{id:true,number:true,topic:true,status:true,createdAt:true}});return NextResponse.json({lead:{...lead,tickets}},{headers});}
  const query=crmText(params.get("q"),100);const stage=crmText(params.get("stage"));const owner=crmText(params.get("owner"));const due=params.get("due")==="1";const page=Math.max(1,Math.min(10000,Math.floor(Number(params.get("page")))||1));
  const permission=crmText(params.get("permission"));const tag=crmText(params.get("tag"),40).toLowerCase();
  const trash=params.get("trash")==="1";const visibility:Prisma.CrmLeadWhereInput=trash?{tags:{has:CRM_TRASH_TAG}}:activeCrmContacts;

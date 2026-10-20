@@ -4,6 +4,12 @@ export {CRM_TRASH_TAG} from "./crm-trash-ui";
 const PRIOR_DNC_TAG="__crm_prior_do_not_contact";
 export const activeCrmContacts:Prisma.CrmLeadWhereInput={NOT:{tags:{has:CRM_TRASH_TAG}}};
 export function isCrmTrashed(lead:{tags:string[]}){return lead.tags.includes(CRM_TRASH_TAG);}
+// For a model with an optional `crmLead` relation (e.g. SupportConversation):
+// matches rows with no lead at all, or whose lead isn't trashed. A plain
+// `{crmLead: activeCrmContacts}` would wrongly exclude the no-lead case,
+// since filtering a nullable to-one relation by an object requires the
+// relation to exist.
+export const activeConversationContacts:Prisma.SupportConversationWhereInput={OR:[{crmLeadId:null},{crmLead:activeCrmContacts}]};
 export async function changeCrmTrash(tx:Prisma.TransactionClient,input:{id:string;updatedAt:Date;actorId:string;restore:boolean;reason:string}){
  const current=await tx.crmLead.findUnique({where:{id:input.id}});
  if(!current)return "missing";

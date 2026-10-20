@@ -81,7 +81,13 @@ export const NUMBERS_PER_ROTATOR_LIMITS: Record<PlanKey, number> = { free: 0, ba
 // count toward LINK_LIMITS nor can be created, regardless of pool room.
 export const AD_LINKS_AVAILABLE: Record<PlanKey, boolean> = { free: false, basic: false, pro: true, ultimate: true };
 
-export const WIDGET_AVAILABLE: Record<PlanKey, boolean> = { free: false, basic: true, pro: true, ultimate: true };
+// Owner decision: the website button (widget) is free and unlimited for
+// everyone, including the "free" plan with no active trial - it does not
+// gate on plan at all. Kept as a lookup (rather than deleting
+// widgetAvailable/WIDGET_AVAILABLE outright) since every call site below
+// still reads through it, so there is one place to flip this back if that
+// ever changes.
+export const WIDGET_AVAILABLE: Record<PlanKey, boolean> = { free: true, basic: true, pro: true, ultimate: true };
 
 export type ReportsTier = "none" | "basic" | "full";
 export const REPORTS_TIER: Record<PlanKey, ReportsTier> = { free: "none", basic: "basic", pro: "full", ultimate: "full" };

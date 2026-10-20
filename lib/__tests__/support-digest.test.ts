@@ -17,7 +17,7 @@ describe("support daily digest", () => {
   it("lists every waiting customer in one email, oldest first", () => {
     const digest = buildSupportDigest({
       waiting: [
-        { kind: "chat", name: "Ravi", email: "ravi@example.com", waitingSince: "2026-10-19T18:00:00Z" },
+        { kind: "ticket", name: "Ravi", email: "ravi@example.com", topic: "#A1B2C3 Payment", waitingSince: "2026-10-19T18:00:00Z" },
         { kind: "request", name: "Ana", email: "ana@example.com", topic: "billing", waitingSince: "2026-10-15T06:00:00Z" },
       ],
       mailboxProblems: [],
@@ -26,7 +26,7 @@ describe("support daily digest", () => {
     })!;
     expect(digest.subject).toBe("Wazap support: 2 customers waiting for a reply");
     expect(digest.message).toContain("1. Ana <ana@example.com> - Contact form: billing - waiting 5 days");
-    expect(digest.message).toContain("2. Ravi <ravi@example.com> - Live chat - waiting 12 hours");
+    expect(digest.message).toContain("2. Ravi <ravi@example.com> - Ticket #A1B2C3 Payment - waiting 12 hours");
     expect(digest.message).toContain("Service emails that failed to send: 2");
   });
 

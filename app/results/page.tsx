@@ -6,7 +6,7 @@ import { BarChart3, Check, Download, Link2, Lock, TrendingUp, Users, Zap } from 
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { PLAN_PRICES } from "@/lib/billing";
-import { routerQuota, TRIAL_ROUTED_LEADS } from "@/lib/router-entitlements";
+import { routerQuota, TRIAL_METERED_ASSET_TYPES, TRIAL_ROUTED_LEADS } from "@/lib/router-entitlements";
 import { accountPlanLabel, isProductTrialActive, trialDaysLeft } from "@/lib/entitlements";
 import { renameLinkTypeLabel, linkDetailsHref } from "@/lib/my-links";
 import { getResultsPageData, type ResultsPageData } from "@/lib/reports-data";
@@ -73,13 +73,13 @@ export default async function ResultsPage({
   const cookieStore = await cookies();
   const tz = sanitizeTimeZone(cookieStore.get("tz")?.value);
 
-  const [resultsData, routerUser, rotatorLeadsUsed] = await Promise.all([
+  const [resultsData, routerUser, trialLeadsUsed] = await Promise.all([
     getResultsPageData(userId, plan, { period: sp.period, from: sp.from, to: sp.to, compare: sp.compare, link: sp.link }, tz),
     prisma.user.findUnique({
       where: { id: userId },
       select: { plan: true, planExpiresAt: true, trialPlan: true, trialEndsAt: true, createdAt: true },
     }),
-    prisma.conversationStart.count({ where: { userId, assetType: "rotator" } }),
+    prisma.conversationStart.count({ where: { userId, assetType: { in: [...TRIAL_METERED_ASSET_TYPES] } } }),
   ]);
 
   if (resultsData.tier === "none") {
@@ -132,7 +132,7 @@ export default async function ResultsPage({
   const { selection, tier } = data;
   const now = new Date();
   const onActiveTrial = isProductTrialActive(routerUser, now);
-  const quota = routerQuota(routerUser, rotatorLeadsUsed, now);
+  const quota = routerQuota(routerUser, trialLeadsUsed, now);
   const routingBlocked = onActiveTrial && !quota.allowed;
   const planName = accountPlanLabel(routerUser, now);
 

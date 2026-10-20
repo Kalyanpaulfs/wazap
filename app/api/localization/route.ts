@@ -43,6 +43,10 @@ const TIMEZONE_COUNTRY: Record<string, string> = {
   "America/Los_Angeles": "US",
   "America/Toronto": "CA",
   "Asia/Kolkata": "IN",
+  // Older IANA names some systems (e.g. Windows) still report.
+  "Asia/Calcutta": "IN",
+  "Asia/Saigon": "VN",
+  "Europe/Kiev": "UA",
   "Asia/Singapore": "SG",
   "Asia/Jakarta": "ID",
   "Asia/Manila": "PH",

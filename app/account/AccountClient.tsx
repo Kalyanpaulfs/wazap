@@ -4,6 +4,9 @@ import { useCallback, useState } from "react";
 import Link from "next/link";
 import EmailCodeConfirm from "@/app/components/EmailCodeConfirm";
 import { Download, Mail, RotateCcw, ShieldAlert, Trash2 } from "lucide-react";
+import { PLAN_NAMES } from "@/lib/billing";
+
+const BILLING_METHOD_LABEL: Record<string, string> = { dodo: "Dodo", paypal: "PayPal" };
 
 export type Lifecycle = {
   requestedAt: string | null;
@@ -148,7 +151,11 @@ export default function AccountClient({ initial, marketing }: { initial: Lifecyc
                 <div className="mt-4 rounded-xl border border-amber-400/20 bg-amber-400/5 p-4 text-sm text-amber-100">
                   <div className="flex items-center gap-2 font-semibold"><ShieldAlert className="h-4 w-4" /> Resolve these protections first</div>
                   {data.blockers.billing && (
-                    <p className="mt-2">Cancel the active {data.blockers.billing.method} {data.blockers.billing.plan} subscription from the dashboard billing controls.</p>
+                    <p className="mt-2">
+                      Your {PLAN_NAMES[data.blockers.billing.plan] ?? data.blockers.billing.plan} plan still auto-renews
+                      ({BILLING_METHOD_LABEL[data.blockers.billing.method] ?? data.blockers.billing.method}). Turn off
+                      auto-pay in Plan &amp; billing first, then come back to close your account.
+                    </p>
                   )}
                   <div className="mt-3 flex gap-4">
                     <Link href="/billing" className="font-semibold text-[#25D366]">Billing controls →</Link>

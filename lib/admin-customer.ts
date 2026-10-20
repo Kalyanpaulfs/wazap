@@ -84,9 +84,13 @@ export function computeUsageVsLimits(
       available: adOk,
       label: adOk ? "Available" : "Not available on this plan",
     },
+    // Owner decision: the website button is free and unlimited on every
+    // plan, including free - widgetOk is always true (see
+    // lib/plan-limits.ts WIDGET_AVAILABLE), kept as a lookup for symmetry
+    // with the other rows here.
     widget: {
       available: widgetOk,
-      label: widgetOk ? "Included in plan" : "Not included in free plan",
+      label: "Free for every plan",
     },
   };
 }

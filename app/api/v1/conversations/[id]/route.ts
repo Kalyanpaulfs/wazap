@@ -1,12 +1,20 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { abandonApiMutation,authenticateApi,beginApiMutation,enqueueWebhookEvent,finishApiMutation,logApiRequest,replayApiMutation } from "@/lib/developer-platform";
-function err(s:number,c:string,m:string,requestId?:string){return NextResponse.json({error:{code:c,message:m},meta:requestId?{requestId}:undefined},{status:s})}
-export async function GET(req:Request,{params}:{params:Promise<{id:string}>}){const auth=await authenticateApi(req,"conversations:read");if(!auth.context)return err(auth.error!.status,auth.error!.code,auth.error!.message);const ctx=auth.context,{id}=await params;const item=await prisma.inboxConversation.findFirst({where:{id,workspaceId:ctx.workspaceId},include:{messages:{orderBy:{sentAt:"asc"},take:200},notes:{orderBy:{createdAt:"desc"},take:50},tasks:{orderBy:{createdAt:"desc"},take:50}}});if(!item){await logApiRequest(ctx,req,404,"not_found");return err(404,"not_found","Conversation not found.",ctx.requestId)}await logApiRequest(ctx,req,200);return NextResponse.json({data:item,meta:{requestId:ctx.requestId}})}
-export async function PATCH(req:Request,{params}:{params:Promise<{id:string}>}){
-  const auth=await authenticateApi(req,"conversations:write");if(!auth.context)return err(auth.error!.status,auth.error!.code,auth.error!.message);const ctx=auth.context,{id}=await params;
-  const current=await prisma.inboxConversation.findFirst({where:{id,workspaceId:ctx.workspaceId}});if(!current){await logApiRequest(ctx,req,404,"not_found");return err(404,"not_found","Conversation not found.",ctx.requestId)}
-  const body=await req.json().catch(()=>({})),status=["open","pending","resolved"].includes(body.status)?body.status:undefined,priority=["low","normal","high","urgent"].includes(body.priority)?body.priority:undefined;
-  const mutation=await beginApiMutation(req,ctx,body);if(mutation.state==="error"){await logApiRequest(ctx,req,mutation.status,mutation.code);return err(mutation.status,mutation.code,mutation.message,ctx.requestId)}if(mutation.state==="replay"){await logApiRequest(ctx,req,mutation.statusCode,"idempotent_replay");return NextResponse.json(replayApiMutation(mutation,ctx.requestId),{status:mutation.statusCode})}
-  try{const updated=await prisma.inboxConversation.update({where:{id},data:{...(status?{status,resolvedAt:status==="resolved"?new Date():null}:{}),...(priority?{priority}:{}),...(Array.isArray(body.tags)?{tags:[...new Set<string>(body.tags.map((x:unknown)=>String(x).trim().slice(0,30)).filter(Boolean))].slice(0,10)}:{})}});const response={data:updated,meta:{requestId:ctx.requestId,replayed:false}};await finishApiMutation(mutation.keyHash,200,response);await enqueueWebhookEvent(ctx.workspaceId,"conversation.updated",{conversationId:id,status:updated.status,priority:updated.priority,tags:updated.tags,source:"api"}).catch(()=>{});await logApiRequest(ctx,req,200);return NextResponse.json(response)}catch{await abandonApiMutation(mutation.keyHash);await logApiRequest(ctx,req,500,"persistence_failed");return err(500,"persistence_failed","The conversation could not be updated.",ctx.requestId)}
+
+export const dynamic = "force-dynamic";
+
+const RETIRED_RESPONSE = { error: "This feature has been retired." };
+
+export async function GET(
+  _req: Request,
+  _context: { params: Promise<{ id: string }> }
+) {
+  return NextResponse.json(RETIRED_RESPONSE, { status: 410 });
 }
+
+export async function PATCH(
+  _req: Request,
+  _context: { params: Promise<{ id: string }> }
+) {
+  return NextResponse.json(RETIRED_RESPONSE, { status: 410 });
+}
+

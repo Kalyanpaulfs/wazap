@@ -3,9 +3,11 @@ import {captureCrmLead} from "@/lib/crm";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { rateLimit } from "@/lib/rate-limit";
+import { requestIp } from "@/lib/request-ip";
 import { notifySupportMessage, queueSupportAlert } from "@/lib/support-notify";
 
 const SUBJECTS = new Set(["general", "billing", "account", "tool", "feature", "migration", "integration", "business", "other"]);
+const MAX_PER_EMAIL_PER_DAY = 5;
 function clean(value: unknown, max: number) {
   return typeof value === "string" ? value.trim().slice(0, max) : "";
 }
@@ -17,12 +19,20 @@ function sameOrigin(req: Request) {
 
 export async function POST(req: Request) {
   if (!sameOrigin(req)) return NextResponse.json({ error: "Invalid request origin." }, { status: 403 });
-  const ip = req.headers.get("x-forwarded-for") ?? "unknown";
+  const ip = requestIp(req.headers);
   if (!rateLimit(`contact:${ip}`, 3, 60 * 60 * 1000)) {
     return NextResponse.json({ error: "Too many messages. Please wait before sending again." }, { status: 429 });
   }
 
   const body = await req.json().catch(() => ({}));
+
+  // Hidden honeypot field: real visitors never fill it in (it's hidden via
+  // CSS on the form). A bot that fills every field trips this - respond as
+  // if it worked, but store and send nothing.
+  if (clean(body.company_website, 200)) {
+    return NextResponse.json({ ok: true }, { status: 201 });
+  }
+
   const name = clean(body.name, 120);
   const email = clean(body.email, 255).toLowerCase();
   const subject = clean(body.subject, 40);
@@ -33,6 +43,11 @@ export async function POST(req: Request) {
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return NextResponse.json({ error: "Enter a valid email address." }, { status: 400 });
   if (!SUBJECTS.has(subject)) return NextResponse.json({ error: "Choose a valid support topic." }, { status: 400 });
   if (!rateLimit(`contact-email:${email}`, 3, 60 * 60 * 1000)) return NextResponse.json({ error: "Too many messages for this email. Please wait before sending again." }, { status: 429 });
+
+  const sentToday = await prisma.contactMessage.count({ where: { email, createdAt: { gte: new Date(Date.now() - 86_400_000) } } });
+  if (sentToday >= MAX_PER_EMAIL_PER_DAY) {
+    return NextResponse.json({ error: "Too many messages from this email today. Please wait before sending again." }, { status: 429 });
+  }
 
   const cleanMessage = { name, email, subject, message };
 

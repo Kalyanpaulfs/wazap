@@ -68,7 +68,8 @@ export async function DELETE(req: Request) {
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if (!sameSiteRequest(req)) return NextResponse.json({ error: "Invalid request origin." }, { status: 403 });
   const userId = (session.user as any).id;
-  const { id } = await req.json();
+  const { id } = await req.json().catch(() => ({}));
+  if (!id || typeof id !== "string") return NextResponse.json({ error: "Missing id." }, { status: 400 });
   await prisma.shortLink.deleteMany({ where: { id, userId } });
   return NextResponse.json({ success: true });
 }

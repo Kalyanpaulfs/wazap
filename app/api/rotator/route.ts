@@ -5,7 +5,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { recordFunnelEvent } from "@/lib/funnel";
 import { cacheRoute, removeCachedRoute } from "@/lib/routing-cache";
-import { routerQuota, linkPlan } from "@/lib/router-entitlements";
+import { routerQuota, linkPlan, TRIAL_METERED_ASSET_TYPES } from "@/lib/router-entitlements";
 import { linkLimit, numbersPerRotatorLimit, numbersPatchAllowed } from "@/lib/plan-limits";
 import { checkLinkPoolForCreate } from "@/lib/link-pool";
 import { accountPlanLabel } from "@/lib/entitlements";
@@ -26,7 +26,9 @@ export async function GET() {
   const [rotators, user, lifetimeStarts] = await Promise.all([
     prisma.rotatorLink.findMany({ where: { userId }, orderBy: { createdAt: "desc" } }),
     prisma.user.findUnique({ where: { id: userId }, select: { plan: true, planExpiresAt: true, trialPlan: true, trialEndsAt: true, createdAt: true } }),
-    prisma.conversationStart.count({ where: { userId, assetType: "rotator" } }),
+    // Shared trial cap across rotator handoffs AND short-link clicks (audit
+    // item 12) - see lib/router-entitlements.ts TRIAL_METERED_ASSET_TYPES.
+    prisma.conversationStart.count({ where: { userId, assetType: { in: [...TRIAL_METERED_ASSET_TYPES] } } }),
   ]);
   const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
   const starts = rotators.length
@@ -98,7 +100,8 @@ export async function DELETE(req: Request) {
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if (req.headers.get("origin") !== new URL(process.env.NEXTAUTH_URL || "https://wazap.lt").origin) return NextResponse.json({ error: "Invalid request origin." }, { status: 403 });
   const userId = (session.user as any).id;
-  const { id } = await req.json();
+  const { id } = await req.json().catch(() => ({}));
+  if (!id || typeof id !== "string") return NextResponse.json({ error: "Missing id." }, { status: 400 });
   const existing = await prisma.rotatorLink.findFirst({ where: { id, userId }, select: { code: true } });
   await prisma.rotatorLink.deleteMany({ where: { id, userId } });
   if (existing) await removeCachedRoute(existing.code);

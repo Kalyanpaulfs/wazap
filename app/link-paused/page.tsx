@@ -4,11 +4,14 @@ import { AlertTriangle, ArrowRight } from "lucide-react";
 export const metadata = { title: "Link paused | Wazap", robots: { index: false, follow: false } };
 
 // Shared paused page for every public link/page type (rotator, short link,
-// ad link). Two distinct reasons land here:
+// ad link). Three distinct reasons land here:
 // - planPausedAt (default / reason=plan): the owner's free trial ended, or
 //   their current plan doesn't include this link - upgrade pitch applies.
 // - pausedAt (reason=owner, manual pause feature): the owner paused this
 //   link themselves on purpose. No upgrade pitch - there's nothing to buy.
+// - reason=unavailable: the link no longer exists at all (e.g. a deleted ad
+//   link - app/a/[id]/route.ts). Not a pause, so no "choose a plan" pitch
+//   and no "nothing was deleted" reassurance - it really was deleted.
 // Matches the visual style of app/router-limit/page.tsx so pausing doesn't
 // invent a second look-and-feel for "this link is off."
 export default async function LinkPausedPage({
@@ -17,6 +20,20 @@ export default async function LinkPausedPage({
   searchParams: Promise<{ type?: string; reason?: string }>;
 }) {
   const { reason } = await searchParams;
+
+  if (reason === "unavailable") {
+    return (
+      <main className="hero-bg min-h-screen px-4 py-20">
+        <section className="mx-auto max-w-xl rounded-3xl border border-slate-700 bg-[#101710] p-8 text-center shadow-2xl">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-700/20">
+            <AlertTriangle className="h-7 w-7 text-slate-400" />
+          </div>
+          <h1 className="mt-5 text-3xl font-bold text-white">This link is no longer available</h1>
+          <p className="mt-3 text-slate-400">The owner has removed this link.</p>
+        </section>
+      </main>
+    );
+  }
 
   if (reason === "owner") {
     return (

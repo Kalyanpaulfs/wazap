@@ -10,10 +10,21 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const now = new Date();
-  const in3Days = new Date(now.getTime() + 3 * 86_400_000);
+  // "Ending" reminder: only once the trial has 1 day or less left - not
+  // right after sign-up (every 3-day trial starts out <= 3 days left, so a
+  // <= 3 day window used to fire it immediately).
+  const in1Day = new Date(now.getTime() + 1 * 86_400_000);
   const [ending, expired] = await Promise.all([
-    prisma.user.findMany({ where: { plan: "free", trialEndsAt: { gt: now, lte: in3Days }, trialReminderSentAt: null }, select: { id: true, email: true, name: true, trialEndsAt: true } }),
-    prisma.user.findMany({ where: { plan: "free", trialStartedAt: { not: null }, trialEndsAt: { lte: now } }, select: { id: true, email: true, name: true } }),
+    prisma.user.findMany({ where: { plan: "free", trialEndsAt: { gt: now, lte: in1Day }, trialReminderSentAt: null }, select: { id: true, email: true, name: true, trialEndsAt: true } }),
+    // "Trial ended" email is only for someone who never had a paid plan (no
+    // payment of theirs was ever activated). A user whose paid plan expired
+    // and fell back to "free" gets the billing expiry notice instead (see
+    // lib/payment-integrity.ts's queueBillingNotice state "expired") - not
+    // this trial email, even if they also have old trial dates on record.
+    prisma.user.findMany({
+      where: { plan: "free", trialStartedAt: { not: null }, trialEndsAt: { lte: now }, payments: { none: { activatedAt: { not: null } } } },
+      select: { id: true, email: true, name: true },
+    }),
   ]);
   const base = process.env.NEXTAUTH_URL ?? "https://wazap.lt";
   for (const user of ending) {

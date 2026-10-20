@@ -12,6 +12,9 @@ export const metadata = {
   robots: { index: false, follow: false },
 };
 
+const TICKET_TOPIC_LABELS: Record<string, string> = { payment: "Payment", link: "Link not working", account: "Account/login", other: "Other" };
+const TICKET_STATUS_LABELS: Record<string, string> = { open: "Open", investigating: "Investigating", waiting: "Waiting for customer", solved: "Solved", closed: "Closed" };
+
 export default async function AdminCustomerDetailPage({
   params,
 }: {
@@ -35,7 +38,7 @@ export default async function AdminCustomerDetailPage({
     widget,
     leads,
     usageVsLimits,
-    supportChats,
+    supportTickets,
     accountStatus,
   } = customer;
 
@@ -394,10 +397,10 @@ export default async function AdminCustomerDetailPage({
           </div>
         </section>
 
-        {/* Support Chats Card */}
+        {/* Support Tickets Card */}
         <section className="wp-growth-panel" aria-label="Customer support history">
           <div className="flex justify-between items-center mb-3">
-            <h2>Support conversations ({supportChats.length})</h2>
+            <h2>Support tickets ({supportTickets.length})</h2>
             <Link
               prefetch={false}
               href={`/admin/crm/support?email=${encodeURIComponent(profile.email)}`}
@@ -406,33 +409,30 @@ export default async function AdminCustomerDetailPage({
               Open inbox →
             </Link>
           </div>
-          {supportChats.length ? (
+          {supportTickets.length ? (
             <div className="space-y-2 text-xs">
-              {supportChats.map((chat) => (
-                <div key={chat.id} className="border border-slate-800 rounded-lg p-2 flex justify-between items-center">
+              {supportTickets.map((ticket) => (
+                <div key={ticket.id} className="border border-slate-800 rounded-lg p-2 flex justify-between items-center">
                   <div>
                     <Link
                       prefetch={false}
-                      href={`/admin/crm/support?chat=${encodeURIComponent(chat.id)}`}
+                      href={`/admin/crm/support?ticket=${encodeURIComponent(ticket.id)}`}
                       className="font-medium text-white hover:text-[#25D366] block"
                     >
-                      {chat.subject}
+                      #{ticket.number} · {TICKET_TOPIC_LABELS[ticket.topic] || ticket.topic}
                     </Link>
-                    <p className="text-[11px] text-slate-500 truncate max-w-xs mt-0.5">
-                      {chat.lastMessageSnippet || "No messages"}
-                    </p>
                   </div>
                   <div className="text-right shrink-0">
-                    <span className="wp-crm-pill">{chat.status}</span>
+                    <span className="wp-crm-pill">{TICKET_STATUS_LABELS[ticket.status] || ticket.status}</span>
                     <span className="text-[11px] text-slate-500 block mt-1">
-                      {new Date(chat.lastMessageAt).toLocaleDateString("en-GB")}
+                      {new Date(ticket.createdAt).toLocaleDateString("en-GB")}
                     </span>
                   </div>
                 </div>
               ))}
             </div>
           ) : (
-            <p className="text-xs text-slate-400 py-2">No support conversations recorded.</p>
+            <p className="text-xs text-slate-400 py-2">No support tickets recorded.</p>
           )}
         </section>
       </div>

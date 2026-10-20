@@ -76,7 +76,9 @@ describe("admin-customer helpers", () => {
       });
       expect(res.links.limit).toBe(0);
       expect(res.adLinksAvailable.available).toBe(false);
-      expect(res.widget.available).toBe(false);
+      // Owner decision: the website button is free and unlimited on every
+      // plan, including free - see lib/plan-limits.ts WIDGET_AVAILABLE.
+      expect(res.widget.available).toBe(true);
     });
   });
 

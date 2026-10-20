@@ -1,4 +1,5 @@
 import Link from "next/link";
+import LocalPrice from "@/app/pricing/LocalPrice";
 import { NUMBERS_PER_ROTATOR_LIMITS, LINK_LIMITS } from "@/lib/plan-limits";
 
 // Shared between /pricing and /plans so the Free-trial card's facts are
@@ -50,7 +51,7 @@ export default function FreePlanStrip({
         </div>
         <p className="text-slate-500 text-sm mt-1">3 days, everything in Solo, no card needed</p>
         <div className="mt-5 mb-6 flex flex-wrap items-baseline gap-x-2">
-          <span className="text-4xl font-bold tracking-tight text-white">$0</span>
+          <span className="text-4xl font-bold tracking-tight text-white"><LocalPrice usd={0} /></span>
           <span className="text-slate-500 text-sm">for 3 days</span>
         </div>
       </div>

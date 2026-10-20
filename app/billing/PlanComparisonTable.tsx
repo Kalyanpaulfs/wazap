@@ -13,7 +13,7 @@ import {
 // for on /billing, and mirrored in wording on the public /pricing page
 // (app/pricing/PricingPlans.tsx `features`). Numbers come from
 // lib/plan-limits.ts so the two can never drift apart from the real limits -
-// only the Reports row's exact phrasing ("Full + shared exports" for Agency)
+// only the Reports row's exact phrasing ("Full reports" for Agency)
 // is owner-specified copy with no boolean flag behind it.
 const PLAN_COLUMNS: PlanKey[] = ["basic", "pro", "ultimate"];
 
@@ -21,7 +21,7 @@ const REPORTS_ROW: Record<PlanKey, string> = {
   free: "—",
   basic: "Basic (30 days)",
   pro: "Full",
-  ultimate: "Full + shared exports",
+  ultimate: "Full reports",
 };
 
 type Cell = boolean | string;

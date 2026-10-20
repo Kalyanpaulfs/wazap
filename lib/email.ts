@@ -106,7 +106,7 @@ export function renderTrialEndedEmail(name: string | null, base: string): string
     <div style="padding:30px 28px;color:#cbd5e1;font-size:15px;line-height:1.65">
       <p style="margin:0 0 12px">${hi}</p>
       <h1 style="margin:0 0 12px;color:#fff;font-size:27px;line-height:1.2">Your free trial has ended.</h1>
-      <p style="margin:0 0 20px;color:#9fb0a3">Your lead rotators, WhatsApp links, ad links and website button are now paused, and no new leads are being routed. Nothing was deleted — choose a plan to turn everything back on instantly.</p>
+      <p style="margin:0 0 20px;color:#9fb0a3">Your links are paused until you choose a plan, and no new leads are being routed. Nothing was deleted — choose a plan to turn everything back on instantly. Your website button keeps working, free and unlimited.</p>
       <p style="margin:22px 0"><a href="${base}/billing#plans" style="display:inline-block;background:#25D366;color:#061008;text-decoration:none;font-weight:800;padding:13px 22px;border-radius:999px">Choose a plan →</a></p>
       <p style="margin:18px 0 0;color:#718078;font-size:12px">Your saved data stays in your workspace. You can still sign in, see your Account, and use the free QR maker any time.</p>
     </div>
@@ -245,31 +245,6 @@ export function renderSupportReplyEmail(opts: {
         <a href="${opts.base}/dashboard" style="display:inline-block;background:#25D366;color:#061008;text-decoration:none;font-weight:800;padding:13px 22px;border-radius:999px">Open my Wazap dashboard →</a>
       </p>
       <p style="margin:18px 0 0;color:#718078;font-size:12px">You can also reply directly to this email if you still need help.</p>
-    </div>
-    <div style="padding:16px 28px;background:#080e09;color:#5f6f63;font-size:11px;text-align:center">Wazap.lt · Professional WhatsApp workflow software</div>
-  </div>`;
-}
-
-export function renderSupportChatContinueEmail(opts: {
-  name: string | null;
-  reply: string;
-  continueUrl: string;
-}): string {
-  const greeting = opts.name ? `Hi ${escapeHtml(opts.name)},` : "Hi,";
-  const reply = escapeHtml(opts.reply).replace(/\n/g, "<br>");
-  return `
-  <div style="font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif;max-width:600px;margin:0 auto;background:#0b120d;border-radius:20px;overflow:hidden;border:1px solid #1d3323">
-    <div style="background:#0d1710;padding:22px 28px;border-bottom:1px solid #1d3323">
-      <span style="display:inline-block;width:12px;height:12px;border:2px solid #25D366;border-radius:50%;vertical-align:-1px;margin-right:9px"></span><span style="color:#25D366;font-weight:800;font-size:20px">Wazap Support</span>
-    </div>
-    <div style="padding:30px 28px;color:#cbd5e1;font-size:15px;line-height:1.65">
-      <p style="margin:0 0 12px">${greeting}</p>
-      <h1 style="margin:0 0 12px;color:#fff;font-size:25px;line-height:1.25">Our team replied to your chat.</h1>
-      <div style="background:#0f1b13;border:1px solid #1d3323;border-radius:14px;padding:17px 18px;margin:20px 0;color:#dbe7de">${reply}</div>
-      <p style="margin:22px 0">
-        <a href="${escapeHtml(opts.continueUrl)}" style="display:inline-block;background:#25D366;color:#061008;text-decoration:none;font-weight:800;padding:13px 22px;border-radius:999px">Continue the chat →</a>
-      </p>
-      <p style="margin:18px 0 0;color:#718078;font-size:12px">This link opens your saved conversation and works for 14 days. You can also reply directly to this email.</p>
     </div>
     <div style="padding:16px 28px;background:#080e09;color:#5f6f63;font-size:11px;text-align:center">Wazap.lt · Professional WhatsApp workflow software</div>
   </div>`;

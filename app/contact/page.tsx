@@ -1,10 +1,38 @@
 "use client";
 import { useEffect, useState } from "react";
-import { MessageCircle, Mail, CheckCircle, Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
+import { MessageCircle, Mail, CheckCircle, Loader2, ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import BackLink from "@/app/links/BackLink";
+
+/** Logged-out back control: goes to the previous page when it was reached
+ * from somewhere on this site, otherwise falls back to /support - there's
+ * no app-frame sidebar here to rely on. */
+function VisitorBackLink() {
+  const router = useRouter();
+  // Lazy initial state (read once, on mount) rather than an effect: the
+  // referrer never changes during this page's life, so there's nothing to
+  // keep in sync - only an initial read.
+  const [sameSiteReferrer] = useState(() => {
+    if (typeof document === "undefined") return false;
+    try { return Boolean(document.referrer) && new URL(document.referrer).origin === window.location.origin; }
+    catch { return false; }
+  });
+
+  if (sameSiteReferrer) {
+    return (
+      <button type="button" onClick={() => router.back()} className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-400 hover:text-white">
+        <ArrowLeft className="h-4 w-4" /> Back
+      </button>
+    );
+  }
+  return <BackLink href="/support" label="Back" />;
+}
 
 export default function ContactPage() {
-  const [form, setForm] = useState({ name: "", email: "", subject: "", message: "" });
+  const { data: session } = useSession();
+  const [form, setForm] = useState({ name: "", email: "", subject: "", message: "", company_website: "" });
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -50,22 +78,31 @@ export default function ContactPage() {
           <CheckCircle className="h-8 w-8 text-[#25D366]" />
         </div>
         <h1 className="text-2xl font-bold text-white mb-2">Message received!</h1>
-        <p className="text-slate-400 mb-6">Your request is queued for review. A response will be sent to <strong className="text-white">{form.email}</strong> within 12 hours.</p>
-        <Link href="/" className="rounded-full border border-slate-700 hover:border-[#25D366]/40 px-6 py-2.5 text-sm text-slate-400 hover:text-white transition-colors">
-          Back to Home
-        </Link>
+        <p className="text-slate-400 mb-8">Your request is queued for review. A response will be sent to <strong className="text-white">{form.email}</strong> within 12 hours.</p>
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+          <Link href="/support" className="w-full sm:w-auto rounded-full bg-[#25D366] hover:bg-[#1fba58] px-6 py-2.5 text-sm font-semibold text-black transition-colors">
+            Back to Help &amp; support
+          </Link>
+          <Link href="/" className="w-full sm:w-auto rounded-full border border-slate-700 hover:border-[#25D366]/40 px-6 py-2.5 text-sm text-slate-400 hover:text-white transition-colors">
+            Home
+          </Link>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="mx-auto max-w-2xl px-4 sm:px-6 py-16">
+    <div className="mx-auto max-w-2xl px-4 sm:px-6 py-10 sm:py-16">
+      <div className="mb-6">
+        {session?.user ? <BackLink href="/support" label="Help & support" /> : <VisitorBackLink />}
+      </div>
+
       <div className="text-center mb-10">
         <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-[#25D366]/10 border border-[#25D366]/20 mb-4">
           <Mail className="h-7 w-7 text-[#25D366]" />
         </div>
-        <h1 className="text-3xl font-bold text-white">Contact Us</h1>
-        <p className="text-slate-400 mt-2">Our AI assistant can answer most questions right away in the chat widget. For anything else, send a message here and our team replies within 12 hours.</p>
+        <h1 className="text-3xl font-bold text-white">Contact us</h1>
+        <p className="text-slate-400 mt-2">Raise a ticket in the chat widget for the fastest reply, or send a message here — either way our team replies within 12 hours.</p>
       </div>
 
       <div className="grid sm:grid-cols-3 gap-3 mb-8">
@@ -74,7 +111,7 @@ export default function ContactPage() {
           { icon: "💳", title: "Billing", desc: "Payment, plan, or refund queries" },
           { icon: "🔐", title: "Account", desc: "Login, password, or access issues" },
         ].map(c => (
-          <div key={c.title} className="rounded-xl border border-slate-800 bg-[#111811] p-4 text-center">
+          <div key={c.title} className="rounded-2xl border border-slate-800 bg-[#111811] p-4 text-center">
             <p className="text-2xl mb-1">{c.icon}</p>
             <p className="text-sm font-semibold text-white">{c.title}</p>
             <p className="text-xs text-slate-500 mt-0.5">{c.desc}</p>
@@ -82,7 +119,14 @@ export default function ContactPage() {
         ))}
       </div>
 
-      <form onSubmit={handleSubmit} className="rounded-2xl border border-slate-800 bg-[#111811] p-6 space-y-5">
+      <form onSubmit={handleSubmit} className="rounded-2xl border border-[#25D366]/15 bg-[#111811] p-6 space-y-5 shadow-sm">
+        {/* Honeypot: hidden from real visitors with CSS (not type="hidden",
+            which some bots skip), never read aloud by screen readers. A
+            filled value means a bot, so app/api/contact silently drops it. */}
+        <div style={{ position: "absolute", left: "-9999px", width: "1px", height: "1px", overflow: "hidden" }} aria-hidden="true">
+          <label htmlFor="contact-company-website">Company website</label>
+          <input id="contact-company-website" name="company_website" type="text" tabIndex={-1} autoComplete="off" value={form.company_website} onChange={set("company_website")} />
+        </div>
         <div className="grid sm:grid-cols-2 gap-4">
           <div>
             <label htmlFor="contact-name" className={labelClass}>Name *</label>
@@ -118,7 +162,7 @@ export default function ContactPage() {
 
         <button type="submit" disabled={loading}
           className="w-full rounded-full bg-[#25D366] hover:bg-[#1fba58] disabled:opacity-50 py-3 text-sm font-semibold text-black transition-colors flex items-center justify-center gap-2">
-          {loading ? <><Loader2 className="h-4 w-4 animate-spin" /> Sending…</> : <><MessageCircle className="h-4 w-4" /> Send Message</>}
+          {loading ? <><Loader2 className="h-4 w-4 animate-spin" /> Sending…</> : <><MessageCircle className="h-4 w-4" /> Send message</>}
         </button>
       </form>
 

@@ -6,7 +6,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { linkPlan } from "@/lib/router-entitlements";
 import { accountPlanLabel } from "@/lib/entitlements";
-import { adLinksAvailable, numbersPerRotatorLimit, widgetAvailable } from "@/lib/plan-limits";
+import { adLinksAvailable, numbersPerRotatorLimit } from "@/lib/plan-limits";
 import { getMyLinks, formatUsageLine, poolFullMessage } from "@/lib/my-links";
 import BackLink from "@/app/links/BackLink";
 
@@ -28,7 +28,6 @@ export default async function NewLinkPage() {
   const poolFull = used >= limit;
   const canCreate = !poolFull;
   const adsAvailable = adLinksAvailable(plan);
-  const widgetIsAvailable = widgetAvailable(plan);
   const numbersLimit = numbersPerRotatorLimit(plan);
 
   // Group 1: the four link types that count against the shared pool. Kept
@@ -90,11 +89,10 @@ export default async function NewLinkPage() {
     {
       question: "Add WhatsApp to my website",
       name: "Website button",
-      desc: "Add a WhatsApp button to any website. As many as you like, not counted in your plan.",
+      desc: "Add a WhatsApp button to any website. As many as you like, free for every plan.",
       href: "/tools/widget",
       Icon: Globe2,
-      locked: !widgetIsAvailable,
-      lockedText: "Available on Solo",
+      locked: false,
       badge: "Free · unlimited",
     },
   ];
@@ -172,7 +170,7 @@ export default async function NewLinkPage() {
             <p className="text-sm text-slate-400">Never counted against your plan.</p>
           </div>
           <div className="grid gap-4 sm:grid-cols-3">
-            {freeCards.map(({ question, name, desc, href, Icon, locked, lockedText, badge, note }) => (
+            {freeCards.map(({ question, name, desc, href, Icon, locked, badge, note }) => (
               <Link
                 key={name}
                 href={locked ? "/billing#plans" : href}
@@ -195,7 +193,7 @@ export default async function NewLinkPage() {
                   <p className="text-sm text-slate-400">{question}</p>
                   <p className="mt-1 font-bold text-white">{name}</p>
                 </div>
-                <p className="text-xs text-slate-500">{locked ? lockedText : desc}</p>
+                <p className="text-xs text-slate-500">{desc}</p>
                 {!locked && note && <p className="text-xs text-slate-600">{note}</p>}
               </Link>
             ))}

@@ -1,4 +1,4 @@
-import {claimRouterHandoff} from "@/lib/router-claim";
+import {claimRouterHandoff, routerQuotaAllowed} from "@/lib/router-claim";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { cacheRoute, readCachedRoute, removeCachedRoute } from "@/lib/routing-cache";
@@ -57,9 +57,17 @@ export async function GET(req: Request, { params }: { params: Promise<{ code: st
   if (!validNumbers.length && !fallback) redirect("/");
   let number=validNumbers[rotator.currentIdx % (validNumbers.length||1)]||fallback;
   let blocked=false;
-  if(rotator.id&&rotator.userId&&withinSpeedLimit){
-    try{const claim=await claimRouterHandoff({...rotator,id:rotator.id,userId:rotator.userId});if(!claim.allowed)blocked=true;else number=claim.destination;}
-    catch{console.warn("[router] metering unavailable; preserving public fallback");}
+  if(rotator.id&&rotator.userId){
+    if(withinSpeedLimit){
+      try{const claim=await claimRouterHandoff({...rotator,id:rotator.id,userId:rotator.userId});if(!claim.allowed)blocked=true;else number=claim.destination;}
+      catch{console.warn("[router] metering unavailable; preserving public fallback");}
+    } else {
+      // Over the speed limit: skip rotation/counting (bot protection), but
+      // the trial's 100-lead cap must still be enforced - a fast enough
+      // burst of requests must not be able to bypass it (audit item 12).
+      try{if(!(await routerQuotaAllowed(rotator.userId)))blocked=true;}
+      catch{console.warn("[router] quota check unavailable; preserving public fallback");}
+    }
   }
   // Keep redirect outside the catch: Next redirects throw and must not be swallowed.
   if(blocked)redirect(`/router-limit?code=${encodeURIComponent(normalizedCode)}`);

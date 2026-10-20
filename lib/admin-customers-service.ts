@@ -275,13 +275,12 @@ export type CustomerDetailResult = {
     total: number;
   };
   usageVsLimits: ReturnType<typeof computeUsageVsLimits>;
-  supportChats: {
+  supportTickets: {
     id: string;
-    subject: string;
+    number: string;
+    topic: string;
     status: string;
-    lastMessageAt: string;
-    messagesCount: number;
-    lastMessageSnippet: string | null;
+    createdAt: string;
   }[];
   accountStatus: {
     status: CustomerAccountStatus;
@@ -401,7 +400,7 @@ export async function getAdminCustomerDetails(userId: string): Promise<CustomerD
   });
 
   // Performance data (chats today, 7d, 30d) and total leads
-  const [perf, totalLeads, auditLogs, supportChats] = await Promise.all([
+  const [perf, totalLeads, auditLogs, supportTickets] = await Promise.all([
     getPerformanceSnapshot(userId),
     prisma.conversationStart.count({ where: { userId } }),
     prisma.billingAuditLog.findMany({
@@ -409,24 +408,16 @@ export async function getAdminCustomerDetails(userId: string): Promise<CustomerD
       orderBy: { createdAt: "desc" },
       take: 50,
     }),
-    prisma.supportConversation.findMany({
+    prisma.supportTicket.findMany({
       where: {
         OR: [
-          { email: { equals: user.email, mode: "insensitive" } },
-          ...(crmLead ? [{ crmLeadId: crmLead.id }] : []),
+          { userId },
+          { conversation: { email: { equals: user.email, mode: "insensitive" } } },
+          ...(crmLead ? [{ conversation: { crmLeadId: crmLead.id } }] : []),
         ],
       },
-      include: {
-        messages: {
-          orderBy: { createdAt: "desc" },
-          take: 1,
-          select: { body: true },
-        },
-        _count: {
-          select: { messages: true },
-        },
-      },
-      orderBy: { lastMessageAt: "desc" },
+      select: { id: true, number: true, topic: true, status: true, createdAt: true },
+      orderBy: { createdAt: "desc" },
       take: 10,
     }),
   ]);
@@ -448,9 +439,10 @@ export async function getAdminCustomerDetails(userId: string): Promise<CustomerD
   const paidDays = user.plan !== "free" && user.planExpiresAt ? getPlanDaysLeft(user.planExpiresAt) : null;
   const linksPaused = areCustomerLinksPaused(user);
 
-  // Widget usage
+  // Widget usage - the website button is free and unlimited on every plan,
+  // including free (owner decision; see lib/plan-limits.ts WIDGET_AVAILABLE).
   const totalWidgetCopies = user.dailyUsage.reduce((sum, d) => sum + (d.widgetCopies || 0), 0);
-  const widgetAvailableInPlan = ["basic", "pro", "ultimate", "business"].includes(effectivePlan(user));
+  const widgetAvailableInPlan = true;
 
   // Max salespeople across rotators
   const maxSalespeople = user.rotatorLinks.reduce((max, r) => Math.max(max, r.numbers.length), 0);
@@ -582,13 +574,12 @@ export async function getAdminCustomerDetails(userId: string): Promise<CustomerD
       shortLinks: user.shortLinks.length,
       adLinks: user.adLinks.length,
     }),
-    supportChats: supportChats.map((c) => ({
-      id: c.id,
-      subject: c.subject,
-      status: c.status,
-      lastMessageAt: c.lastMessageAt.toISOString(),
-      messagesCount: c._count.messages,
-      lastMessageSnippet: c.messages[0]?.body || null,
+    supportTickets: supportTickets.map((t) => ({
+      id: t.id,
+      number: t.number,
+      topic: t.topic,
+      status: t.status,
+      createdAt: t.createdAt.toISOString(),
     })),
     accountStatus: {
       status: lifecycle.status,

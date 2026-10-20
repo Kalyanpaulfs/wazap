@@ -44,7 +44,7 @@ const PLANS = [
     name: "Agency",
     price: PLAN_PRICES.ultimate,
     description: "High-volume routing for agencies and larger teams",
-    features: ["55 links, any type", "Up to 20 salespeople per lead rotator", "Everything in Growth", "Full reports with shared exports", "Priority support"],
+    features: ["55 links, any type", "Up to 20 salespeople per lead rotator", "Everything in Growth", "Full reports", "Priority support"],
     highlighted: false,
     salesOnly: false,
   },

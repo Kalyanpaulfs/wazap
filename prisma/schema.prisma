@@ -1331,6 +1331,10 @@ model SupportConversation {
   crmLead           CrmLead?             @relation(fields: [crmLeadId], references: [id], onDelete: SetNull)
   id                String               @id @default(cuid())
   visitorId         String               @unique
+  // Logged-in owner (set when a logged-in user creates a support ticket).
+  // Plain string, no relation - same style as CrmLead.ownerId - so this
+  // table never gets an ON DELETE behaviour tied to User.
+  userId            String?
   name              String?
   email             String?
   subject           String               @default("Live support")
@@ -1343,6 +1347,7 @@ model SupportConversation {
   updatedAt         DateTime             @updatedAt
   messages          SupportChatMessage[]
   attachments       SupportAttachment[]
+  tickets           SupportTicket[]
 
   @@index([crmLeadId])
 }
@@ -1350,15 +1355,69 @@ model SupportConversation {
 model SupportChatMessage {
   id             String              @id @default(cuid())
   conversationId String
+  // Every NEW message belongs to a ticket (SUPPORT-2). Nullable only
+  // because older rows (pre-ticket chat history) and the bot/system
+  // messages recorded before a ticket exists may have none; the backfill
+  // migration sets this for existing rows that do have a ticket.
+  ticketId       String?
   sender         String
   body           String
   readByAdmin    Boolean             @default(false)
   readByVisitor  Boolean             @default(false)
   createdAt      DateTime            @default(now())
   conversation   SupportConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  ticket         SupportTicket?      @relation(fields: [ticketId], references: [id], onDelete: SetNull)
   attachments    SupportAttachment[]
 
   @@index([conversationId, createdAt])
+  @@index([ticketId, createdAt])
+}
+
+// Customer support ticket (SUPPORT-2, "no AI"). SupportConversation stays
+// the per-visitor container (profile, CRM link, support-session cookie);
+// every message now belongs to one of these instead of living loose on the
+// conversation. See lib/support-tickets.ts and lib/support-ticket-rules.ts.
+model SupportTicket {
+  id                  String               @id @default(cuid())
+  number              String               @unique // "A1B2C3", shown as #A1B2C3
+  conversationId      String
+  userId              String? // set when the customer is logged in
+  topic               String // "payment" | "link" | "account" | "other"
+  status              String               @default("open") // open | investigating | waiting | solved | closed
+  urgent              Boolean              @default(false)
+  priority            Boolean              @default(false) // Agency (ultimate) plan at creation time
+  assignedToId        String? // admin User id
+  quickAnswerId       String? // quick answer the customer read before raising (lib/support-quick-answers.ts)
+  parentTicketId      String? // "start new ticket" from a closed one
+  waitingSince        DateTime? // first customer message not yet answered by staff; null when staff replied last
+  firstReplyAt        DateTime?
+  lastAdminReplyAt    DateTime?
+  lastCustomerEmailAt DateTime? // throttle for "new reply" emails
+  urgentEscalatedAt   DateTime?
+  solvedAt            DateTime?
+  closedAt            DateTime?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  conversation        SupportConversation  @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  messages            SupportChatMessage[]
+
+  @@index([conversationId, status])
+  @@index([userId, status])
+  @@index([status, waitingSince])
+}
+
+// Feedback on a quick answer (lib/support-quick-answers.ts) - "did this
+// solve your problem?" before the customer raises a ticket. answerId is a
+// static quick-answer id (not a DB row), same plain-string style as
+// SupportTicket.quickAnswerId.
+model SupportAnswerFeedback {
+  id        String   @id @default(cuid())
+  answerId  String
+  solved    Boolean
+  userId    String?
+  createdAt DateTime @default(now())
+
+  @@index([answerId, createdAt])
 }
 
 // Screenshots customers attach in the support chat widget. Bytes live in

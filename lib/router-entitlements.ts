@@ -12,6 +12,14 @@ export const ROUTER_METERING_LAUNCHED_AT = new Date("2026-10-05T20:00:00.000Z");
 // Routed leads allowed during the one-time 3-day Free trial (no paid plan).
 // Paid plans (Solo/Growth/Agency) stay unlimited - see routerQuota below.
 export const TRIAL_ROUTED_LEADS = 100;
+
+// Which ConversationStart.assetType values count toward the trial's 100-lead
+// cap (routerQuota's `used` count). Both rotator handoffs (app/r/[code],
+// lib/router-claim.ts claimRouterHandoff) and WhatsApp/brand short-link
+// clicks (app/w/[code], claimShortLinkHandoff) share this one cap - ad links
+// are not part of the trial at all (owner rule), so "ad_link" is deliberately
+// excluded here.
+export const TRIAL_METERED_ASSET_TYPES = ["rotator", "short_link"] as const;
 // In the past as of this restructure — hasLegacyRouterGrace is always false
 // now and is effectively inert. Kept (harmless) rather than deleted.
 export const EXISTING_ROUTER_GRACE_END = new Date("2026-10-12T20:00:00.000Z");

@@ -23,8 +23,23 @@ export async function accountClosureBlockers(userId: string) {
     select: { method: true, plan: true },
     orderBy: [{ activatedAt: "desc" }, { createdAt: "desc" }],
   });
+  if (!billing) return { billing: null };
+
+  // Turning PayPal auto-pay off cancels the subscription outright (its
+  // Payment row moves to subscription_inactive, so it stops matching the
+  // query above on its own). Dodo auto-pay off instead just stops the next
+  // charge - lib/dodo.ts's setDodoAutoRenew - while the current Payment row
+  // stays "subscription_active" until the paid period really ends. Without
+  // this check, a Dodo customer who already turned auto-pay off (so the
+  // subscription will NOT renew) was wrongly blocked from closing their
+  // account, and the account-lifecycle cron (lib/account-lifecycle.ts's
+  // permanentlyDeleteAccount, via the same function) would undo their
+  // already-scheduled deletion every time it ran.
+  const pointer = await prisma.securityUserBilling.findUnique({ where: { userId }, select: { autoRenew: true } });
+  if (pointer && pointer.autoRenew === false) return { billing: null };
+
   return {
-    billing: billing ? { method: billing.method, plan: billing.plan } : null,
+    billing: { method: billing.method, plan: billing.plan },
   };
 }
 

@@ -3,20 +3,20 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { linkPlan } from "@/lib/router-entitlements";
-import { widgetAvailable } from "@/lib/plan-limits";
 
 export const dynamic = "force-dynamic";
 
-// The website widget is included in Solo, Growth and Agency (and the product
-// trial); it is not part of Free. Paid access is unlimited - usage is only
-// counted for analytics.
+// Owner decision: the website widget (button) is free and unlimited for
+// EVERY plan, including free and anonymous (not signed in) visitors - see
+// lib/plan-limits.ts WIDGET_AVAILABLE. This endpoint never gates it; for a
+// signed-in user it still records a usage count for analytics (dailyUsage),
+// but an anonymous visitor has no account to attribute that to, so there is
+// simply nothing to meter.
 type MeterableTool = "widget";
 
 const FIELD_MAP: Record<MeterableTool, "widgetCopies"> = {
   widget: "widgetCopies",
 };
-
-const UPGRADE_MESSAGE = "The website button is included in your free trial and in Solo, Growth and Agency. Choose a plan to use it.";
 
 function today() { return new Date().toISOString().slice(0, 10); }
 
@@ -31,36 +31,32 @@ async function planFor(userId: string) {
     where: { id: userId },
     select: { plan: true, planExpiresAt: true, trialPlan: true, trialStartedAt: true, trialEndsAt: true },
   });
-  // Expiry-aware, same resolution as the link/count limits (lib/router-entitlements.ts),
-  // so the widget flips off at the same moment rotators/short links do.
   return linkPlan(user);
 }
 
-// GET /api/tools/use?tool=widget - is the widget available on this plan?
+// GET /api/tools/use?tool=widget - always available, logged in or not.
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
   const tool = req.nextUrl.searchParams.get("tool") as MeterableTool | null;
   if (!tool || !FIELD_MAP[tool]) return NextResponse.json({ error: "Invalid tool" }, { status: 400 });
 
-  if (!session?.user) return NextResponse.json({ available: false, plan: "free", anonymous: true });
+  if (!session?.user) return NextResponse.json({ available: true, plan: "free" });
 
   const userId = (session.user as { id: string }).id;
   const plan = await planFor(userId);
-  return NextResponse.json({ available: widgetAvailable(plan), plan });
+  return NextResponse.json({ available: true, plan });
 }
 
-// POST /api/tools/use - { tool, count? } - records usage; 403 when not in the plan
+// POST /api/tools/use - { tool, count? } - records usage for analytics only
+// (never blocks it; the widget is free for everyone).
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   const { tool, count = 1 } = await req.json() as { tool: MeterableTool; count?: number };
   if (!tool || !FIELD_MAP[tool]) return NextResponse.json({ error: "Invalid tool" }, { status: 400 });
 
-  if (!session?.user) return NextResponse.json({ error: UPGRADE_MESSAGE, available: false }, { status: 403 });
+  if (!session?.user) return NextResponse.json({ ok: true, available: true });
 
   const userId = (session.user as { id: string }).id;
-  const plan = await planFor(userId);
-  if (!widgetAvailable(plan)) return NextResponse.json({ error: UPGRADE_MESSAGE, available: false, plan }, { status: 403 });
-
   const field = FIELD_MAP[tool];
   await prisma.dailyUsage.upsert({
     where: { userId_date: { userId, date: today() } },
@@ -68,5 +64,5 @@ export async function POST(req: NextRequest) {
     update: { [field]: { increment: cleanCount(count) } },
   });
 
-  return NextResponse.json({ ok: true, available: true, plan });
+  return NextResponse.json({ ok: true, available: true });
 }

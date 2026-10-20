@@ -1,32 +1,29 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { sendEmail, isEmailConfigured, renderExpiryEmail } from "@/lib/email";
+import { PLAN_NAMES } from "@/lib/billing";
 
 export const dynamic = "force-dynamic";
 
-const LABEL: Record<string, string> = { basic: "Solo", pro: "Growth", ultimate: "Team", business: "Business" };
 const DAY = 86_400_000;
 
 // Daily cron. Reminds users whose paid plan expires within 3 days — but skips
-// active card subscribers (Dodo auto-renews them). Emails the user
-// (via Resend, if configured) and sends the admin a Telegram digest so they
-// can personally follow up. Idempotent per billing cycle.
+// anyone whose subscription will auto-renew (PayPal or Dodo — see
+// lib/billing-summary.ts's same SecurityUserBilling.autoRenew read). Emails
+// the user (via Resend, if configured) and sends the admin a Telegram digest
+// so they can personally follow up. Idempotent per billing cycle.
 export async function GET(req: Request) {
-  if (req.headers.get("authorization") !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!process.env.CRON_SECRET || req.headers.get("authorization") !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
   const now = new Date();
   const in3 = new Date(now.getTime() + 3 * DAY);
-  const cardCutoff = new Date(now.getTime() - 32 * DAY);
 
   const candidates = await prisma.user.findMany({
     where: { plan: { not: "free" }, planExpiresAt: { gt: now, lte: in3 } },
     include: {
-      payments: {
-        where: { method: { in: ["card", "dodo"] }, status: "active", createdAt: { gte: cardCutoff } },
-        take: 1,
-      },
+      securityBillingState: { select: { autoRenew: true } },
     },
   });
 
@@ -36,10 +33,13 @@ export async function GET(req: Request) {
   const digest: string[] = [];
 
   for (const u of candidates) {
-    const autoRenew = u.payments.length > 0;
+    // Default to true (auto-renew) when there is no billing pointer yet,
+    // matching lib/billing-summary.ts's getBillingSummary — the same rule
+    // used to show "Auto-pay on" in app/billing.
+    const autoRenew = u.securityBillingState?.autoRenew ?? true;
     const days = Math.max(0, Math.ceil((u.planExpiresAt!.getTime() - now.getTime()) / DAY));
-    const label = LABEL[u.plan] ?? u.plan;
-    digest.push(`• ${u.name || u.email} — ${label}, ${days}d left${autoRenew ? " (card auto-renew)" : ""}`);
+    const label = PLAN_NAMES[u.plan] ?? u.plan;
+    digest.push(`• ${u.name || u.email} — ${label}, ${days}d left${autoRenew ? " (auto-renews)" : ""}`);
 
     if (autoRenew) { skippedAutoRenew++; continue; }
     if (

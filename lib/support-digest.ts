@@ -5,7 +5,7 @@
 export const SUPPORT_DIGEST_HOUR = 9; // Dubai time (UTC+4, no DST)
 const DUBAI_OFFSET_MS = 4 * 3600_000;
 
-export type WaitingItem = { kind: "chat" | "request"; name?: string | null; email?: string | null; topic?: string | null; waitingSince: string };
+export type WaitingItem = { kind: "ticket" | "request"; name?: string | null; email?: string | null; topic?: string | null; waitingSince: string };
 
 // Dubai calendar day, and whether today's summary may go out yet.
 export function supportDigestSlot(now: Date) {
@@ -27,7 +27,7 @@ export function buildSupportDigest(input: { waiting: WaitingItem[]; mailboxProbl
     lines.push(`Still waiting for a reply (${sorted.length}):`);
     sorted.forEach((item, i) => {
       const who = [item.name || "Website visitor", item.email ? `<${item.email}>` : ""].filter(Boolean).join(" ");
-      const what = item.kind === "chat" ? "Live chat" : `Contact form${item.topic ? `: ${item.topic}` : ""}`;
+      const what = item.kind === "ticket" ? `Ticket${item.topic ? ` ${item.topic}` : ""}` : `Contact form${item.topic ? `: ${item.topic}` : ""}`;
       lines.push(`${i + 1}. ${who} - ${what} - waiting ${waited(item.waitingSince, now)}`);
     });
     lines.push("", "Reply, or move spam to Trash, in Admin -> Support.");

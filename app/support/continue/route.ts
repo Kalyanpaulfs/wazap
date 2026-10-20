@@ -19,7 +19,7 @@ export const runtime = "nodejs";
 // overwrite localStorage["wazap_support_visitor_id"] with it before opening
 // the chat, so the restored cookie and the widget's stored id refer to the
 // same conversation. The support-ownership cookie set below is what actually
-// authorizes /api/chatbot and /api/support/chat calls for that visitorId.
+// authorizes /api/support/tickets calls for that visitorId.
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const token = url.searchParams.get("t") || "";

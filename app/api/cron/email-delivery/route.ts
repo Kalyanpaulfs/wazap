@@ -6,14 +6,12 @@ import { emailChannel } from '@/lib/email-brand';
 import { processCrmCampaigns } from '@/lib/crm-campaign-worker';
 import { nurtureEligibility, reactivationEligible } from '@/lib/customer-nurture';
 import { preferenceUrl } from '@/lib/crm-marketing';
-import { prepareSupportAnswers } from '@/lib/support-email-automation';
 export const dynamic='force-dynamic';
 export const maxDuration=300;
 export async function GET(req:Request){
  if(!process.env.CRON_SECRET||req.headers.get('authorization')!==`Bearer ${process.env.CRON_SECRET}`)return NextResponse.json({error:'Unauthorized'},{status:401});
  if(!isEmailConfigured())return NextResponse.json({accepted:0,queued:await prisma.outboundEmail.count({where:{status:'queued'}}),provider:'not_configured'});
  await prisma.outboundEmail.updateMany({where:{status:'processing',updatedAt:{lt:new Date(Date.now()-10*60000)}},data:{status:'unknown',lastError:'Worker interrupted during send; reconcile provider before resending.'}});
- const support=await prepareSupportAnswers();
  const marketingOnly={OR:[{AND:[{type:{startsWith:'marketing_'}},{NOT:{type:{startsWith:'marketing_service_'}}}]},{type:{startsWith:'crm_'}}]};
  const serviceOnly={NOT:marketingOnly};
  const daily=await prisma.outboundEmail.count({where:{...marketingOnly,sentAt:{gte:new Date(Date.now()-86400000)},status:{in:['accepted','sent','delivered','deferred']}}});
@@ -35,5 +33,5 @@ export async function GET(req:Request){
   if(result.accepted)accepted++;
  }
  const campaigns=daily+accepted<240?await processCrmCampaigns():{processed:0,blocked:true};
- return NextResponse.json({accepted,attempted:messages.length,campaigns,support});
+ return NextResponse.json({accepted,attempted:messages.length,campaigns});
 }

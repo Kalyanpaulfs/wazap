@@ -5,6 +5,7 @@ import {
   derivePauseReason,
   statusLabel,
   combinedStatusText,
+  planCannotRouteKind,
   formatUsageLine,
   poolFullMessage,
   mergeLinks,
@@ -78,6 +79,55 @@ describe("combinedStatusText (manual pause, owner feature)", () => {
   });
   it("plan-pause-only still uses the existing derived reason", () => {
     expect(combinedStatusText(new Date("2026-01-01"), null, "shortlink", "basic")).toBe("Paused: over your plan limit");
+  });
+});
+
+describe("planCannotRouteKind (live, before the pause-sync cron runs - audit item 13)", () => {
+  it("a lapsed trial/plan (free) can't route any kind", () => {
+    expect(planCannotRouteKind("rotator", "free")).toBe(true);
+    expect(planCannotRouteKind("shortlink", "free")).toBe(true);
+    expect(planCannotRouteKind("adlink", "free")).toBe(true);
+  });
+  it("ad links on a plan that never offers them (Solo) can't route, even unpaused in the DB", () => {
+    expect(planCannotRouteKind("adlink", "basic")).toBe(true);
+  });
+  it("otherwise, on a real plan that supports the kind, it's fine", () => {
+    expect(planCannotRouteKind("rotator", "basic")).toBe(false);
+    expect(planCannotRouteKind("shortlink", "basic")).toBe(false);
+    expect(planCannotRouteKind("adlink", "pro")).toBe(false);
+  });
+});
+
+describe("combinedStatusText reflects a live-lapsed plan before planPausedAt is set (audit item 13)", () => {
+  it("shows Paused: trial ended for a free/no-trial owner even though planPausedAt is still null", () => {
+    expect(combinedStatusText(null, null, "rotator", "free")).toBe("Paused: trial ended");
+  });
+  it("shows Paused: ad links need Growth for an ad link on Solo even though planPausedAt is still null", () => {
+    expect(combinedStatusText(null, null, "adlink", "basic")).toBe("Paused: ad links need Growth");
+  });
+  it("a real, supported plan with no flags set stays Live", () => {
+    expect(combinedStatusText(null, null, "rotator", "basic")).toBe("Live");
+  });
+});
+
+describe("mergeLinks marks every row paused the instant the plan/trial lapses, before any cron runs (audit item 13)", () => {
+  it("every row is paused when plan resolves to free, even with planPausedAt/pausedAt both null", () => {
+    const rotators = [{ id: "r1", name: "Team", code: "AAA", totalClicks: 0, planPausedAt: null, createdAt: new Date("2026-01-01") }];
+    const shortLinks = [{ id: "s1", name: "Brand", code: "acme", clicks: 0, planPausedAt: null, createdAt: new Date("2026-01-01") }];
+    const adLinks = [{ id: "a1", name: "Campaign", number: "971500000000", message: null, clicks: 0, planPausedAt: null, createdAt: new Date("2026-01-01") }];
+    const rows = mergeLinks(rotators, shortLinks, adLinks, { plan: "free", origin: "https://wazap.lt" });
+    for (const row of rows) {
+      expect(row.paused).toBe(true);
+      expect(row.statusText).toBe("Paused: trial ended");
+    }
+  });
+
+  it("an ad link row is paused on Solo (no ad links on that plan) even with planPausedAt null", () => {
+    const adLinks = [{ id: "a1", name: "Campaign", number: "971500000000", message: null, clicks: 0, planPausedAt: null, createdAt: new Date("2026-01-01") }];
+    const rows = mergeLinks([], [], adLinks, { plan: "basic", origin: "https://wazap.lt" });
+    const row = rows.find((r) => r.id === "a1");
+    expect(row?.paused).toBe(true);
+    expect(row?.statusText).toBe("Paused: ad links need Growth");
   });
 });
 

@@ -52,8 +52,8 @@ describe("owner-approved plan table (UX-1 step 1: shared link pool)", () => {
     expect(reportsTier("business")).toBe(reportsTier("ultimate"));
     expect(supportLabel("business")).toBe(supportLabel("ultimate"));
   });
-  it("widget is unavailable on free and available on every paid plan", () => {
-    expect(widgetAvailable("free")).toBe(false);
+  it("widget (website button) is free and unlimited on every plan, including free", () => {
+    expect(widgetAvailable("free")).toBe(true);
     expect(widgetAvailable("basic")).toBe(true);
     expect(widgetAvailable("pro")).toBe(true);
     expect(widgetAvailable("ultimate")).toBe(true);

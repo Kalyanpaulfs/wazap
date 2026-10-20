@@ -8,7 +8,7 @@ check(()=>assert.equal(verifySupportToken(a.token,now),a.visitorId));
 check(()=>assert.equal(verifySupportToken(a.token.replace(a.visitorId,b.visitorId),now),null));
 check(()=>assert.equal(verifySupportToken(a.token,now+31*86400000),null));
 check(()=>assert.equal(verifySupportToken('not-a-token'),null));
-const req=new Request('https://wazap.lt/api/support/chat',{headers:{cookie:SUPPORT_COOKIE+'='+a.token}});
+const req=new Request('https://wazap.lt/api/support/tickets',{headers:{cookie:SUPPORT_COOKIE+'='+a.token}});
 check(()=>assert(ownsSupport(req,a.visitorId)));check(()=>assert(!ownsSupport(req,b.visitorId)));check(()=>assert(!ownsSupport(new Request('https://wazap.lt'),a.visitorId)));
 const {routerQuota,EXISTING_ROUTER_GRACE_END,TRIAL_ROUTED_LEADS}=require('../lib/router-entitlements.ts');
 // Free-trial restructure (FEAT-FREE-TRIAL): the free-plan lifetime lead cap

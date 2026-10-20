@@ -1,24 +1,15 @@
-// Admin-side writes for the support inbox: replying to a chat (which also
-// emails the customer a "continue the chat" link) and opening/closing a
-// conversation. Split out of app/api/admin/support/route.ts so the route
-// only has to handle auth + request shape, and scripts/support-flow-check.ts
-// can call the same functions directly without a real admin session.
+// Admin-side support helpers. SUPPORT-2 moved the live ticket writes to
+// lib/support-tickets.ts; this file now only holds the admin-reply text
+// convention (shared with staffReply) and the ticket-count badge.
 import { prisma } from "./prisma";
-import { createContinueToken } from "./support-session";
-import { renderSupportChatContinueEmail } from "./email";
-import { activeCrmContacts } from "./crm-trash";
-
-export type ReplyToConversationResult = { conversationId: string; outboundEmailId: string | null } | null;
-
-export type AdminReplyAttachment = { mimeType: string; size: number; data: Buffer };
+import { activeConversationContacts } from "./crm-trash";
 
 /**
- * Chat-message body and customer-email text for an admin reply. A reply
- * with text uses it for both. A reply that is just a screenshot (no text)
- * falls back to the same "📎 Screenshot" chat-history convention the
- * customer-side upload uses (see recordAttachmentTurn in
- * support-chat-service.ts), but a friendlier line for the email, since
- * "📎 Screenshot" alone would be an odd thing to email.
+ * Message body and customer-email text for an admin reply. A reply with
+ * text uses it for both. A reply that is just a screenshot (no text) falls
+ * back to the same "📎 Screenshot" history convention the customer-side
+ * upload uses, but a friendlier line for the email, since "📎 Screenshot"
+ * alone would be an odd thing to email.
  */
 export function adminReplyContent(message: string, hasAttachment: boolean): { body: string; emailText: string } {
   const trimmed = message.trim();
@@ -27,51 +18,7 @@ export function adminReplyContent(message: string, hasAttachment: boolean): { bo
   return { body: "", emailText: "" };
 }
 
-export async function replyToConversation(conversationId: string, message: string, attachment?: AdminReplyAttachment): Promise<ReplyToConversationResult> {
-  const conversation = await prisma.supportConversation.findUnique({ where: { id: conversationId } });
-  if (!conversation) return null;
-  const base = process.env.NEXTAUTH_URL || "https://wazap.lt";
-  const { body, emailText } = adminReplyContent(message, Boolean(attachment));
-
-  return prisma.$transaction(async tx => {
-    const created = await tx.supportChatMessage.create({ data: { conversationId, sender: "admin", body, readByAdmin: true } });
-    if (attachment) {
-      await tx.supportAttachment.create({ data: { conversationId, messageId: created.id, mimeType: attachment.mimeType, size: attachment.size, data: attachment.data } });
-    }
-    await tx.supportConversation.update({ where: { id: conversationId }, data: { status: "open", lastMessageAt: new Date() } });
-    if (conversation.crmLeadId) await tx.crmActivity.create({ data: { leadId: conversation.crmLeadId, kind: "support_reply", body: `Support reply: ${body}` } });
-
-    let outboundEmailId: string | null = null;
-    if (conversation.email) {
-      const token = createContinueToken(conversation.visitorId);
-      const continueUrl = `${base}/support/continue?t=${encodeURIComponent(token)}`;
-      const outbound = await tx.outboundEmail.create({
-        data: {
-          recipient: conversation.email.toLowerCase(),
-          type: "support_chat_reply",
-          subject: "Wazap support replied to your chat",
-          html: renderSupportChatContinueEmail({ name: conversation.name, reply: emailText, continueUrl }),
-        },
-      });
-      outboundEmailId = outbound.id;
-      if (conversation.crmLeadId) {
-        await tx.crmActivity.upsert({
-          where: { sourceKey: "support-chat-outbound:" + outbound.id },
-          create: { leadId: conversation.crmLeadId, kind: "support_thread", body: conversationId, sourceKey: "support-chat-outbound:" + outbound.id },
-          update: {},
-        });
-      }
-    }
-
-    return { conversationId, outboundEmailId };
-  });
-}
-
-export async function setConversationStatus(conversationId: string, status: "open" | "closed") {
-  return prisma.supportConversation.update({ where: { id: conversationId }, data: { status } });
-}
-
-/** Server-side count of flagged ("needs you") chats, for the admin menu badge. Matches the same trashed-lead exclusion as the inbox list. */
+/** Server-side count of tickets needing attention (open|investigating), for the admin menu badge (SUPPORT-2: was conversation-based, now ticket-based - same function name, different query). Excludes tickets whose conversation's CRM lead was moved to Trash. */
 export async function flaggedConversationCount(): Promise<number> {
-  return prisma.supportConversation.count({ where: { status: "open", OR: [{ crmLeadId: null }, { crmLead: activeCrmContacts }] } });
+  return prisma.supportTicket.count({ where: { status: { in: ["open", "investigating"] }, conversation: activeConversationContacts } });
 }

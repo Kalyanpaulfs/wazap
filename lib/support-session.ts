@@ -18,8 +18,8 @@ export const supportCookieOptions={httpOnly:true,secure:true,sameSite:"lax" as c
 // separate HMAC domain ("support-continue-v1") so these tokens can never be
 // replayed as a support-session cookie value or vice versa. The visitorId is
 // base64url-encoded so it can safely contain any characters (it is
-// client-supplied, not necessarily a UUID, up to 120 chars - see app/api/
-// chatbot/route.ts and app/api/support/chat/route.ts).
+// client-supplied, not necessarily a UUID, up to 120 chars - see
+// app/api/support/tickets/**).
 const CONTINUE_TTL=14*86400;
 function continueSignature(value:string){return createHmac("sha256",key()).update("support-continue-v1:"+value).digest("hex");}
 export function createContinueToken(visitorId:string,now=Date.now()):string{
@@ -27,6 +27,19 @@ export function createContinueToken(visitorId:string,now=Date.now()):string{
   const value=encoded+"."+Math.floor(now/1000+CONTINUE_TTL);
   return value+"."+continueSignature(value);
 }
+// Shared "how to reopen a solved ticket" text for the solved/auto-solved
+// emails (lib/support-tickets.ts, lib/support-monitor.ts). Email replies do
+// NOT reach a ticket (support@ is not polled back into SupportTicket), so
+// this must be a link the visitor can click, not "just reply" - the same
+// continue-chat token the "new reply" email already uses. Logged-in users
+// (ticket.userId set) also get a direct /support/tickets link.
+export function reopenTicketText(opts:{visitorId:string;ticketNumber:string;userId?:string|null;base:string}):string{
+  const token=createContinueToken(opts.visitorId);
+  const reopenUrl=`${opts.base}/support/continue?t=${encodeURIComponent(token)}`;
+  const myTickets=opts.userId?`\n\nSee all your tickets: ${opts.base}/support/tickets`:"";
+  return `If this isn't fixed, you can reopen ticket #${opts.ticketNumber} within 7 days: ${reopenUrl}${myTickets}`;
+}
+
 export function verifyContinueToken(token:string,now=Date.now()):string|null{
   const parts=token.split(".");
   if(parts.length!==3|| !/^\d{10}$/.test(parts[1])|| !/^[a-f0-9]{64}$/.test(parts[2]))return null;

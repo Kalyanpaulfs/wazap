@@ -41,11 +41,34 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: poolCheck.error, upgrade: true }, { status: 403 });
   }
 
-  const { name, number, message, utmSource, utmMedium, utmCampaign } = await req.json();
+  const body = await req.json().catch(() => ({}));
+  const { name, number, message, utmSource, utmMedium, utmCampaign } = body as Record<string, unknown>;
   const n = String(number ?? "").replace(/\D/g, "");
-  if (!name || !isPlausibleE164Digits(n)) return NextResponse.json({ error: "A name and a valid phone number (with country code) are required." }, { status: 400 });
+  if (typeof name !== "string" || !name.trim() || !isPlausibleE164Digits(n)) {
+    return NextResponse.json({ error: "A name and a valid phone number (with country code) are required." }, { status: 400 });
+  }
+  if (message !== undefined && message !== null && typeof message !== "string") {
+    return NextResponse.json({ error: "Invalid message." }, { status: 400 });
+  }
+  if (utmSource !== undefined && utmSource !== null && typeof utmSource !== "string") {
+    return NextResponse.json({ error: "Invalid utmSource." }, { status: 400 });
+  }
+  if (utmMedium !== undefined && utmMedium !== null && typeof utmMedium !== "string") {
+    return NextResponse.json({ error: "Invalid utmMedium." }, { status: 400 });
+  }
+  if (utmCampaign !== undefined && utmCampaign !== null && typeof utmCampaign !== "string") {
+    return NextResponse.json({ error: "Invalid utmCampaign." }, { status: 400 });
+  }
   const link = await prisma.adLink.create({
-    data: { userId, name, number: n, message, utmSource, utmMedium, utmCampaign },
+    data: {
+      userId,
+      name: name.trim().slice(0, 100),
+      number: n,
+      message: typeof message === "string" ? message.slice(0, 600) : null,
+      utmSource: typeof utmSource === "string" ? utmSource.slice(0, 60) : null,
+      utmMedium: typeof utmMedium === "string" ? utmMedium.slice(0, 60) : null,
+      utmCampaign: typeof utmCampaign === "string" ? utmCampaign.slice(0, 60) : null,
+    },
   });
   await recordFunnelEvent("first_tool_success", { userId, source: "ad_builder" });
   return NextResponse.json(link);
@@ -56,7 +79,8 @@ export async function DELETE(req: Request) {
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if (!sameSiteRequest(req)) return NextResponse.json({ error: "Invalid request origin." }, { status: 403 });
   const userId = (session.user as any).id;
-  const { id } = await req.json();
+  const { id } = await req.json().catch(() => ({}));
+  if (!id || typeof id !== "string") return NextResponse.json({ error: "Missing id." }, { status: 400 });
   await prisma.adLink.deleteMany({ where: { id, userId } });
   return NextResponse.json({ success: true });
 }

@@ -1,8 +1,7 @@
 // Full customer-journey end-to-end check against the LOCAL dev server
 // (http://localhost:3000), acting like a real browser over HTTP (fetch +
 // manual cookie jar for the NextAuth email-code flow), with direct Prisma
-// used only for test setup/verification/cleanup - exactly like
-// scripts/support-flow-check.ts does for the support flow.
+// used only for test setup/verification/cleanup.
 //
 // Usage: npx tsx tests/e2e/customer-e2e.ts
 //
@@ -11,6 +10,8 @@
 import fs from "node:fs";
 import { prisma } from "@/lib/prisma";
 import { getActiveWorkspace } from "@/lib/workspaces";
+import { syncPlanLimits } from "@/lib/plan-limit-sync";
+import { staffReply as libStaffReply } from "@/lib/support-tickets";
 
 const cleanHtml = (s: string) => s.replace(/<!--.*?-->/g, "");
 
@@ -172,8 +173,12 @@ async function getSession(jar: Jar) {
 // ---------------------------------------------------------------------------
 const createdUserIds = new Set<string>();
 const createdEmails = new Set<string>();
+const createdVisitorIds = new Set<string>();
 function trackEmail(email: string) {
   createdEmails.add(email);
+}
+function trackVisitor(visitorId: string) {
+  createdVisitorIds.add(visitorId);
 }
 async function trackUserByEmail(email: string) {
   const user = await prisma.user.findUnique({ where: { email }, select: { id: true } });
@@ -205,8 +210,22 @@ async function cleanupAll() {
   await prisma.outboundEmail.deleteMany({ where: { userId: { in: ids } } });
   await prisma.billingAuditLog.deleteMany({ where: { userId: { in: ids } } }).catch(() => {});
   await prisma.emailCode.deleteMany({ where: { email: { in: [...createdEmails] } } });
+  // SUPPORT-2: SupportConversation has no FK/cascade from User (plain
+  // userId string, same style as CrmLead.ownerId - see schema comment), so
+  // it must be cleaned up explicitly by visitorId. This cascades (DB-level
+  // ON DELETE CASCADE) to SupportTicket, SupportChatMessage and
+  // SupportAttachment for that conversation.
+  await prisma.supportConversation.deleteMany({ where: { visitorId: { in: [...createdVisitorIds] } } }).catch(() => {});
+  // Quick-answer feedback rows use a plain answerId string (not a DB
+  // relation) - our e2e feedback checks tag theirs with the run id so they
+  // can be swept without touching real answer ids.
+  await prisma.supportAnswerFeedback.deleteMany({ where: { answerId: { startsWith: `e2e-${RUN}` } } }).catch(() => {});
   await prisma.crmActivity.deleteMany({ where: { lead: { email: { in: [...createdEmails] } } } }).catch(() => {});
   await prisma.crmLead.deleteMany({ where: { email: { in: [...createdEmails] } } }).catch(() => {});
+  // Pre-existing gap (not new): the PayPal "manual invoice" fallback tested
+  // in the misc billing check creates a real ContactMessage for the free
+  // plan test user's email - clean that up too.
+  await prisma.contactMessage.deleteMany({ where: { email: { in: [...createdEmails] } } }).catch(() => {});
   await prisma.payment.deleteMany({ where: { userId: { in: ids } } }).catch(() => {});
   // User delete cascades to Workspace (owner), WorkspaceMember, RotatorLink,
   // ShortLink, AdLink (+AdLinkClick), ConversationStart, DailyUsage,
@@ -408,8 +427,10 @@ async function main() {
   type PlanCfg = { key: "free" | "basic" | "pro" | "ultimate"; linkLimit: number; numbersLimit: number; adAvailable: boolean; widget: boolean };
   const PLANS: PlanCfg[] = [
     // Free-trial restructure: "free" (no paid plan, no active trial) is 0 of
-    // everything - nothing is grandfathered any more.
-    { key: "free", linkLimit: 0, numbersLimit: 0, adAvailable: false, widget: false },
+    // everything - nothing is grandfathered any more. The website widget is
+    // the one exception: owner decision, free and unlimited for every plan
+    // (including free/anonymous) - see lib/plan-limits.ts WIDGET_AVAILABLE.
+    { key: "free", linkLimit: 0, numbersLimit: 0, adAvailable: false, widget: true },
     { key: "basic", linkLimit: 5, numbersLimit: 3, adAvailable: false, widget: true },
     { key: "pro", linkLimit: 20, numbersLimit: 10, adAvailable: true, widget: true },
     { key: "ultimate", linkLimit: 55, numbersLimit: 20, adAvailable: true, widget: true },
@@ -809,6 +830,31 @@ async function main() {
     }
   });
 
+  // --- D. Audit item 11: a deleted (not found) ad link must land on
+  // /link-paused?reason=unavailable - never on the caller-supplied `?to=`
+  // fallback, which is only meant for a genuine DB error/timeout. ---
+  await check("D", "deleted ad link: /a/<id> goes to link-paused?reason=unavailable, ignoring ?to=", async () => {
+    const r = await http(null, `/a/nonexistent-ad-link-${RUN}?to=${encodeURIComponent("https://wa.me/15550000000")}`, { ip: "10.77.9.11" });
+    assertTrue(r.status === 307 || r.status === 308, `deleted ad link should still redirect, got ${r.status}`);
+    assertTrue((r.location || "").includes("/link-paused") && (r.location || "").includes("reason=unavailable"), `deleted ad link should land on link-paused?reason=unavailable, got ${r.location}`);
+    assertTrue(!(r.location || "").includes("wa.me"), `deleted ad link must NOT use the ?to= fallback, got ${r.location}`);
+  });
+
+  // --- D. Audit item 11: ad links must stop routing the moment the owner's
+  // plan doesn't include them (live check, no cron needed) - e.g. a Solo
+  // (basic) plan, which doesn't offer ad links at all. ---
+  await check("D", "ad link on a plan without ad links (Solo): /a/<id> goes to link-paused?reason=plan even with no planPausedAt", async () => {
+    const basicUser = planUsers.get("basic")!;
+    const noAdLinksPlan = await prisma.adLink.create({ data: { userId: basicUser.id, name: "solo plan ad link probe", number: "971501110009" } });
+    try {
+      const r = await http(null, `/a/${noAdLinksPlan.id}`, { ip: "10.77.9.12" });
+      assertTrue(r.status === 307 || r.status === 308, `ad link on a plan without ad links should still redirect, got ${r.status}`);
+      assertTrue((r.location || "").includes("/link-paused") && (r.location || "").includes("reason=plan"), `ad link on Solo should land on link-paused?reason=plan, got ${r.location}`);
+    } finally {
+      await prisma.adLink.deleteMany({ where: { id: noAdLinksPlan.id } });
+    }
+  });
+
   // --- D. Grandfathering: over-limit existing item still works; PATCH that doesn't increase numbers is allowed ---
   await check("D", "grandfathering: over-limit rotator still routes, non-increasing PATCH allowed, increasing PATCH blocked", async () => {
     const basicUser = planUsers.get("basic")!;
@@ -1111,17 +1157,28 @@ async function main() {
     });
 
     await check("J", "trial-lifecycle: queues a reminder email and records trial_expired", async () => {
+      // Audit item 9: the "ending" reminder now only fires with <= 1 day
+      // left, not right after sign-up - so this trial must be inside that
+      // 1-day window, not the old 3-day one.
       const endingSoon = await createDbUser("trial-ending-soon", {
         plan: "free",
         trialPlan: "basic",
-        trialStartedAt: new Date(),
-        trialEndsAt: new Date(Date.now() + 2 * 86_400_000),
+        trialStartedAt: new Date(Date.now() - 2 * 86_400_000),
+        trialEndsAt: new Date(Date.now() + 12 * 3_600_000),
       });
       const justExpired = await createDbUser("trial-just-expired", {
         plan: "free",
         trialPlan: "basic",
         trialStartedAt: new Date(Date.now() - 3 * 86_400_000),
         trialEndsAt: new Date(Date.now() - 60_000),
+      });
+      // Audit item 9: a brand-new trial (3 days left, right after sign-up)
+      // must NOT get the "ending" reminder yet.
+      const brandNewTrial = await createDbUser("trial-brand-new", {
+        plan: "free",
+        trialPlan: "basic",
+        trialStartedAt: new Date(),
+        trialEndsAt: new Date(Date.now() + 3 * 86_400_000),
       });
       const r = await http(null, "/api/cron/trial-lifecycle", { headers: { Authorization: `Bearer ${cronSecret}` } });
       assertEqual(r.status, 200, `cron call: ${JSON.stringify(r.body)}`);
@@ -1131,6 +1188,8 @@ async function main() {
       assertTrue(!!refreshed!.trialReminderSentAt, "trialReminderSentAt should be set");
       const expiredEvent = await prisma.funnelEvent.findFirst({ where: { userId: justExpired.id, name: "trial_expired" } });
       assertTrue(!!expiredEvent, "a trial_expired funnel event should be recorded");
+      const noEarlyReminder = await prisma.outboundEmail.findFirst({ where: { userId: brandNewTrial.id, type: "trial_ending" } });
+      assertTrue(!noEarlyReminder, "a brand-new trial (3 days left) should not get the ending reminder yet");
     });
 
     await check("J", "expire-plans: pauses ALL rotators once the Free trial ends (Free-trial restructure: free is 0 of everything)", async () => {
@@ -1163,17 +1222,367 @@ async function main() {
   }
 
   // -------------------------------------------------------------------------
-  // K. Support flow check (existing script)
+  // M. Plan pausing end-to-end: a trial-ended user's links pause (and /r,
+  // /w redirect to /link-paused), a simulated paid activation resumes them
+  // via the same lib/plan-limit-sync.ts call the admin "activate" endpoint
+  // (app/api/admin/activate/route.ts) and every payment webhook
+  // (lib/payment-integrity.ts) rely on, and a currently-paid user is left
+  // alone by the cron.
   // -------------------------------------------------------------------------
-  await check("K", "scripts/support-flow-check.ts passes", async () => {
-    const { execSync } = await import("node:child_process");
-    const out = execSync("npx tsx scripts/support-flow-check.ts", { cwd: process.cwd(), encoding: "utf8" });
-    const jsonMatch = out.match(/\{[\s\S]*\}/);
-    const parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : {};
-    assertTrue(parsed.passed > 0 && Array.isArray(parsed.checks), `unexpected output: ${out}`);
-    console.log(`  support-flow-check: ${parsed.passed} checks passed`);
+  if (!cronSecret) {
+    skip("M", "plan pause: trial-ended links pause and /r,/w redirect to /link-paused", "CRON_SECRET not configured in .env");
+    skip("M", "plan pause: a currently-paid user's links are not paused by expire-plans", "CRON_SECRET not configured in .env");
+  } else {
+    await check("M", "plan pause: trial-ended user's links pause, /r+/w redirect to /link-paused, and a simulated paid activation resumes them", async () => {
+      const user = await createDbUser("pause-flow", {
+        plan: "free",
+        trialPlan: "basic",
+        trialStartedAt: new Date(Date.now() - 4 * 86_400_000),
+        trialEndsAt: new Date(Date.now() - 1 * 86_400_000), // trial ended yesterday
+      });
+      const rotator = await prisma.rotatorLink.create({
+        data: { userId: user.id, code: `E2EPLANPAUSE${RUN}`, name: "plan pause rotator", numbers: ["919888800001"], fallbackNumber: "919888800001" },
+      });
+      const shortLink = await prisma.shortLink.create({ data: { userId: user.id, code: `e2eplanpausesl${RUN}`, name: "plan pause short link", phone: "919888800002" } });
+
+      const cronResult = await http(null, "/api/cron/expire-plans", { headers: { Authorization: `Bearer ${cronSecret}` } });
+      assertEqual(cronResult.status, 200, `cron call: ${JSON.stringify(cronResult.body)}`);
+
+      const rotatorAfter = await prisma.rotatorLink.findUnique({ where: { id: rotator.id } });
+      const shortLinkAfter = await prisma.shortLink.findUnique({ where: { id: shortLink.id } });
+      assertTrue(!!rotatorAfter!.planPausedAt, "rotator should be plan-paused once the trial ended");
+      assertTrue(!!shortLinkAfter!.planPausedAt, "short link should be plan-paused once the trial ended");
+
+      const rRotator = await http(null, `/r/${rotator.code}`, { ip: "10.77.20.1" });
+      assertTrue(rRotator.status === 307 || rRotator.status === 308, `paused rotator should still redirect, got ${rRotator.status}`);
+      assertTrue(
+        (rRotator.location || "").includes("/link-paused") && !(rRotator.location || "").includes("reason=owner"),
+        `plan-paused rotator should land on /link-paused without reason=owner, got ${rRotator.location}`,
+      );
+
+      const rShortLink = await http(null, `/w/${shortLink.code}`, { ip: "10.77.20.2" });
+      assertTrue(rShortLink.status === 307 || rShortLink.status === 308, `paused short link should still redirect, got ${rShortLink.status}`);
+      assertTrue(
+        (rShortLink.location || "").includes("/link-paused") && !(rShortLink.location || "").includes("reason=owner"),
+        `plan-paused short link should land on /link-paused without reason=owner, got ${rShortLink.location}`,
+      );
+
+      // Simulate a successful paid activation exactly the way the app does
+      // it: update plan/planExpiresAt, then call lib/plan-limit-sync.ts's
+      // syncPlanLimits with the plan read BEFORE the change - the same two
+      // steps as app/api/admin/activate/route.ts's POST handler (and what
+      // lib/payment-integrity.ts's recordVerifiedCharge/applyVerifiedLifecycle
+      // also do after a verified webhook charge).
+      const before = await prisma.user.findUnique({ where: { id: user.id }, select: { plan: true } });
+      await prisma.user.update({ where: { id: user.id }, data: { plan: "basic", planExpiresAt: new Date(Date.now() + 30 * 86_400_000) } });
+      await syncPlanLimits(user.id, before!.plan);
+
+      const rotatorResumed = await prisma.rotatorLink.findUnique({ where: { id: rotator.id } });
+      const shortLinkResumed = await prisma.shortLink.findUnique({ where: { id: shortLink.id } });
+      assertEqual(rotatorResumed!.planPausedAt, null, "rotator should resume (planPausedAt cleared) after paid activation");
+      assertEqual(shortLinkResumed!.planPausedAt, null, "short link should resume (planPausedAt cleared) after paid activation");
+
+      const rRotator2 = await http(null, `/r/${rotator.code}`, { ip: "10.77.20.3" });
+      assertTrue((rRotator2.location || "").includes("wa.me"), `resumed rotator should route to wa.me, got ${rRotator2.location}`);
+      const rShortLink2 = await http(null, `/w/${shortLink.code}`, { ip: "10.77.20.4" });
+      assertTrue((rShortLink2.location || "").includes("wa.me"), `resumed short link should route to wa.me, got ${rShortLink2.location}`);
+    });
+
+    await check("M", "plan pause: a currently-paid (non-expired) user's links are not paused by expire-plans", async () => {
+      const user = await createDbUser("pause-flow-paid", { plan: "pro", planExpiresAt: new Date(Date.now() + 30 * 86_400_000) });
+      const rotator = await prisma.rotatorLink.create({
+        data: { userId: user.id, code: `E2EPLANPAID${RUN}`, name: "paid user rotator", numbers: ["919888800003"], fallbackNumber: "919888800003" },
+      });
+      const cronResult = await http(null, "/api/cron/expire-plans", { headers: { Authorization: `Bearer ${cronSecret}` } });
+      assertEqual(cronResult.status, 200, `cron call: ${JSON.stringify(cronResult.body)}`);
+      const after = await prisma.rotatorLink.findUnique({ where: { id: rotator.id } });
+      assertEqual(after!.planPausedAt, null, "a currently-paid user's rotator must not be paused by expire-plans");
+      const r = await http(null, `/r/${rotator.code}`, { ip: "10.77.20.5" });
+      assertTrue((r.location || "").includes("wa.me"), `paid user's rotator should still route to wa.me, got ${r.location}`);
+    });
+  }
+
+  // -------------------------------------------------------------------------
+  // N. Support tickets (customer HTTP flow, SUPPORT-2 - no AI, ticket-based).
+  // -------------------------------------------------------------------------
+  const visitorAJar = new Jar();
+  let visitorAId = "";
+  let ticketLinkId = "";
+  let ticketLinkNumber = "";
+  let ticketAccountId = "";
+
+  await check("N", "support profile: GET issues a support session cookie, POST saves the visitor's profile", async () => {
+    const getResult = await http(visitorAJar, "/api/support/profile");
+    assertEqual(getResult.status, 200, `GET /api/support/profile: ${JSON.stringify(getResult.body)}`);
+    assertEqual(getResult.body.ready, false, "a brand-new visitor should not be ready yet");
+    assertTrue(!!getResult.body.visitorId, "GET should hand back a visitorId");
+    assertTrue(visitorAJar.cookies.has("__Host-wazap-support"), "GET should set the __Host-wazap-support cookie");
+    visitorAId = getResult.body.visitorId;
+    trackVisitor(visitorAId);
+
+    const email = emailFor("support-visitor-a");
+    trackEmail(email);
+    const postResult = await http(visitorAJar, "/api/support/profile", {
+      method: "POST",
+      headers: await getOrigin(visitorAJar),
+      body: JSON.stringify({ visitorId: visitorAId, name: "E2E Visitor A", email, phone: "+971501110000" }),
+    });
+    assertEqual(postResult.status, 201, `POST /api/support/profile: ${JSON.stringify(postResult.body)}`);
+    assertEqual(postResult.body.ready, true, "profile save should report ready:true");
   });
 
+  await check("N", "quick answers: GET per topic returns the static list; personal facts only for a logged-in user", async () => {
+    const loggedOut = await http(null, "/api/support/quick-answers?topic=payment");
+    assertEqual(loggedOut.status, 200, "GET /api/support/quick-answers?topic=payment");
+    assertTrue(Array.isArray(loggedOut.body.answers) && loggedOut.body.answers.length > 0, "payment topic should have quick answers");
+    assertEqual(loggedOut.body.personal, null, "a logged-out visitor should not get personal facts");
+
+    const proJar = planJars.get("pro")!;
+    const loggedIn = await http(proJar, "/api/support/quick-answers?topic=payment");
+    assertEqual(loggedIn.status, 200, "GET /api/support/quick-answers?topic=payment (logged in)");
+    assertTrue(!!loggedIn.body.personal && Array.isArray(loggedIn.body.personal.sentences), "a logged-in user should get personal facts for the payment topic");
+
+    const accountTopic = await http(proJar, "/api/support/quick-answers?topic=account");
+    assertEqual(accountTopic.body.personal, null, "personal facts are only for payment/link topics, not account");
+  });
+
+  await check("N", "create ticket: duplicate topic returns 'existing', differentProblem:true creates a new one", async () => {
+    const create1 = await http(visitorAJar, "/api/support/tickets", {
+      method: "POST",
+      headers: await getOrigin(visitorAJar),
+      body: JSON.stringify({ visitorId: visitorAId, topic: "link", message: "My short link opens the wrong number" }),
+    });
+    assertEqual(create1.status, 201, `create ticket 1: ${JSON.stringify(create1.body)}`);
+    assertTrue(!!create1.body.ticket?.number, "created ticket should have a number");
+    ticketLinkId = create1.body.ticket.id;
+    ticketLinkNumber = create1.body.ticket.number;
+    assertEqual(create1.body.ticket.urgent, true, "the 'link' topic is always urgent");
+
+    const duplicate = await http(visitorAJar, "/api/support/tickets", {
+      method: "POST",
+      headers: await getOrigin(visitorAJar),
+      body: JSON.stringify({ visitorId: visitorAId, topic: "link", message: "Still the same problem" }),
+    });
+    assertEqual(duplicate.status, 200, `duplicate-topic create: ${JSON.stringify(duplicate.body)}`);
+    assertEqual(duplicate.body.existing?.id, ticketLinkId, "a second ticket on the same open topic should return the existing one, not create a new one");
+
+    const differentProblem = await http(visitorAJar, "/api/support/tickets", {
+      method: "POST",
+      headers: await getOrigin(visitorAJar),
+      body: JSON.stringify({ visitorId: visitorAId, topic: "link", message: "A second, different link problem", differentProblem: true }),
+    });
+    assertEqual(differentProblem.status, 201, `differentProblem create: ${JSON.stringify(differentProblem.body)}`);
+    assertTrue(differentProblem.body.ticket.id !== ticketLinkId, "differentProblem:true should create a genuinely new ticket");
+
+    // Also raise the "account" topic ticket used by the closed-ticket check below.
+    const accountCreate = await http(visitorAJar, "/api/support/tickets", {
+      method: "POST",
+      headers: await getOrigin(visitorAJar),
+      body: JSON.stringify({ visitorId: visitorAId, topic: "account", message: "Can't change my email" }),
+    });
+    assertEqual(accountCreate.status, 201, `create account ticket: ${JSON.stringify(accountCreate.body)}`);
+    ticketAccountId = accountCreate.body.ticket.id;
+  });
+
+  await check("N", "list + detail: GET /api/support/tickets and /api/support/tickets/[id] return only this visitor's tickets", async () => {
+    const list = await http(visitorAJar, `/api/support/tickets?visitorId=${visitorAId}`);
+    assertEqual(list.status, 200, "GET /api/support/tickets");
+    assertTrue(list.body.tickets.length >= 3, `expected at least 3 tickets for visitor A, got ${list.body.tickets.length}`);
+    assertTrue(list.body.tickets.some((t: { id: string }) => t.id === ticketLinkId), "list should include the first link ticket");
+
+    const detail = await http(visitorAJar, `/api/support/tickets/${ticketLinkId}?visitorId=${visitorAId}`);
+    assertEqual(detail.status, 200, "GET /api/support/tickets/[id]");
+    assertTrue(
+      detail.body.ticket.messages.some((m: { sender: string; body: string }) => m.sender === "bot" && m.body.includes(`Ticket #${ticketLinkNumber} received`)),
+      "detail should include the 'Ticket received' system message",
+    );
+    assertTrue(detail.body.ticket.messages.some((m: { sender: string }) => m.sender === "visitor"), "detail should include the visitor's own first message");
+  });
+
+  await check("N", "send message, staff reply (lib staffReply), unread count, reopen within 7 days", async () => {
+    const sendResult = await http(visitorAJar, `/api/support/tickets/${ticketLinkId}/messages`, {
+      method: "POST",
+      headers: await getOrigin(visitorAJar),
+      body: JSON.stringify({ visitorId: visitorAId, message: "Any update?" }),
+    });
+    assertEqual(sendResult.status, 200, `customer message: ${JSON.stringify(sendResult.body)}`);
+    assertEqual(sendResult.body.status, "open", "an open ticket stays open after another customer message");
+
+    const staffResult = await libStaffReply(ticketLinkId, "e2e-admin", "We're looking into it.", "waiting");
+    assertEqual(staffResult.kind, "ok", `staffReply: ${JSON.stringify(staffResult)}`);
+
+    const unreadAfterReply = await http(visitorAJar, `/api/support/unread?visitorId=${visitorAId}`);
+    assertEqual(unreadAfterReply.status, 200, "GET /api/support/unread");
+    assertTrue(unreadAfterReply.body.unread >= 1, `expected at least 1 unread admin message, got ${unreadAfterReply.body.unread}`);
+
+    const detailAfterReply = await http(visitorAJar, `/api/support/tickets/${ticketLinkId}?visitorId=${visitorAId}`);
+    assertEqual(detailAfterReply.body.ticket.status, "waiting", "ticket should move to 'waiting' after a staff reply with the default next-status");
+    assertTrue(detailAfterReply.body.ticket.messages.some((m: { sender: string }) => m.sender === "admin"), "detail should include the admin's reply");
+
+    const unreadAfterRead = await http(visitorAJar, `/api/support/unread?visitorId=${visitorAId}`);
+    assertEqual(unreadAfterRead.body.unread, 0, "fetching the ticket detail should mark the admin message as read, so unread drops back to 0");
+
+    const solveResult = await libStaffReply(ticketLinkId, "e2e-admin", "This should be fixed now.", "solved");
+    assertEqual(solveResult.kind, "ok", `staffReply (solve): ${JSON.stringify(solveResult)}`);
+    const solvedDetail = await http(visitorAJar, `/api/support/tickets/${ticketLinkId}?visitorId=${visitorAId}`);
+    assertEqual(solvedDetail.body.ticket.status, "solved", "ticket should be 'solved' after staffReply with nextStatus solved");
+    assertTrue(solvedDetail.body.ticket.canReopen, "a just-solved ticket should still be within the 7-day reopen window");
+
+    const reopenResult = await http(visitorAJar, `/api/support/tickets/${ticketLinkId}/reopen`, {
+      method: "POST",
+      headers: await getOrigin(visitorAJar),
+      body: JSON.stringify({ visitorId: visitorAId }),
+    });
+    assertEqual(reopenResult.status, 200, `reopen: ${JSON.stringify(reopenResult.body)}`);
+    const reopenedDetail = await http(visitorAJar, `/api/support/tickets/${ticketLinkId}?visitorId=${visitorAId}`);
+    assertEqual(reopenedDetail.body.ticket.status, "open", "a customer reopen within 7 days should bring the ticket back to 'open'");
+  });
+
+  await check("N", "closed ticket rejects new customer messages", async () => {
+    // A fresh visitor/jar here (not visitorA, which has already used several
+    // of its 5-messages/minute burst-limit slots in the checks above) so
+    // this one 409 assertion isn't masked by an unrelated 429.
+    const closedVisitorJar = new Jar();
+    const profileGet = await http(closedVisitorJar, "/api/support/profile");
+    const closedVisitorId = profileGet.body.visitorId as string;
+    trackVisitor(closedVisitorId);
+    const closedVisitorEmail = emailFor("support-visitor-closed");
+    trackEmail(closedVisitorEmail);
+    await http(closedVisitorJar, "/api/support/profile", {
+      method: "POST",
+      headers: await getOrigin(closedVisitorJar),
+      body: JSON.stringify({ visitorId: closedVisitorId, name: "E2E Visitor Closed", email: closedVisitorEmail, phone: "+971501110002" }),
+    });
+    const created = await http(closedVisitorJar, "/api/support/tickets", {
+      method: "POST",
+      headers: await getOrigin(closedVisitorJar),
+      body: JSON.stringify({ visitorId: closedVisitorId, topic: "account", message: "Can't change my email" }),
+    });
+    assertEqual(created.status, 201, `create ticket for closed-ticket check: ${JSON.stringify(created.body)}`);
+    const closedTicketId = created.body.ticket.id as string;
+    await prisma.supportTicket.update({ where: { id: closedTicketId }, data: { status: "closed", closedAt: new Date() } });
+
+    const result = await http(closedVisitorJar, `/api/support/tickets/${closedTicketId}/messages`, {
+      method: "POST",
+      headers: await getOrigin(closedVisitorJar),
+      body: JSON.stringify({ visitorId: closedVisitorId, message: "Hello?" }),
+    });
+    assertEqual(result.status, 409, `message on a closed ticket: ${JSON.stringify(result.body)}`);
+    assertTrue(/closed/i.test(result.body.error || ""), `expected a 'closed' error message, got ${JSON.stringify(result.body)}`);
+  });
+
+  await check("N", "another visitor gets 404 reading someone else's ticket", async () => {
+    const visitorBJar = new Jar();
+    const getResult = await http(visitorBJar, "/api/support/profile");
+    const visitorBId = getResult.body.visitorId as string;
+    trackVisitor(visitorBId);
+    const emailB = emailFor("support-visitor-b");
+    trackEmail(emailB);
+    await http(visitorBJar, "/api/support/profile", {
+      method: "POST",
+      headers: await getOrigin(visitorBJar),
+      body: JSON.stringify({ visitorId: visitorBId, name: "E2E Visitor B", email: emailB, phone: "+971501110001" }),
+    });
+    const result = await http(visitorBJar, `/api/support/tickets/${ticketLinkId}?visitorId=${visitorBId}`);
+    assertEqual(result.status, 404, `visitor B reading visitor A's ticket: ${JSON.stringify(result.body)}`);
+  });
+
+  await check("N", "WhatsApp support availability: Solo -> plan, Growth -> available", async () => {
+    const soloResult = await http(planJars.get("basic")!, "/api/support/whatsapp");
+    assertEqual(soloResult.status, 200, "GET /api/support/whatsapp (solo)");
+    assertEqual(soloResult.body.available, false, "Solo should not get WhatsApp support");
+    assertEqual(soloResult.body.reason, "plan", "Solo's reason should be 'plan'");
+
+    const growthResult = await http(planJars.get("pro")!, "/api/support/whatsapp");
+    assertEqual(growthResult.status, 200, "GET /api/support/whatsapp (growth)");
+    assertEqual(growthResult.body.available, true, "Growth should get WhatsApp support (SUPPORT_WHATSAPP_NUMBER is set locally)");
+    assertTrue(
+      typeof growthResult.body.url === "string" && growthResult.body.url.includes("wa.me/971585580053"),
+      `expected a wa.me url with the configured number, got ${growthResult.body.url}`,
+    );
+  });
+
+  await check("N", "quick-answer feedback: POST records a row", async () => {
+    const answerId = `e2e-${RUN}-pay-not-active`;
+    const result = await http(visitorAJar, "/api/support/quick-answers/feedback", {
+      method: "POST",
+      headers: await getOrigin(visitorAJar),
+      body: JSON.stringify({ answerId, solved: true }),
+    });
+    assertEqual(result.status, 200, `feedback POST: ${JSON.stringify(result.body)}`);
+    const row = await prisma.supportAnswerFeedback.findFirst({ where: { answerId } });
+    assertTrue(!!row, "feedback row should be recorded");
+    assertEqual(row!.solved, true, "feedback 'solved' should be stored as sent");
+  });
+
+  await check("N", "contact form honeypot: filled honeypot returns ok but stores nothing", async () => {
+    const email = emailFor("contact-honeypot");
+    const before = await prisma.contactMessage.count({ where: { email } });
+    const result = await http(null, "/api/contact", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Origin: BASE },
+      body: JSON.stringify({ name: "Bot", email, subject: "general", message: "buy cheap stuff", company_website: "http://spam.example" }),
+    });
+    assertEqual(result.status, 201, `honeypot POST: ${JSON.stringify(result.body)}`);
+    assertEqual(result.body.ok, true, "honeypot response should still say ok:true");
+    const after = await prisma.contactMessage.count({ where: { email } });
+    assertEqual(after, before, "a filled honeypot must not create a ContactMessage row");
+  });
+
+  // -------------------------------------------------------------------------
+  // O. Additional customer pages: /support/tickets, /contact (logged-in),
+  // and each /links/new/* type form.
+  // -------------------------------------------------------------------------
+  await check("O", "/support/tickets redirects to /login when logged out, 200 when logged in", async () => {
+    const loggedOut = await http(null, "/support/tickets");
+    const isHttpRedirect = (loggedOut.status === 307 || loggedOut.status === 308) && (loggedOut.location || "").includes("/login");
+    const isStreamRedirect = loggedOut.status === 200 && loggedOut.text.includes("NEXT_REDIRECT") && loggedOut.text.includes("/login");
+    assertTrue(isHttpRedirect || isStreamRedirect, `GET /support/tickets (logged out) should redirect to /login, got ${loggedOut.status}`);
+
+    const loggedIn = await http(planJars.get("pro")!, "/support/tickets");
+    assertEqual(loggedIn.status, 200, "GET /support/tickets (logged in)");
+  });
+
+  await check("O", "/contact renders 200 for a logged-in user too", async () => {
+    const r = await http(planJars.get("pro")!, "/contact");
+    assertEqual(r.status, 200, "GET /contact (logged in)");
+  });
+
+  await check("O", "each link-type create form loads 200 for a logged-in user with room in their pool", async () => {
+    const jar = planJars.get("ultimate")!;
+    for (const path of ["/links/new/rotator", "/links/new/brand", "/links/new/ad"]) {
+      const r = await http(jar, path);
+      assertEqual(r.status, 200, `GET ${path} as ultimate`);
+    }
+  });
+
+  // -------------------------------------------------------------------------
+  // P. Local price API: timezone -> country -> currency (estimated local
+  // prices use this; countryForRequest returns null for a loopback test
+  // request, so the timeZone -> country table in app/api/localization/
+  // route.ts is what actually decides it here).
+  // -------------------------------------------------------------------------
+  await check("P", "GET /api/localization: Asia/Calcutta and Asia/Kolkata -> INR, America/New_York -> USD", async () => {
+    const calcutta = await http(null, "/api/localization?timeZone=Asia/Calcutta");
+    assertEqual(calcutta.status, 200, "GET /api/localization?timeZone=Asia/Calcutta");
+    assertEqual(calcutta.body.currency, "INR", `Asia/Calcutta should resolve to INR, got ${JSON.stringify(calcutta.body)}`);
+
+    const kolkata = await http(null, "/api/localization?timeZone=Asia/Kolkata");
+    assertEqual(kolkata.status, 200, "GET /api/localization?timeZone=Asia/Kolkata");
+    assertEqual(kolkata.body.currency, "INR", `Asia/Kolkata should resolve to INR, got ${JSON.stringify(kolkata.body)}`);
+
+    const ny = await http(null, "/api/localization?timeZone=America/New_York");
+    assertEqual(ny.status, 200, "GET /api/localization?timeZone=America/New_York");
+    assertEqual(ny.body.currency, "USD", `America/New_York should resolve to USD, got ${JSON.stringify(ny.body)}`);
+  });
+
+  // -------------------------------------------------------------------------
+  // K. Support flow check - removed. scripts/support-flow-check.ts tested
+  // the old "AI first, human when needed" chat/handoff flow, which SUPPORT-2
+  // retired in favour of tickets; that script and its AI-era dependencies
+  // (lib/support-chat-service.ts, lib/support-handoff.ts) were deleted.
+  // Equivalent coverage for the ticket flow lives in
+  // tests/integration/support-tickets.test.ts.
   // -------------------------------------------------------------------------
   // L. Unit + DB integration tests
   // -------------------------------------------------------------------------
