@@ -4,7 +4,9 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 
-type Consent = "unknown" | "accepted" | "rejected";
+// "loading" = saved choice not read yet. The banner stays hidden until then,
+// otherwise it flashes on every refresh for people who already chose (BUG-14).
+type Consent = "loading" | "unknown" | "accepted" | "rejected";
 
 declare global {
   interface Window {
@@ -45,15 +47,18 @@ export default function AnalyticsConsent() {
   const pathname = usePathname();
   const previousPath = useRef(pathname);
   const firstPageViewSent = useRef(false);
-  const [consent, setConsent] = useState<Consent>("unknown");
+  const [consent, setConsent] = useState<Consent>("loading");
 
   useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
+    let stored: string | null = null;
+    try { stored = localStorage.getItem(STORAGE_KEY); } catch {}
     if (stored === "accepted") {
       setConsent("accepted");
       initialiseAnalytics();
     } else if (stored === "rejected") {
       setConsent("rejected");
+    } else {
+      setConsent("unknown");
     }
   }, []);
 
@@ -70,8 +75,8 @@ export default function AnalyticsConsent() {
     }
   }, [consent, pathname]);
 
-  const choose = (choice: Exclude<Consent, "unknown">) => {
-    localStorage.setItem(STORAGE_KEY, choice);
+  const choose = (choice: Exclude<Consent, "loading" | "unknown">) => {
+    try { localStorage.setItem(STORAGE_KEY, choice); } catch {}
     setConsent(choice);
     if (choice === "accepted") initialiseAnalytics();
     window.gtag?.("consent", "update", {
