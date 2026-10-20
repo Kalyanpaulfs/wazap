@@ -417,7 +417,7 @@ async function main() {
   // once, right after this loop) - /tools/widget and /qr stay as themselves
   // for logged-in users too (free tools, never redirected).
   const PLAN_LOGGED_IN_PAGES = [
-    "/dashboard", "/links", "/links/new", "/tools/widget",
+    "/dashboard", "/links", "/links/new", "/tools", "/tools/widget",
     "/qr", "/results", "/billing", "/account", "/support",
   ];
 
@@ -608,15 +608,17 @@ async function main() {
     }
   });
 
-  // --- C. UX-1 step 4: logged-in /tools (hub) and logged-in /qr behaviour -
-  // /tools redirects to /links/new; /qr stays itself (free tool) but shows
-  // the logged-in "Create a link" back-link instead of the logged-out hero.
-  await check("C", "logged-in /tools redirects to /links/new; /qr stays 200 with a logged-in back-link", async () => {
+  // --- C. logged-in /tools (hub) now shows the "All tools" page (paid +
+  // free tool cards from lib/tool-catalog.ts) instead of redirecting into
+  // /links/new; /qr stays itself (free tool) with its own logged-in frame.
+  await check("C", "logged-in /tools shows the All tools page; /qr stays 200", async () => {
     const jar = planJars.get("pro");
     assertTrue(!!jar, "need a logged-in pro user");
     const toolsResult = await http(jar!, "/tools");
-    assertTrue(toolsResult.status === 307 || toolsResult.status === 308, `GET /tools (logged in) should redirect, got ${toolsResult.status}`);
-    assertTrue((toolsResult.location || "").includes("/links/new"), `GET /tools -> Location "${toolsResult.location}" should include "/links/new"`);
+    assertEqual(toolsResult.status, 200, "GET /tools (logged in) should load 200");
+    assertTrue(toolsResult.text.includes("All tools"), "logged-in /tools should render the All tools heading");
+    assertTrue(toolsResult.text.includes("Paid tools"), "logged-in /tools should render the Paid tools section");
+    assertTrue(toolsResult.text.includes("Free tools"), "logged-in /tools should render the Free tools section");
     const qrResult = await http(jar!, "/qr");
     assertEqual(qrResult.status, 200, "GET /qr (logged in) should stay 200");
     assertTrue(qrResult.text.includes("/links/new"), "logged-in /qr should show the 'Create a link' back-link");

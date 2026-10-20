@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import WorkspaceFrame from "../product/WorkspaceFrame";
 
 export const metadata: Metadata = {
   title: "Dashboard",
@@ -7,5 +8,5 @@ export const metadata: Metadata = {
 };
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  return children;
+  return <WorkspaceFrame>{children}</WorkspaceFrame>;
 }

@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import { getServerSession } from "next-auth";
-import { redirect } from "next/navigation";
 import Link from "next/link";
 import { ArrowRight, Code2, Link2, Megaphone, MessageCircle, QrCode, RefreshCw } from "lucide-react";
 import { authOptions } from "@/lib/auth";
+import AllTools from "./AllTools";
 
 export const metadata: Metadata = {
   title: "WhatsApp Business Tools — QR, Links & Routing",
@@ -40,13 +40,14 @@ const toolsJsonLd = {
   ],
 };
 
-// UX-1 step 5: the tools hub sends logged-in users straight into the new
-// in-app create flow. This redirect lives on the page itself (not a
-// app/tools/layout.tsx) so it does NOT also wrap /tools/widget or the other
-// /tools/* subpages, which must stay reachable for logged-in users.
+// Logged-in customers get the "All tools" page (AllTools.tsx) instead of
+// this public SEO page - decided on the page itself (not
+// app/tools/layout.tsx), so it does NOT also affect /tools/widget or the
+// other /tools/* subpages, which keep their own logged-in behaviour.
+// Logged-out visitors keep seeing exactly the public content below.
 export default async function ToolsPage() {
   const session = await getServerSession(authOptions);
-  if (session?.user) redirect("/links/new");
+  if (session?.user) return <AllTools userId={(session.user as { id: string }).id} />;
 
   const tools = [
     { href: "/tools/rotator", icon: RefreshCw, title: "Lead rotator", desc: "One link that shares chats across your team's numbers.", action: "Create rotator" },

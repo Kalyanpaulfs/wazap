@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import WorkspaceFrame from "../product/WorkspaceFrame";
 
 export const metadata: Metadata = {
   title: "Performance — Wazap",
@@ -6,5 +7,5 @@ export const metadata: Metadata = {
 };
 
 export default function PerformanceLayout({ children }: { children: React.ReactNode }) {
-  return children;
+  return <WorkspaceFrame>{children}</WorkspaceFrame>;
 }

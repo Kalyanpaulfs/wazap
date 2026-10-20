@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import SupportFrame from "../support/SupportFrame";
 
 export const metadata: Metadata = {
   title: "Contact Wazap — Sales, Support and Product Help",
@@ -12,5 +13,5 @@ export const metadata: Metadata = {
 };
 
 export default function Layout({ children }: { children: React.ReactNode }) {
-  return <>{children}</>;
+  return <SupportFrame>{children}</SupportFrame>;
 }

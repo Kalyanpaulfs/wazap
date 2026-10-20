@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
-import { useSession } from "next-auth/react";
 import {
   CreditCard,
   Link2,
@@ -18,7 +17,6 @@ import {
 } from "lucide-react";
 
 interface WhatsappInfo { available: boolean; url?: string; reason?: "plan" | "unavailable" }
-interface TicketSummary { status: string }
 
 type AnswerGroup = "Payment" | "Links" | "Account" | "Plans";
 
@@ -116,32 +114,13 @@ const QUICK_ANSWERS: { group: AnswerGroup; q: string; a: React.ReactNode }[] = [
 ];
 
 const GROUP_ORDER: AnswerGroup[] = ["Payment", "Links", "Account", "Plans"];
-const OPEN_STATUSES = new Set(["open", "investigating", "waiting"]);
 
 function openNewTicket() {
   window.dispatchEvent(new CustomEvent("wazap:open-chat", { detail: { newTicket: true } }));
 }
 
-export default function SupportClient() {
-  const { data: session } = useSession();
-  const [whatsapp, setWhatsapp] = useState<WhatsappInfo | null>(null);
-  const [openTicketCount, setOpenTicketCount] = useState<number | null>(null);
+export default function SupportClient({ loggedIn, whatsapp, openTicketCount }: { loggedIn: boolean; whatsapp: WhatsappInfo; openTicketCount: number | null }) {
   const [search, setSearch] = useState("");
-
-  useEffect(() => {
-    fetch("/api/support/whatsapp").then(response => response.json()).then(setWhatsapp).catch(() => setWhatsapp({ available: false, reason: "unavailable" }));
-  }, []);
-
-  useEffect(() => {
-    if (!session?.user) return;
-    fetch("/api/support/tickets", { cache: "no-store" })
-      .then(response => response.json())
-      .then(json => {
-        const tickets: TicketSummary[] = Array.isArray(json.tickets) ? json.tickets : [];
-        setOpenTicketCount(tickets.filter(t => OPEN_STATUSES.has(t.status)).length);
-      })
-      .catch(() => setOpenTicketCount(null));
-  }, [session]);
 
   const filteredGroups = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -189,7 +168,7 @@ export default function SupportClient() {
             </span>
           </button>
 
-          {session?.user && (
+          {loggedIn && (
             <Link
               href="/support/tickets"
               className="group flex flex-col items-start gap-3 rounded-2xl border border-slate-800 bg-[#111811] p-5 text-left shadow-sm transition-colors hover:border-[#25D366]/40"
