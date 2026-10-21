@@ -1,4 +1,27 @@
-.wp-crm-workspace-bar{padding:16px 28px;border-bottom:1px solid #213525;background:#0c160f}.wp-crm-workspace-tools{display:flex;gap:16px;align-items:center;justify-content:space-between}.wp-crm-workspace-tools form{display:flex;gap:10px;align-items:center;max-width:620px;width:100%;border:1px solid #304a37;background:#0a110c;border-radius:10px;padding:8px 12px;color:#93b49e}.wp-crm-workspace-tools input{width:100%;min-width:0;background:transparent;color:#f0f6f1;font-size:12px;outline:none}.wp-crm-workspace-tools form:focus-within{border-color:#25d366;box-shadow:0 0 0 2px #25d36618}.wp-crm-workspace-tools form button{font-size:12px;color:#86df9d;padding:4px}.wp-crm-guide-toggle{display:flex;gap:7px;align-items:center;font-size:12px;white-space:nowrap;color:#b8cbbb}.wp-crm-page-guide{font-size:12px;line-height:1.8;color:#b2c5b7;margin-top:12px;max-width:850px}.wp-crm-filter-summary{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:16px 0;font-size:12px;color:#b9cabb}.wp-crm-filter-summary button{color:#67e98f;border:1px solid #32533b;border-radius:7px;padding:6px 10px}.wp-crm .wp-crm-list-heading,.wp-growth .wp-growth-table th{background:#112018}.wp-growth-table th{position:sticky;top:0;z-index:1}.wp-growth-table tbody tr:hover{background:#14231a}.wp-crm-row:focus-visible{outline:2px solid #25d366;outline-offset:-3px}.wp-crm-detail-heading{background:#112018;position:sticky;top:0;z-index:2}.wp-crm-detail .wp-crm-contact-links{flex-wrap:wrap}.wp-crm-timeline article{overflow-wrap:anywhere}.wp-crm-list-heading h2{font-weight:600}.wp-crm-workspace-tools input::placeholder{color:#819b89}.wp-crm .wp-crm-label input,.wp-crm .wp-crm-label textarea,.wp-crm .wp-crm-label select{font-size:13px}.wp-crm .wp-crm-detail{scroll-margin-top:16px}@media(max-width:767px){.wp-crm-workspace-bar{padding:12px 16px}.wp-crm-workspace-tools{flex-wrap:wrap;gap:12px}.wp-crm-workspace-tools form{max-width:none}.wp-crm-workspace-tools input{font-size:16px}.wp-crm .wp-crm-label input,.wp-crm .wp-crm-label textarea,.wp-crm .wp-crm-label select{font-size:16px}.wp-crm-guide-toggle{font-size:12px}.wp-crm-grid.has-detail{display:flex;flex-direction:column-reverse}.wp-crm-detail{max-height:none}.wp-crm-row{min-height:88px}.wp-crm-workspace-tools form button{padding:6px}}
+.wp-crm-filter-summary{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:16px 0;font-size:12px;color:#b9cabb}.wp-crm-filter-summary button{color:#67e98f;border:1px solid #32533b;border-radius:7px;padding:6px 10px}.wp-crm .wp-crm-list-heading,.wp-growth .wp-growth-table th{background:#112018}.wp-growth-table th{position:sticky;top:0;z-index:1}.wp-growth-table tbody tr:hover{background:#14231a}.wp-crm-row:focus-visible{outline:2px solid #25d366;outline-offset:-3px}.wp-crm-detail-heading{background:#112018;position:sticky;top:0;z-index:2}.wp-crm-detail .wp-crm-contact-links{flex-wrap:wrap}.wp-crm-timeline article{overflow-wrap:anywhere}.wp-crm-list-heading h2{font-weight:600}.wp-crm .wp-crm-label input,.wp-crm .wp-crm-label textarea,.wp-crm .wp-crm-label select{font-size:13px}.wp-crm .wp-crm-detail{scroll-margin-top:16px}@media(max-width:767px){.wp-crm .wp-crm-label input,.wp-crm .wp-crm-label textarea,.wp-crm .wp-crm-label select{font-size:16px}.wp-crm-grid.has-detail{display:flex;flex-direction:column-reverse}.wp-crm-detail{max-height:none}.wp-crm-row{min-height:88px}}
+
+/* Section tabs (AdminSectionTabs) - premium pill/segmented control shown
+   above grouped pages (Customers/Billing, Email/Contacts, Reports/Health). */
+.wp-section-tabs-wrap{padding:18px 28px 0;max-width:1600px;margin:0 auto}
+.wp-section-tabs{display:inline-flex;gap:4px;padding:4px;background:#101b13;border:1px solid #233b2b;border-radius:999px;max-width:100%;overflow-x:auto}
+.wp-section-tab{padding:9px 18px;border-radius:999px;font-size:12px;font-weight:550;color:#a4b7aa;white-space:nowrap}
+.wp-section-tab:hover{color:#f4f7f4;background:#17241a}
+.wp-section-tab.is-active{background:#25d366;color:#07120b}
+.wp-section-tab.is-active:hover{background:#25d366;color:#07120b}
+@media(max-width:767px){.wp-section-tabs-wrap{padding:14px 16px 0}}
+
+/* Dashboard "Needs attention" list and secondary stats row. */
+.wp-attention-list{display:flex;flex-direction:column;margin-top:10px}
+.wp-attention-row{display:flex;align-items:center;gap:12px;padding:14px 4px;border-bottom:1px solid #203727;color:#f4f7f4;text-decoration:none}
+.wp-attention-row:last-child{border-bottom:none}
+.wp-attention-row:hover{background:#142319}
+.wp-attention-row svg:first-child{color:#ffbc75;flex-shrink:0}
+.wp-attention-row span{flex:1;font-size:13px;line-height:1.5}
+.wp-attention-row svg:last-child{color:#a0afa2;flex-shrink:0}
+.wp-attention-clear{display:flex;align-items:center;gap:10px;color:#5deb90;font-size:13px;margin-top:10px;padding:6px 4px}
+.wp-growth-stats-secondary{opacity:.82}
+.wp-growth-stats-secondary .wp-crm-stat{padding:14px}
+.wp-growth-stats-secondary strong{font-size:21px}
 
 .wp-support-row.is-unread{background:#143723;box-shadow:inset 4px 0 #25d366}.wp-support-row.is-unread strong{color:#fff;font-weight:750}.wp-support-row.is-unread small{color:#bedbc8}.wp-support-row.is-selected{outline:1px solid #56d986;outline-offset:-1px}.wp-support-row.is-unread.is-selected{background:#1b472d}.wp-support-row-state{display:flex;align-items:flex-end;flex-direction:column;gap:6px;flex-shrink:0}.wp-support-row-state small{font-size:11px}.wp-support-row .wp-avatar{position:relative}.wp-support-dot{position:absolute;right:-1px;top:-1px;width:10px;height:10px;border-radius:50%;background:#25d366;border:2px solid #0c160f}.wp-support-unread{background:#25d366!important;color:#06140b!important;border-color:#25d366!important;font-weight:700}.wp-support-overdue{color:#ffbc75!important;font-size:12px;font-weight:600}.wp-support-row.is-overdue{border-right:3px solid #e9a357}.wp-support-summary{display:flex;gap:12px;flex-wrap:wrap}.wp-support-summary>span{border:1px solid #2b4734;border-radius:9px;background:#112018;padding:9px 14px;font-size:12px;color:#afc9b8}.wp-support-summary strong{color:#fff;margin-right:5px}.wp-support-summary .is-overdue{border-color:#a87135;color:#ffbc75}.wp-support-unread-count{display:inline-block;margin-left:7px;padding:2px 6px;border-radius:5px;background:#25d36620;color:#5deb90;font-size:11px}
 .wp-nav-badge{display:inline-flex;align-items:center;justify-content:center;margin-left:auto;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:#ef4444;color:#fff;font-size:11px;font-weight:700;line-height:20px}
@@ -7,3 +30,65 @@
 .wp-support-flag-late{color:#ff6b6b!important;font-weight:700}
 .wp-support-needs-you{border-left:3px solid #ef4444}
 .wp-support-reference{color:#8fa79a;font-weight:600;letter-spacing:.2px}
+
+/* Reports (ReportsWorkspace) - income bar chart, currency switch and the
+   collapsed-empty-months table row. */
+.wp-reports-chart-wrap{max-width:100%;overflow-x:auto;padding-bottom:4px}
+.wp-reports-chart{display:flex;align-items:flex-end;gap:10px;height:180px;min-width:min-content;padding:10px 4px 0}
+.wp-reports-bar{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:8px;width:34px;height:100%;flex-shrink:0}
+.wp-reports-bar-value{font-size:10px;color:#5de992;font-weight:600;white-space:nowrap}
+.wp-reports-bar-fill{width:100%;border-radius:6px 6px 2px 2px;background:linear-gradient(180deg,#39e97d,#1f9e52);min-height:4px}
+.wp-reports-bar-fill[data-empty=true]{background:#1c2b20;border:1px dashed #2c4333}
+.wp-reports-bar small{font-size:10px;color:#90aa99;white-space:nowrap}
+.wp-reports-bar.is-current small{color:#f4f7f4;font-weight:600}
+.wp-reports-currencies{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.wp-reports-currencies button{padding:6px 11px;font-size:11px;color:#a6bdaf;border:1px solid #233e2b;border-radius:999px;background:#0d1811}
+.wp-reports-currencies button[aria-pressed=true]{background:#213c2a;color:#6ee99b;border-color:#3a6547}
+.wp-reports-collapsed{padding:14px 12px;text-align:center;color:#90aa99;font-size:12px;border-bottom:1px solid #203727}
+.wp-reports-collapsed button{color:#5de992;font-weight:600;margin-left:6px}
+@media(max-width:600px){.wp-reports-chart{height:150px}.wp-reports-bar{width:28px}}
+
+/* Customers list (/admin/crm/customers) - compact header search, segment
+   chips, a collapsible "More filters" row, and a row-list layout (not a
+   real <table>, like .wp-crm-row elsewhere) so the whole row can be one
+   Link with a chevron, and stacks cleanly on mobile. */
+.wp-admin-heading form{flex-shrink:0}
+.wp-crm-pagination a{color:#5de992}
+.wp-crm-pagination a[aria-disabled=true]{color:#56735f}
+.wp-seg-chips{display:flex;gap:6px;flex-wrap:wrap}
+.wp-seg-chip{display:inline-flex;align-items:center;gap:6px;padding:9px 14px;font-size:12px;color:#a6bdaf;border:1px solid #233e2b;border-radius:999px;background:#0d1811;text-decoration:none}
+.wp-seg-chip:hover{color:#f4f7f4;background:#17241a}
+.wp-seg-chip[aria-current=page]{background:#25d366;color:#07120b;border-color:#25d366;font-weight:600}
+.wp-seg-chip span{font-size:10px;opacity:.8}
+.wp-more-filters{margin-top:12px}
+.wp-more-filters summary{cursor:pointer;font-size:12px;color:#8fa79a;list-style:none;display:inline-flex;align-items:center;gap:5px}
+.wp-more-filters summary::-webkit-details-marker{display:none}
+.wp-more-filters[open] summary{color:#d5e6db}
+.wp-more-filters-body{display:flex;flex-wrap:wrap;gap:12px;align-items:end;margin-top:10px}
+.wp-more-filters-body select{min-width:130px}
+
+.wp-customers-list{border:1px solid #294431;border-radius:14px;background:#101b13;overflow:hidden}
+.wp-customers-head,.wp-customers-row{display:grid;grid-template-columns:minmax(0,2.1fr) minmax(0,1.3fr) 84px 104px 18px;gap:16px;align-items:center;padding:14px 18px}
+.wp-customers-head{font-size:9px;text-transform:uppercase;letter-spacing:1px;color:#a0afa2;border-bottom:1px solid #294a32;background:#112018}
+.wp-customers-row{border-bottom:1px solid #203727;color:#f4f7f4;text-decoration:none}
+.wp-customers-row:last-child{border-bottom:none}
+.wp-customers-row:hover{background:#172b1e}
+.wp-customers-row>svg{color:#5a6b60;flex-shrink:0;justify-self:end}
+.wp-customers-cell{min-width:0;overflow-wrap:anywhere;font-size:12px}
+.wp-customers-name{display:flex;align-items:center;gap:10px;min-width:0}
+.wp-customers-name strong{display:block;font-size:12.5px;font-weight:600;overflow-wrap:anywhere}
+.wp-customers-name small{display:block;font-size:11px;color:#90aa99;margin-top:2px;overflow-wrap:anywhere}
+.wp-customers-sub{display:block;font-size:10.5px;color:#8fa79a;margin-top:3px}
+.wp-autopay-dot{display:inline-flex;align-items:center;gap:6px;color:#dce8df}
+.wp-autopay-dot i{width:7px;height:7px;border-radius:50%;background:#25d366;display:inline-block}
+.wp-autopay-dot.is-off{color:#8fa79a}
+.wp-autopay-dot.is-off i{background:#546056}
+@media(max-width:860px){
+ .wp-customers-head{display:none}
+ .wp-customers-row{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"customer chevron" "plan plan";row-gap:10px;padding:16px}
+ .wp-customers-row .wp-col-customer{grid-area:customer}
+ .wp-customers-row .wp-col-plan{grid-area:plan}
+ .wp-customers-row .wp-col-autopay,.wp-customers-row .wp-col-signedup{display:none}
+ .wp-customers-row>svg{grid-area:chevron;align-self:start}
+}
+@media(max-width:600px){.wp-admin-heading{align-items:stretch}.wp-admin-heading form{width:100%}}

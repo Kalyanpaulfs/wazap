@@ -5,6 +5,9 @@ import {
   areCustomerLinksPaused,
   customerDaysRemaining,
   customerPlanLabel,
+  customerSegmentKey,
+  customerPlanPill,
+  accountStatusPill,
 } from "../admin-customer";
 
 describe("admin-customer helpers", () => {
@@ -130,5 +133,58 @@ describe("customerPlanLabel", () => {
     expect(customerPlanLabel({ plan: "pro", planExpiresAt: past })).toBe("Expired");
     expect(customerPlanLabel({ plan: "pro", planExpiresAt: future })).toBe("Growth");
     expect(customerPlanLabel({ plan: "ultimate", planExpiresAt: future })).toBe("Agency");
+  });
+});
+
+describe("customerSegmentKey", () => {
+  const future = new Date(Date.now() + 2 * 86_400_000);
+  const past = new Date(Date.now() - 2 * 86_400_000);
+  it("classifies each account into exactly one segment, matching customerPlanLabel", () => {
+    expect(customerSegmentKey({ plan: "free", trialEndsAt: future })).toBe("trial");
+    expect(customerSegmentKey({ plan: "free", trialEndsAt: past })).toBe("trial_ended");
+    expect(customerSegmentKey({ plan: "free", trialEndsAt: null })).toBe("trial_ended");
+    expect(customerSegmentKey({ plan: "pro", planExpiresAt: past })).toBe("expired");
+    expect(customerSegmentKey({ plan: "pro", planExpiresAt: future })).toBe("paying");
+    expect(customerSegmentKey({ plan: "ultimate", planExpiresAt: future })).toBe("paying");
+  });
+});
+
+describe("customerPlanPill", () => {
+  const future = new Date(Date.now() + 2 * 86_400_000);
+  const past = new Date(Date.now() - 2 * 86_400_000);
+  it("free trial: green pill with the trial end date", () => {
+    const pill = customerPlanPill({ plan: "free", trialEndsAt: future });
+    expect(pill.label).toBe("Free trial");
+    expect(pill.tone).toBe("green");
+    expect(pill.sub).toMatch(/^until /);
+  });
+  it("trial ended: slate pill, no subtext", () => {
+    expect(customerPlanPill({ plan: "free", trialEndsAt: null })).toEqual({ label: "Trial ended", tone: "slate", sub: null });
+  });
+  it("expired paid plan: red pill with 'ended'", () => {
+    const pill = customerPlanPill({ plan: "pro", planExpiresAt: past });
+    expect(pill.label).toBe("Expired");
+    expect(pill.tone).toBe("red");
+    expect(pill.sub).toMatch(/^ended /);
+  });
+  it("paying: plan name pill with 'until', tone varies by tier", () => {
+    expect(customerPlanPill({ plan: "basic", planExpiresAt: future })).toMatchObject({ label: "Solo", tone: "sky" });
+    expect(customerPlanPill({ plan: "pro", planExpiresAt: future })).toMatchObject({ label: "Growth", tone: "emerald" });
+    expect(customerPlanPill({ plan: "ultimate", planExpiresAt: future })).toMatchObject({ label: "Agency", tone: "gold" });
+  });
+});
+
+describe("accountStatusPill", () => {
+  it("no pill for an active account", () => {
+    expect(accountStatusPill({ status: "active", scheduledFor: null, requestedAt: null })).toBeNull();
+  });
+  it("amber pill for a closing account", () => {
+    const scheduledFor = new Date("2026-11-13T00:00:00Z");
+    const pill = accountStatusPill({ status: "closing", scheduledFor, requestedAt: null });
+    expect(pill?.tone).toBe("amber");
+    expect(pill?.label).toContain("Closing");
+  });
+  it("red pill for a deleted account", () => {
+    expect(accountStatusPill({ status: "deleted", scheduledFor: null, requestedAt: null })).toEqual({ label: "Deleted", tone: "red" });
   });
 });

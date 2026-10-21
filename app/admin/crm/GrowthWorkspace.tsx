@@ -2,34 +2,48 @@
 import {useCallback,useEffect,useState} from 'react';
 import Link from 'next/link';
 import {ArrowUpRight,Mail,Plus,RefreshCw,Users} from 'lucide-react';
-import {planDisplayName} from '@/lib/billing';
 type Campaign={id:string;name:string;subject:string;preheader:string;heading:string;body:string;ctaLabel:string;ctaUrl:string;segmentId:string|null;status:string;scheduledAt:string|null;updatedAt:string;segment?:{name:string;filters?:{customerGroup?:string}}|null;_count?:{recipients:number}};
 type Readiness={ready:boolean;provider:string;sender:string;checks:{label:string;ok:boolean;detail:string}[]};
 type Overview={totalUsers:number;paidActive:number;trial:number;expired:number;free:number;newSignups7d:number};
-type Reports={months:string[];income:Record<string,Record<string,number>>;plansSold:Record<string,Record<string,number>>;refunds:Record<string,Record<string,number>>;refundCount:Record<string,number>;newPaidByMonth:Record<string,number>;expiredByMonth:Record<string,number>};
 type BroadcastData={campaigns:Campaign[];readiness:Readiness|null};
 type Audience={total:number;eligible:number;excluded:number;fingerprint:string|null;sample:{name:string;email:string}[]};
 type CampaignDetail={campaign:Campaign;html:string;counts:{status:string;_count:{_all:number}}[];recipients:{id:string;email:string;status:string;attempts:number;lastError:string|null}[]};
 const groups=[['all','All users'],['paid','Paid active'],['trial','Free trial'],['expired','Expired'],['free','Trial ended']] as const;
 const groupLabel=(g:string)=>groups.find(([k])=>k===g)?.[1]||g;
 const label=(v:string)=>v.replaceAll('_',' ').replace(/^./,c=>c.toUpperCase());
-const money=(n:number,currency:string)=>new Intl.NumberFormat(undefined,{style:'currency',currency}).format(n);
 const emptyOverview:Overview={totalUsers:0,paidActive:0,trial:0,expired:0,free:0,newSignups7d:0};
-const emptyReports:Reports={months:[],income:{},plansSold:{},refunds:{},refundCount:{},newPaidByMonth:{},expiredByMonth:{}};
 const emptyBroadcast:BroadcastData={campaigns:[],readiness:null};
 const blankCampaign={name:'',subject:'',preheader:'',heading:'',body:'',ctaLabel:'',ctaUrl:'',customerGroup:'all'};
 async function call(path:string,options?:RequestInit){const r=await fetch(path,options);const result=await r.json();if(!r.ok)throw new Error(result.error||'Could not complete the request.');return result;}
 const post=(body:Record<string,unknown>)=>call('/api/admin/crm/marketing',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
 function Stats({items}:{items:{label:string;value:string|number;hint?:string}[]}){return <div className="wp-growth-stats">{items.map(i=><div className="wp-crm-stat" key={i.label}><span>{i.label}</span><strong>{i.value}</strong>{i.hint&&<small>{i.hint}</small>}</div>)}</div>;}
 function Panel({title,children,link}:{title:string;children:React.ReactNode;link?:string}){return <section className="wp-growth-panel"><div className="flex justify-between items-center gap-4 mb-5"><h2>{title}</h2>{link&&<Link prefetch={false} className="text-xs text-[#25d366]" href={link}>Open <ArrowUpRight className="inline" size={13}/></Link>}</div>{children}</section>;}
-function ReadinessBox({readiness}:{readiness:Readiness|null}){return <div className="wp-growth-callout"><h3 className="font-semibold text-sm">Email sending setup {readiness?.ready?'✅':'❌'}</h3><p className="text-xs leading-6 mt-2">{readiness?.provider} · {readiness?.sender}</p>{readiness?.checks.map(c=><p key={c.label} className={`text-xs leading-6 mt-2 ${c.ok?'text-slate-400':'text-amber-200'}`}>{c.ok?'✓':'!'} {c.label}: {c.detail}</p>)}</div>;}
+// Plain-English summary for a non-technical admin, with the existing
+// technical checklist tucked behind "Show details" (not removed - still the
+// same checks lib/crm-marketing.ts's marketingReadiness() computes, and
+// queueCampaign still blocks sending unless readiness.ready). On local dev,
+// Brevo only ever accepts the live server's IP, so "Provider account access"
+// alone failing there is expected, not a real outage - shown as a neutral
+// note instead of an alarming red line.
+function ReadinessBox({readiness}:{readiness:Readiness|null}){
+ const [showDetails,setShowDetails]=useState(false);
+ if(!readiness)return null;
+ const failing=readiness.checks.filter(c=>!c.ok);
+ const localProviderAccessOnly=process.env.NODE_ENV!=='production'&&failing.length===1&&failing[0].label==='Provider account access';
+ return <div className="wp-growth-callout">
+  {readiness.ready?<p className="text-sm font-semibold text-[#25d366]">✓ Email sending ready</p>
+  :localProviderAccessOnly?<p className="text-sm text-slate-400">Emails only send from the live site.</p>
+  :<p className="text-sm font-semibold text-red-300">Email sending isn&apos;t working right now, so broadcasts can&apos;t be sent. Tell your developer.</p>}
+  <button type="button" className="text-xs text-[#25d366] underline mt-2" onClick={()=>setShowDetails(s=>!s)}>{showDetails?'Hide details':'Show details'}</button>
+  {showDetails&&<div className="mt-2"><p className="text-xs leading-6 text-slate-400">{readiness.provider} · {readiness.sender}</p>{readiness.checks.map(c=><p key={c.label} className={`text-xs leading-6 mt-2 ${c.ok?'text-slate-400':'text-amber-200'}`}>{c.ok?'✓':'!'} {c.label}: {c.detail}</p>)}</div>}
+ </div>;
+}
 export default function GrowthWorkspace({view}:{view:string}){
- const [overview,setOverview]=useState<Overview>(emptyOverview),[reports,setReports]=useState<Reports>(emptyReports),[broadcast,setBroadcast]=useState<BroadcastData>(emptyBroadcast);
+ const [overview,setOverview]=useState<Overview>(emptyOverview),[broadcast,setBroadcast]=useState<BroadcastData>(emptyBroadcast);
  const [loading,setLoading]=useState(true),[notice,setNotice]=useState(''),[busy,setBusy]=useState(false);
  const [editor,setEditor]=useState(false),[campaign,setCampaign]=useState(blankCampaign),[detail,setDetail]=useState<CampaignDetail|null>(null),[campaignView,setCampaignView]=useState('compose'),[groupPreview,setGroupPreview]=useState<Audience|null>(null),[review,setReview]=useState<Audience|null>(null),[confirmed,setConfirmed]=useState(false),[schedule,setSchedule]=useState('');
  const load=useCallback(async(force=false,signal?:AbortSignal)=>{
  if(view==='overview'){setOverview(await call('/api/admin/crm/marketing?view=overview',{signal}));return;}
- if(view==='reports'){setReports(await call('/api/admin/crm/marketing?view=reports',{signal}));return;}
  setBroadcast(await call(`/api/admin/crm/marketing?view=broadcast${force?'&refresh=1':''}`,{signal}));
  },[view]);
  useEffect(()=>{const controller=new AbortController();setLoading(true);load(false,controller.signal).catch(e=>{if(!controller.signal.aborted)setNotice(e.message);}).finally(()=>{if(!controller.signal.aborted)setLoading(false);});return()=>controller.abort();},[load]);
@@ -37,8 +51,8 @@ export default function GrowthWorkspace({view}:{view:string}){
  async function loadGroupPreview(group:string){setGroupPreview(await call('/api/admin/crm/marketing?view=audience&customerGroup='+group));}
  async function openCampaign(id:string){const result:CampaignDetail=await call(`/api/admin/crm/marketing?campaign=${id}`);setDetail(result);const group=result.campaign.segment?.filters?.customerGroup||'all';setCampaign({name:result.campaign.name,subject:result.campaign.subject,preheader:result.campaign.preheader,heading:result.campaign.heading,body:result.campaign.body,ctaLabel:result.campaign.ctaLabel,ctaUrl:result.campaign.ctaUrl,customerGroup:group});setEditor(true);setReview(null);setConfirmed(false);setCampaignView(result.campaign.status==='draft'?'compose':'results');await loadGroupPreview(group);}
  function newCampaign(){setEditor(true);setDetail(null);setCampaign(blankCampaign);setCampaignView('compose');setReview(null);loadGroupPreview('all');}
- const title={overview:'CRM overview',broadcast:'Broadcast',reports:'Money reports'}[view]||'CRM';
- const description={overview:'Business numbers, computed from accounts and recorded payments. Admin-only.',broadcast:'Choose who to send to, write a considered email, review the exact audience, then launch.',reports:'Income, plans sold and refunds by month, from completed payments only. Admin-only.'}[view];
+ const title={overview:'CRM overview',broadcast:'Broadcast'}[view]||'CRM';
+ const description={overview:'Business numbers, computed from accounts and recorded payments. Admin-only.',broadcast:'Choose who to send to, write a considered email, review the exact audience, then launch.'}[view];
  return <main className="wp-growth"><div className="wp-admin-heading"><div><p className="wp-eyebrow">WAZAP · CRM & GROWTH</p><h1>{title}</h1><p>{description}</p></div><div className="flex gap-2">{view!=='overview'&&<button className="wp-crm-secondary" aria-label="Refresh workspace" disabled={busy} onClick={()=>action(()=>load(true))}><RefreshCw size={16}/></button>}{view==='broadcast'&&!editor&&<button className="wp-primary" onClick={newCampaign}><Plus size={15}/>New broadcast</button>}{view==='overview'&&<Link prefetch={false} href="/admin/crm" className="wp-primary"><Users size={15}/>Manage contacts</Link>}</div></div>
  {notice&&<p role="status" className="wp-admin-context my-5">{notice}</p>}{loading?<p role="status" className="wp-growth-panel mt-6 text-sm text-slate-400">Loading your workspace…</p>:<>
  {view==='overview'&&<Stats items={[{label:'Total users',value:overview.totalUsers},{label:'Paid active',value:overview.paidActive,hint:'Plan is not free and has not expired'},{label:'On free trial',value:overview.trial,hint:'Inside the 3-day trial window'},{label:'Expired',value:overview.expired,hint:'Paid plan past its expiry, or a trial that ended without paying'},{label:'Trial ended',value:overview.free,hint:'No active trial — links paused'},{label:'New signups (7 days)',value:overview.newSignups7d}]}/>}
@@ -48,11 +62,5 @@ export default function GrowthWorkspace({view}:{view:string}){
  {campaignView==='review'&&detail&&review&&<div className="wp-growth-two"><div><Stats items={[{label:'Matching people',value:review.total},{label:'Eligible recipients',value:review.eligible},{label:'Excluded',value:review.excluded}]}/><div className="wp-growth-callout"><h3 className="font-semibold">{detail.campaign.subject}</h3><p className="text-xs leading-6 mt-2">Sent to: {groupLabel(detail.campaign.segment?.filters?.customerGroup||'all')}. Launch freezes the current audience and saved content. Only confirmed subscribers with no suppression or account opt-out can receive this email.</p>{review.sample.map(c=><p className="text-xs mt-2 text-slate-400" key={c.email}>{c.name} · {c.email}</p>)}</div></div><div className="space-y-4"><ReadinessBox readiness={broadcast.readiness}/><label className="wp-crm-label">Schedule (optional · your local time)<input type="datetime-local" value={schedule} onChange={e=>setSchedule(e.target.value)}/></label><label className="flex gap-3 text-sm"><input type="checkbox" checked={confirmed} onChange={e=>setConfirmed(e.target.checked)}/>I reviewed this saved email and its {review.eligible} eligible recipients.</label><button className="wp-primary" disabled={busy||!confirmed||!broadcast.readiness?.ready||!review.eligible||review.eligible>1000} onClick={()=>action(async()=>{await post({action:'queueCampaign',id:detail.campaign.id,updatedAt:detail.campaign.updatedAt,confirm:true,expectedCount:review.eligible,expectedFingerprint:review.fingerprint,scheduledAt:schedule?new Date(schedule).toISOString():undefined});await openCampaign(detail.campaign.id);await load();setNotice('Broadcast queued. Progress appears as the scheduled worker processes recipients.');})}>{schedule?'Schedule broadcast':'Launch reviewed broadcast'}</button><p className="text-xs text-slate-500">Up to 1,000 recipients per broadcast. Drafts send nothing. A message already in flight may finish after cancellation.</p></div></div>}
  {campaignView==='results'&&detail&&<><Stats items={detail.counts.map(c=>({label:label(c.status),value:c._count._all}))}/><div className="flex flex-wrap gap-3 mb-5"><button className="wp-crm-secondary" onClick={()=>action(()=>openCampaign(detail.campaign.id))}>Refresh delivery results</button>{['scheduled','sending'].includes(detail.campaign.status)&&<button disabled={busy} className="wp-crm-secondary" onClick={()=>action(async()=>{await post({action:'cancelCampaign',id:detail.campaign.id});await openCampaign(detail.campaign.id);await load();})}>Cancel queued recipients</button>}<button className="wp-crm-secondary" onClick={()=>{setCampaign({...campaign,name:campaign.name+' · copy'});setDetail(null);setCampaignView('compose');setReview(null);}}>Duplicate as draft</button></div><p className="text-xs text-slate-400 mb-4">Sent means accepted by the provider. Delivered means a delivery callback arrived. Unknown outcomes require provider-log reconciliation before resending. Showing up to 100 recipient results.</p><div className="wp-growth-table-wrap"><table className="wp-growth-table"><thead><tr><th>Recipient</th><th>Status</th><th>Attempts</th><th>Details</th></tr></thead><tbody>{detail.recipients.map(r=><tr key={r.id}><td>{r.email}</td><td>{label(r.status)}</td><td>{r.attempts}</td><td>{r.lastError||'—'}</td></tr>)}</tbody></table></div></>}
  </section>}</>}
- {view==='reports'&&<div className="wp-growth-two">
- <Panel title="Income per month (last 12 months)"><p className="text-xs text-slate-400 mb-4">From completed payments only. Currencies are never mixed together.</p><div className="wp-growth-table-wrap"><table className="wp-growth-table"><thead><tr><th>Month</th><th>Income</th></tr></thead><tbody>{reports.months.map(m=><tr key={m}><td>{m}</td><td>{Object.keys(reports.income[m]||{}).length?Object.entries(reports.income[m]).map(([cur,amt])=><span key={cur} className="mr-3">{money(amt,cur)}</span>):'—'}</td></tr>)}</tbody></table></div></Panel>
- <Panel title="Plans sold per month"><div className="wp-growth-table-wrap"><table className="wp-growth-table"><thead><tr><th>Month</th><th>Plans</th><th>Total</th></tr></thead><tbody>{reports.months.map(m=>{const row=reports.plansSold[m]||{};const total=Object.values(row).reduce((a,b)=>a+b,0);return <tr key={m}><td>{m}</td><td>{total?Object.entries(row).map(([plan,count])=><span key={plan} className="mr-3">{planDisplayName(plan)}: {count}</span>):'—'}</td><td>{total}</td></tr>;})}</tbody></table></div></Panel>
- <Panel title="Refunds per month"><p className="text-xs text-slate-400 mb-4">Refunded, partially refunded and charged-back payments.</p><div className="wp-growth-table-wrap"><table className="wp-growth-table"><thead><tr><th>Month</th><th>Count</th><th>Amount</th></tr></thead><tbody>{reports.months.map(m=><tr key={m}><td>{m}</td><td>{reports.refundCount[m]||0}</td><td>{Object.keys(reports.refunds[m]||{}).length?Object.entries(reports.refunds[m]).map(([cur,amt])=><span key={cur} className="mr-3">{money(amt,cur)}</span>):'—'}</td></tr>)}</tbody></table></div></Panel>
- <Panel title="New paid customers vs expired"><p className="text-xs text-slate-400 mb-4">New paid: distinct accounts with a completed payment that month. Expired: accounts currently expired whose access ended that month. Both are best-effort, not full cohort history.</p><div className="wp-growth-table-wrap"><table className="wp-growth-table"><thead><tr><th>Month</th><th>New paid</th><th>Expired</th></tr></thead><tbody>{reports.months.map(m=><tr key={m}><td>{m}</td><td>{reports.newPaidByMonth[m]||0}</td><td>{reports.expiredByMonth[m]||0}</td></tr>)}</tbody></table></div></Panel>
- </div>}
  </>}</main>;
 }

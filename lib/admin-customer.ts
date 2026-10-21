@@ -1,6 +1,7 @@
 import { normalizePlanKey, LINK_LIMITS, NUMBERS_PER_ROTATOR_LIMITS, AD_LINKS_AVAILABLE, WIDGET_AVAILABLE } from "./plan-limits";
 import { isProductTrialActive, trialDaysLeft } from "./entitlements";
 import { isPlanExpired, getPlanDaysLeft, PLAN_NAMES } from "./billing";
+import { formatAdminDate, formatShortDate } from "./admin-format";
 
 // Bold plan label for admin screens. "free" alone is ambiguous: it is a running
 // trial, an ended trial or a paid plan that lapsed, so say which.
@@ -14,6 +15,63 @@ export function customerPlanLabel(user: {
   if (plan === "free") return "Trial ended";
   if (isPlanExpired(plan, user.planExpiresAt ? new Date(user.planExpiresAt) : null)) return "Expired";
   return PLAN_NAMES[plan] || plan;
+}
+
+// Customers list segment chips (All / Paying / On trial / Trial ended /
+// Expired). Mutually exclusive and exhaustive, and deliberately mirrors
+// customerPlanLabel's own classification above so a customer's segment
+// always matches the plan pill they're shown with.
+export type CustomerSegment = "paying" | "trial" | "trial_ended" | "expired";
+
+export const CUSTOMER_SEGMENTS: { key: CustomerSegment; label: string }[] = [
+  { key: "paying", label: "Paying" },
+  { key: "trial", label: "On trial" },
+  { key: "trial_ended", label: "Trial ended" },
+  { key: "expired", label: "Expired" },
+];
+
+export function customerSegmentKey(
+  user: {
+    plan?: string | null;
+    planExpiresAt?: Date | string | null;
+    trialEndsAt?: Date | string | null;
+  },
+  now: Date = new Date(),
+): CustomerSegment {
+  if (isProductTrialActive(user, now)) return "trial";
+  const plan = (user.plan ?? "free").toLowerCase();
+  if (plan === "free") return "trial_ended";
+  if (isPlanExpired(plan, user.planExpiresAt ? new Date(user.planExpiresAt) : null)) return "expired";
+  return "paying";
+}
+
+export type PlanPillTone = "green" | "slate" | "red" | "sky" | "emerald" | "gold";
+export type PlanPillInfo = { label: string; tone: PlanPillTone; sub: string | null };
+
+// Plan pill + muted "until .../ended ..." line for the Customers list and
+// customer profile. Built from the same inputs as customerPlanLabel/
+// customerSegmentKey above, so the three never disagree.
+export function customerPlanPill(
+  user: {
+    plan?: string | null;
+    planExpiresAt?: Date | string | null;
+    trialEndsAt?: Date | string | null;
+  },
+  now: Date = new Date(),
+): PlanPillInfo {
+  const segment = customerSegmentKey(user, now);
+  if (segment === "trial") {
+    return { label: "Free trial", tone: "green", sub: user.trialEndsAt ? `until ${formatAdminDate(user.trialEndsAt)}` : null };
+  }
+  if (segment === "trial_ended") {
+    return { label: "Trial ended", tone: "slate", sub: null };
+  }
+  if (segment === "expired") {
+    return { label: "Expired", tone: "red", sub: user.planExpiresAt ? `ended ${formatShortDate(user.planExpiresAt)}` : null };
+  }
+  const plan = (user.plan ?? "free").toLowerCase();
+  const tone: PlanPillTone = plan === "ultimate" || plan === "business" ? "gold" : plan === "pro" ? "emerald" : "sky";
+  return { label: PLAN_NAMES[plan] || plan, tone, sub: user.planExpiresAt ? `until ${formatAdminDate(user.planExpiresAt)}` : null };
 }
 
 export type CustomerAccountStatus = "active" | "closing" | "deleted";
@@ -41,6 +99,18 @@ export function getCustomerAccountStatus(user: {
     };
   }
   return { status: "active", scheduledFor: null, requestedAt: null };
+}
+
+export type AccountStatusPill = { label: string; tone: "amber" | "red" } | null;
+
+// Small pill shown next to a customer's name on the Customers list -
+// Closing/Deleted only; an Active account gets no pill at all.
+export function accountStatusPill(lifecycle: CustomerLifecycleInfo): AccountStatusPill {
+  if (lifecycle.status === "closing") {
+    return { label: lifecycle.scheduledFor ? `Closing ${formatShortDate(lifecycle.scheduledFor)}` : "Closing", tone: "amber" };
+  }
+  if (lifecycle.status === "deleted") return { label: "Deleted", tone: "red" };
+  return null;
 }
 
 // UX-1 step 1: rotators/short links/ad links share one pool - admin screens

@@ -9,6 +9,7 @@ import {
   areCustomerLinksPaused,
   customerPlanLabel,
   CustomerAccountStatus,
+  CustomerSegment,
 } from "./admin-customer";
 import type { Prisma } from "@prisma/client";
 
@@ -26,7 +27,47 @@ export type CustomerListItem = {
   lastLogin: string | null;
   accountStatus: CustomerAccountStatus;
   scheduledDeletionFor: string | null;
+  autoPay: boolean | null;
 };
+
+// Prisma where-clauses for the Customers list segment chips (All / Paying /
+// On trial / Trial ended / Expired). Mirrors customerSegmentKey in
+// admin-customer.ts exactly, but expressed so the DB can filter and count
+// directly instead of pulling every row into JS.
+function segmentWhere(segment: CustomerSegment, now: Date): Prisma.UserWhereInput {
+  if (segment === "trial") return { plan: "free", trialEndsAt: { gt: now } };
+  if (segment === "trial_ended") return { plan: "free", OR: [{ trialEndsAt: null }, { trialEndsAt: { lte: now } }] };
+  if (segment === "expired") return { plan: { not: "free" }, planExpiresAt: { lte: now } };
+  // paying
+  return { plan: { not: "free" }, OR: [{ planExpiresAt: null }, { planExpiresAt: { gt: now } }] };
+}
+
+const AUTOPAY_SUB_METHODS = ["paypal", "dodo"] as const;
+
+// Auto-pay state isn't a column - it's a SecurityUserBilling pointer plus a
+// matching live Payment row (same shape as BillingWorkspace's own
+// autopayStateFor). Resolved for a whole set of userIds in two queries.
+async function resolveAutoPay(userIds: string[]): Promise<Map<string, boolean | null>> {
+  const result = new Map<string, boolean | null>();
+  if (!userIds.length) return result;
+  const pointers = await prisma.securityUserBilling.findMany({ where: { userId: { in: userIds } } });
+  const activeSubPayments = pointers.length
+    ? await prisma.payment.findMany({
+        where: { userId: { in: pointers.map((p) => p.userId) }, status: "subscription_active", method: { in: [...AUTOPAY_SUB_METHODS] } },
+        select: { userId: true, method: true, txId: true },
+      })
+    : [];
+  for (const userId of userIds) {
+    const pointer = pointers.find((p) => p.userId === userId);
+    if (!pointer) {
+      result.set(userId, null);
+      continue;
+    }
+    const live = activeSubPayments.some((p) => p.userId === userId && p.method === pointer.provider && p.txId === pointer.subscriptionId);
+    result.set(userId, live ? pointer.autoRenew : null);
+  }
+  return result;
+}
 
 export type CustomerListResult = {
   customers: CustomerListItem[];
@@ -34,13 +75,20 @@ export type CustomerListResult = {
   page: number;
   pageSize: number;
   totalPages: number;
+  segmentCounts: Record<CustomerSegment, number> & { all: number };
 };
+
+const SEGMENT_KEYS: CustomerSegment[] = ["paying", "trial", "trial_ended", "expired"];
 
 export async function listAdminCustomers(params: {
   q?: string;
+  segment?: string;
+  /** @deprecated superseded by `segment`; still honoured so old links keep working. */
   plan?: string;
+  /** @deprecated superseded by `segment`; still honoured so old links keep working. */
   trial?: string;
   status?: string;
+  autopay?: string;
   page?: number;
   pageSize?: number;
 }): Promise<CustomerListResult> {
@@ -50,6 +98,9 @@ export async function listAdminCustomers(params: {
   const planFilter = (params.plan || "").toLowerCase();
   const trialFilter = (params.trial || "").toLowerCase();
   const statusFilter = (params.status || "").toLowerCase();
+  const segmentFilter = SEGMENT_KEYS.includes((params.segment || "") as CustomerSegment) ? (params.segment as CustomerSegment) : null;
+  const autopayFilter = params.autopay === "on" || params.autopay === "off" ? params.autopay : null;
+  const now = new Date();
 
   const digitsOnly = q.replace(/\D/g, "");
   const matchingLeadEmails = q
@@ -118,15 +169,34 @@ export async function listAdminCustomers(params: {
     });
   }
 
+  // Base AND-conditions (search + plan/trial/account filters, but no
+  // segment) - used for the segment chip counts, so every chip's count
+  // reflects the current search and other filters without being limited to
+  // whichever chip is selected. Snapshotted before the segment condition (if
+  // any) is appended below.
+  const baseAndConditions: Prisma.UserWhereInput[] = [...andConditions];
+
+  if (segmentFilter) andConditions.push(segmentWhere(segmentFilter, now));
+
   const where: Prisma.UserWhereInput = {
     isAdmin: false,
     ...(andConditions.length > 0 ? { AND: andConditions } : {}),
   };
 
+  // Auto-pay isn't a column, so filtering by it means resolving it for every
+  // matching user first (cheap here: admin tool, modest customer counts),
+  // then paginating that filtered id list ourselves.
+  let autopayIds: string[] | null = null;
+  if (autopayFilter) {
+    const candidates = await prisma.user.findMany({ where, select: { id: true }, orderBy: { createdAt: "desc" }, take: 5000 });
+    const autoPayById = await resolveAutoPay(candidates.map((u) => u.id));
+    autopayIds = candidates.filter((u) => (autopayFilter === "on" ? autoPayById.get(u.id) === true : autoPayById.get(u.id) === false)).map((u) => u.id);
+  }
+  const effectiveWhere: Prisma.UserWhereInput = autopayIds ? { ...where, id: { in: autopayIds } } : where;
 
-  const [users, total] = await Promise.all([
+  const [users, total, segmentCountRows] = await Promise.all([
     prisma.user.findMany({
-      where,
+      where: effectiveWhere,
       orderBy: { createdAt: "desc" },
       skip: (page - 1) * pageSize,
       take: pageSize,
@@ -144,8 +214,19 @@ export async function listAdminCustomers(params: {
         createdAt: true,
       },
     }),
-    prisma.user.count({ where }),
+    autopayIds ? autopayIds.length : prisma.user.count({ where: effectiveWhere }),
+    Promise.all(SEGMENT_KEYS.map((key) => prisma.user.count({ where: { isAdmin: false, AND: [...baseAndConditions, segmentWhere(key, now)] } }))),
   ]);
+  const segmentCounts = {
+    all: segmentCountRows.reduce((a, b) => a + b, 0),
+    paying: segmentCountRows[0],
+    trial: segmentCountRows[1],
+    trial_ended: segmentCountRows[2],
+    expired: segmentCountRows[3],
+  };
+
+  const userIds = users.map((u) => u.id);
+  const autoPayById = await resolveAutoPay(userIds);
 
   const emails = users.map((u) => u.email.toLowerCase());
   const crmLeads = emails.length
@@ -175,6 +256,7 @@ export async function listAdminCustomers(params: {
       lastLogin: null, // Not persisted in DB
       accountStatus: lifecycle.status,
       scheduledDeletionFor: lifecycle.scheduledFor ? lifecycle.scheduledFor.toISOString() : null,
+      autoPay: autoPayById.get(u.id) ?? null,
     };
   });
 
@@ -184,6 +266,7 @@ export async function listAdminCustomers(params: {
     page,
     pageSize,
     totalPages: Math.max(1, Math.ceil(total / pageSize)),
+    segmentCounts,
   };
 }
 

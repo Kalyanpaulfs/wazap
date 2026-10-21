@@ -1,5 +1,6 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
+import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { MessageCircle, X, Send, Headphones, ArrowRight, ChevronLeft, Plus, Smartphone, Paperclip, CreditCard, Link2, UserRound, HelpCircle } from "lucide-react";
 import Link from "next/link";
@@ -51,6 +52,7 @@ function renderText(text: string) {
 }
 
 export default function ChatWidget() {
+  const pathname = usePathname();
   const { data: session } = useSession();
   const [open, setOpen] = useState(false); const [visitorId, setVisitorId] = useState("");
   // Whether localStorage already had a visitor id BEFORE this page load -
@@ -408,6 +410,11 @@ export default function ChatWidget() {
   }
 
   const homeTickets = tickets.filter(t => ["open", "investigating", "waiting"].includes(t.status) || (t.status === "solved" && t.canReopen));
+
+  // Admins answer support themselves - they don't need the customer chat
+  // bubble on their own admin pages. All hooks above still run on every
+  // render (rules of hooks), only the final markup is skipped.
+  if (pathname?.startsWith("/admin")) return null;
 
   return <div className="fixed bottom-4 right-4 z-50 flex flex-col items-end gap-3 sm:bottom-6 sm:right-6">
     {open && <div id="wazap-support-panel" role="region" aria-label="Wazap support chat" onKeyDown={event => { if (event.key === "Escape") closeChat(); }} className="w-[calc(100vw-2rem)] max-w-sm max-h-[calc(100dvh-110px)] rounded-2xl border border-[#25D366]/25 bg-[#0d1a0d] shadow-2xl flex flex-col overflow-hidden">
