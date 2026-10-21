@@ -24,12 +24,12 @@ export default async function LinkPausedPage({
   if (reason === "unavailable") {
     return (
       <main className="hero-bg min-h-screen px-4 py-20">
-        <section className="mx-auto max-w-xl rounded-3xl border border-slate-700 bg-[#101710] p-8 text-center shadow-2xl">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-700/20">
-            <AlertTriangle className="h-7 w-7 text-slate-400" />
+        <section className="mx-auto max-w-xl rounded-3xl border border-border bg-surface p-8 text-center shadow-2xl">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-surface-2">
+            <AlertTriangle className="h-7 w-7 text-muted" />
           </div>
-          <h1 className="mt-5 text-3xl font-bold text-white">This link is no longer available</h1>
-          <p className="mt-3 text-slate-400">The owner has removed this link.</p>
+          <h1 className="mt-5 text-3xl font-bold text-text">This link is no longer available</h1>
+          <p className="mt-3 text-muted">The owner has removed this link.</p>
         </section>
       </main>
     );
@@ -37,15 +37,15 @@ export default async function LinkPausedPage({
 
   if (reason === "owner") {
     return (
-      <main className="hero-bg min-h-screen px-4 py-20">
-        <section className="mx-auto max-w-xl rounded-3xl border border-amber-400/30 bg-[#101710] p-8 text-center shadow-2xl">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-400/10">
-            <AlertTriangle className="h-7 w-7 text-amber-300" />
+      <main className="min-h-screen px-4 py-20">
+        <section className="mx-auto max-w-xl rounded-3xl border border-warning/30 bg-surface p-8 text-center shadow-2xl">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-highlight-soft">
+            <AlertTriangle className="h-7 w-7 text-warning" />
           </div>
-          <h1 className="mt-5 text-3xl font-bold text-white">This link is paused</h1>
-          <p className="mt-3 text-slate-400">This link is paused by its owner.</p>
+          <h1 className="mt-5 text-3xl font-bold text-text">This link is paused</h1>
+          <p className="mt-3 text-muted">This link is paused by its owner.</p>
           <div className="mt-7 flex justify-center">
-            <Link href="/login" className="inline-flex items-center justify-center gap-2 rounded-full border border-slate-700 px-6 py-3 text-sm font-semibold text-white hover:border-[#25D366]">
+            <Link href="/login" className="inline-flex items-center justify-center gap-2 rounded-full border border-border-strong px-6 py-3 text-sm font-semibold text-text hover:border-accent">
               Owner login
             </Link>
           </div>
@@ -55,22 +55,22 @@ export default async function LinkPausedPage({
   }
 
   return (
-    <main className="hero-bg min-h-screen px-4 py-20">
-      <section className="mx-auto max-w-xl rounded-3xl border border-amber-400/30 bg-[#101710] p-8 text-center shadow-2xl">
-        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-400/10">
-          <AlertTriangle className="h-7 w-7 text-amber-300" />
+    <main className="min-h-screen px-4 py-20">
+      <section className="mx-auto max-w-xl rounded-3xl border border-warning/30 bg-surface p-8 text-center shadow-2xl">
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-highlight-soft">
+          <AlertTriangle className="h-7 w-7 text-warning" />
         </div>
-        <h1 className="mt-5 text-3xl font-bold text-white">This link is paused</h1>
-        <p className="mt-3 text-slate-400">This link was paused because the owner&apos;s free trial ended, or their plan doesn&apos;t include it. If you manage it, choose a plan to turn it back on instantly.</p>
+        <h1 className="mt-5 text-3xl font-bold text-text">This link is paused</h1>
+        <p className="mt-3 text-muted">This link was paused because the owner&apos;s free trial ended, or their plan doesn&apos;t include it. If you manage it, choose a plan to turn it back on instantly.</p>
         <div className="mt-7 flex flex-col justify-center gap-3 sm:flex-row">
-          <Link href="/pricing?source=plan_limit_pause" className="inline-flex items-center justify-center gap-2 rounded-full bg-[#25D366] px-6 py-3 text-sm font-bold text-black hover:bg-[#1fba58]">
+          <Link href="/pricing?source=plan_limit_pause" className="inline-flex items-center justify-center gap-2 rounded-full bg-accent px-6 py-3 text-sm font-bold text-on-accent hover:bg-accent-hover">
             Choose a plan <ArrowRight className="h-4 w-4" />
           </Link>
-          <Link href="/login" className="inline-flex items-center justify-center gap-2 rounded-full border border-slate-700 px-6 py-3 text-sm font-semibold text-white hover:border-[#25D366]">
+          <Link href="/login" className="inline-flex items-center justify-center gap-2 rounded-full border border-border-strong px-6 py-3 text-sm font-semibold text-text hover:border-accent">
             Owner login
           </Link>
         </div>
-        <p className="mt-6 text-xs text-slate-600">Nothing was deleted. Choosing a plan turns this back on automatically.</p>
+        <p className="mt-6 text-xs text-muted">Nothing was deleted. Choosing a plan turns this back on automatically.</p>
       </section>
     </main>
   );

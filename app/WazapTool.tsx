@@ -68,11 +68,11 @@ export default function WazapTool() {
   return (
     <div className="space-y-3">
       {/* Main card */}
-      <div className="rounded-2xl border border-slate-800 bg-[#111811] p-4 sm:p-6 shadow-xl">
+      <div className="rounded-2xl border border-border bg-surface p-4 sm:p-6 shadow-xl">
         <div className="flex items-center gap-2 mb-4">
-          <MessageCircle className="h-5 w-5 text-[#25D366]" />
-          <span className="font-semibold text-white text-sm sm:text-base">Open WhatsApp Chat</span>
-          <span className="ml-auto text-xs text-[#25D366]">Free &amp; unlimited</span>
+          <MessageCircle className="h-5 w-5 text-accent" />
+          <span className="font-semibold text-text text-sm sm:text-base">Open WhatsApp Chat</span>
+          <span className="ml-auto text-xs text-accent">Free &amp; unlimited</span>
         </div>
 
         {/* Country + Number */}
@@ -85,7 +85,7 @@ export default function WazapTool() {
             onChange={e => setNumber(e.target.value)}
             onKeyDown={e => e.key === "Enter" && openWhatsApp()}
             placeholder="Phone number"
-            className="flex-1 min-w-0 rounded-xl bg-slate-900 border border-slate-700 px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-[#25D366] transition-colors text-base"
+            className="flex-1 min-w-0 rounded-xl bg-surface border border-border-strong px-4 py-3 text-text placeholder:text-muted/70 focus:outline-none focus:border-accent transition-colors text-base"
           />
         </div>
 
@@ -95,14 +95,14 @@ export default function WazapTool() {
           onChange={e => setMessage(e.target.value)}
           placeholder="Message (optional)"
           rows={2}
-          className="w-full rounded-xl bg-slate-900 border border-slate-700 px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#25D366] transition-colors resize-none mb-3"
+          className="w-full rounded-xl bg-surface border border-border-strong px-4 py-3 text-sm text-text placeholder:text-muted/70 focus:outline-none focus:border-accent transition-colors resize-none mb-3"
         />
 
         {/* Button */}
         <button
           onClick={openWhatsApp}
           disabled={!number.trim()}
-          className="w-full flex items-center justify-center gap-2 rounded-full bg-[#25D366] hover:bg-[#1fba58] active:bg-[#1aaa4f] disabled:opacity-40 disabled:cursor-not-allowed py-4 text-base font-bold text-black transition-colors"
+          className="w-full flex items-center justify-center gap-2 rounded-full bg-accent hover:bg-accent-hover active:bg-accent-hover disabled:opacity-40 disabled:cursor-not-allowed py-4 text-base font-bold text-on-accent transition-colors"
         >
           <Send className="h-5 w-5" />
           Open in WhatsApp
@@ -112,26 +112,26 @@ export default function WazapTool() {
 
       {/* History */}
       {history.length > 0 && (
-        <div className="rounded-2xl border border-slate-800 bg-[#111811] p-4">
+        <div className="rounded-2xl border border-border bg-surface p-4">
           <div className="flex items-center gap-2 mb-3">
-            <Clock className="h-4 w-4 text-slate-500" />
-            <span className="text-sm font-medium text-slate-400">Recent</span>
+            <Clock className="h-4 w-4 text-muted" />
+            <span className="text-sm font-medium text-muted">Recent</span>
           </div>
           <div className="space-y-2">
             {history.slice(0, 5).map(entry => (
-              <div key={entry.ts} className="flex items-center gap-2 rounded-xl bg-slate-900 px-3 py-2.5">
+              <div key={entry.ts} className="flex items-center gap-2 rounded-xl bg-surface px-3 py-2.5">
                 <button onClick={() => openFromHistory(entry)} className="flex-1 text-left min-w-0">
-                  <span className="text-white text-sm font-medium">{entry.dial} {entry.number}</span>
+                  <span className="text-text text-sm font-medium">{entry.dial} {entry.number}</span>
                   {entry.message && (
-                    <span className="text-slate-500 text-xs ml-2 truncate inline-block max-w-[120px] align-bottom">&ldquo;{entry.message}&rdquo;</span>
+                    <span className="text-muted text-xs ml-2 truncate inline-block max-w-[120px] align-bottom">&ldquo;{entry.message}&rdquo;</span>
                   )}
                 </button>
                 <button onClick={() => openFromHistory(entry)}
-                  className="shrink-0 w-8 h-8 rounded-full bg-[#25D366]/10 flex items-center justify-center">
-                  <MessageCircle className="h-4 w-4 text-[#25D366]" />
+                  className="shrink-0 w-8 h-8 rounded-full bg-accent-soft flex items-center justify-center">
+                  <MessageCircle className="h-4 w-4 text-accent" />
                 </button>
                 <button onClick={() => removeHistory(entry.ts)}
-                  className="shrink-0 text-slate-600 hover:text-red-400 transition-colors p-1">
+                  className="shrink-0 text-muted hover:text-danger transition-colors p-1">
                   <X className="h-4 w-4" />
                 </button>
               </div>

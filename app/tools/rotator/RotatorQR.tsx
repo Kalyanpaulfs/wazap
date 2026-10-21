@@ -53,26 +53,26 @@ export default function RotatorQR({ url, name }: { url: string; name: string }) 
   }
 
   return (
-    <div className="mt-4 flex flex-col sm:flex-row items-center gap-4 rounded-xl bg-slate-900 p-3">
+    <div className="mt-4 flex flex-col sm:flex-row items-center gap-4 rounded-xl bg-surface p-3">
       {dataUrl ? (
-        <img src={dataUrl} alt={`QR code for ${name}`} className="h-32 w-32 rounded bg-white" />
+        <img src={dataUrl} alt={`QR code for ${name}`} className="h-32 w-32 rounded bg-surface" />
       ) : (
-        <div className="h-32 w-32 flex items-center justify-center rounded bg-white text-center">
+        <div className="h-32 w-32 flex items-center justify-center rounded bg-surface text-center">
           {error ? (
-            <QrCode className="h-6 w-6 text-slate-300" />
+            <QrCode className="h-6 w-6 text-muted" />
           ) : (
-            <span className="text-xs text-slate-500">Generating QR…</span>
+            <span className="text-xs text-muted">Generating QR…</span>
           )}
         </div>
       )}
       <div className="text-center sm:text-left">
         {error ? (
-          <p className="text-xs text-red-400">{error}</p>
+          <p className="text-xs text-danger">{error}</p>
         ) : (
-          <p className="text-xs text-slate-400">Scan to open this router link</p>
+          <p className="text-xs text-muted">Scan to open this router link</p>
         )}
         <button type="button" onClick={download} disabled={!dataUrl}
-          className="mt-2 flex items-center gap-1.5 rounded-full border border-slate-700 hover:border-[#25D366] px-3 py-1.5 text-xs text-slate-300 hover:text-white transition-colors disabled:opacity-50">
+          className="mt-2 flex items-center gap-1.5 rounded-full border border-border-strong hover:border-accent px-3 py-1.5 text-xs text-muted hover:text-text transition-colors disabled:opacity-50">
           <Download className="h-3.5 w-3.5" />
           Download QR Code
         </button>

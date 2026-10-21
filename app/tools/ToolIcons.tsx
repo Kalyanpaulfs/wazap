@@ -1,4 +1,4 @@
-export function IconWidget({ size = 28, color = "#25D366" }: { size?: number; color?: string }) {
+export function IconWidget({ size = 28, color = "#087f50" }: { size?: number; color?: string }) {
   return (
     <svg width={size} height={size} viewBox="0 0 28 28" fill="none">
       <rect x="2" y="2" width="24" height="24" rx="6" stroke={color} strokeWidth="1.8" />
@@ -9,7 +9,7 @@ export function IconWidget({ size = 28, color = "#25D366" }: { size?: number; co
   );
 }
 
-export function IconBulk({ size = 28, color = "#25D366" }: { size?: number; color?: string }) {
+export function IconBulk({ size = 28, color = "#087f50" }: { size?: number; color?: string }) {
   return (
     <svg width={size} height={size} viewBox="0 0 28 28" fill="none">
       <path d="M4 8h20M4 14h14M4 20h8" stroke={color} strokeWidth="1.8" strokeLinecap="round" />
@@ -19,7 +19,7 @@ export function IconBulk({ size = 28, color = "#25D366" }: { size?: number; colo
   );
 }
 
-export function IconChecker({ size = 28, color = "#25D366" }: { size?: number; color?: string }) {
+export function IconChecker({ size = 28, color = "#087f50" }: { size?: number; color?: string }) {
   return (
     <svg width={size} height={size} viewBox="0 0 28 28" fill="none">
       <circle cx="14" cy="14" r="11" stroke={color} strokeWidth="1.8" />
@@ -28,7 +28,7 @@ export function IconChecker({ size = 28, color = "#25D366" }: { size?: number; c
   );
 }
 
-export function IconAdBuilder({ size = 28, color = "#25D366" }: { size?: number; color?: string }) {
+export function IconAdBuilder({ size = 28, color = "#087f50" }: { size?: number; color?: string }) {
   return (
     <svg width={size} height={size} viewBox="0 0 28 28" fill="none">
       <path d="M4 22L10 14l5 4 4-7 5 3" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
@@ -38,7 +38,7 @@ export function IconAdBuilder({ size = 28, color = "#25D366" }: { size?: number;
   );
 }
 
-export function IconVCard({ size = 28, color = "#25D366" }: { size?: number; color?: string }) {
+export function IconVCard({ size = 28, color = "#087f50" }: { size?: number; color?: string }) {
   return (
     <svg width={size} height={size} viewBox="0 0 28 28" fill="none">
       <rect x="2" y="6" width="24" height="16" rx="3" stroke={color} strokeWidth="1.8" />
@@ -48,7 +48,7 @@ export function IconVCard({ size = 28, color = "#25D366" }: { size?: number; col
   );
 }
 
-export function IconLinktree({ size = 28, color = "#25D366" }: { size?: number; color?: string }) {
+export function IconLinktree({ size = 28, color = "#087f50" }: { size?: number; color?: string }) {
   return (
     <svg width={size} height={size} viewBox="0 0 28 28" fill="none">
       <path d="M14 4v16M14 20l-4 4M14 20l4 4" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
@@ -59,7 +59,7 @@ export function IconLinktree({ size = 28, color = "#25D366" }: { size?: number; 
   );
 }
 
-export function IconRotator({ size = 28, color = "#25D366" }: { size?: number; color?: string }) {
+export function IconRotator({ size = 28, color = "#087f50" }: { size?: number; color?: string }) {
   return (
     <svg width={size} height={size} viewBox="0 0 28 28" fill="none">
       <path d="M5 14A9 9 0 0114 5a9 9 0 018.5 6" stroke={color} strokeWidth="1.8" strokeLinecap="round" />
@@ -70,7 +70,7 @@ export function IconRotator({ size = 28, color = "#25D366" }: { size?: number; c
   );
 }
 
-export function IconTranscript({ size = 28, color = "#25D366" }: { size?: number; color?: string }) {
+export function IconTranscript({ size = 28, color = "#087f50" }: { size?: number; color?: string }) {
   return (
     <svg width={size} height={size} viewBox="0 0 28 28" fill="none">
       <rect x="4" y="3" width="20" height="22" rx="3" stroke={color} strokeWidth="1.8" />
@@ -80,7 +80,7 @@ export function IconTranscript({ size = 28, color = "#25D366" }: { size?: number
   );
 }
 
-export function IconUser({ size = 28, color = "#25D366" }: { size?: number; color?: string }) {
+export function IconUser({ size = 28, color = "#087f50" }: { size?: number; color?: string }) {
   return (
     <svg width={size} height={size} viewBox="0 0 28 28" fill="none">
       <circle cx="14" cy="9" r="5" stroke={color} strokeWidth="1.8" />
@@ -89,7 +89,7 @@ export function IconUser({ size = 28, color = "#25D366" }: { size?: number; colo
   );
 }
 
-export function IconSend({ size = 28, color = "#25D366" }: { size?: number; color?: string }) {
+export function IconSend({ size = 28, color = "#087f50" }: { size?: number; color?: string }) {
   return (
     <svg width={size} height={size} viewBox="0 0 28 28" fill="none">
       <path d="M3 14L25 4L15 25L13 16L3 14Z" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
@@ -98,7 +98,7 @@ export function IconSend({ size = 28, color = "#25D366" }: { size?: number; colo
   );
 }
 
-export function IconQR({ size = 28, color = "#25D366" }: { size?: number; color?: string }) {
+export function IconQR({ size = 28, color = "#087f50" }: { size?: number; color?: string }) {
   return (
     <svg width={size} height={size} viewBox="0 0 28 28" fill="none">
       <rect x="3" y="3" width="9" height="9" rx="2" stroke={color} strokeWidth="1.8" />
@@ -112,7 +112,7 @@ export function IconQR({ size = 28, color = "#25D366" }: { size?: number; color?
   );
 }
 
-export function IconPricing({ size = 28, color = "#25D366" }: { size?: number; color?: string }) {
+export function IconPricing({ size = 28, color = "#087f50" }: { size?: number; color?: string }) {
   return (
     <svg width={size} height={size} viewBox="0 0 28 28" fill="none">
       <circle cx="14" cy="14" r="11" stroke={color} strokeWidth="1.8" />
@@ -121,7 +121,7 @@ export function IconPricing({ size = 28, color = "#25D366" }: { size?: number; c
   );
 }
 
-export function IconUpload({ size = 28, color = "#25D366" }: { size?: number; color?: string }) {
+export function IconUpload({ size = 28, color = "#087f50" }: { size?: number; color?: string }) {
   return (
     <svg width={size} height={size} viewBox="0 0 28 28" fill="none">
       <path d="M14 18V8M10 12l4-4 4 4" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />

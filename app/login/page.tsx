@@ -13,11 +13,11 @@ function LoginForm() {
   const redirect = safeInternalRedirect(params.get("redirect"));
   return (
     <AuthShell mode="login" nextHref={`/signup?redirect=${encodeURIComponent(redirect)}`}>
-      {params.get("error") && <p role="alert" className="mb-4 text-sm text-red-400">Google sign-in did not complete. Use a verified Gmail or Google Workspace account, try again, or sign in with an email code.</p>}
+      {params.get("error") && <p role="alert" className="mb-4 text-sm text-danger">Google sign-in did not complete. Use a verified Gmail or Google Workspace account, try again, or sign in with an email code.</p>}
       <GoogleSignInButton callbackUrl={redirect} />
       <EmailCodeSignIn mode="login" redirect={redirect} />
-      <p className="text-center text-sm text-slate-500 mt-4">
-        No account? <Link href={`/signup?redirect=${encodeURIComponent(redirect)}`} className="text-[#25D366] hover:underline">Sign up free</Link>
+      <p className="text-center text-sm text-muted mt-4">
+        No account? <Link href={`/signup?redirect=${encodeURIComponent(redirect)}`} className="font-medium text-accent hover:underline">Sign up free</Link>
       </p>
     </AuthShell>
   );

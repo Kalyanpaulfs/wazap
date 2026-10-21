@@ -57,7 +57,7 @@ export default function ReportsWorkspace(){
    </div>
   </div>
   {notice&&<p role="status" className="wp-admin-context my-5">{notice}</p>}
-  {loading?<p role="status" className="wp-growth-panel mt-6 text-sm text-slate-400">Loading your workspace…</p>:!hasActivity?
+  {loading?<p role="status" className="wp-growth-panel mt-6 text-sm text-muted">Loading your workspace…</p>:!hasActivity?
   <div className="wp-growth-empty mt-6"><h3>No activity yet</h3><p>Nothing to report in the last {period} months. Come back once there have been some payments.</p></div>:<>
 
   <div className="wp-growth-stats mt-6">

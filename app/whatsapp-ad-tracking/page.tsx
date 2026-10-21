@@ -28,6 +28,7 @@ const jsonLd = {
 };
 
 const content: ProductLandingContent = {
+  art: { src: "/art/products/product-ad-tracking.webp", alt: "A megaphone sending a tracked trail into an analytics card" },
   icon: Megaphone,
   eyebrow: "WhatsApp ad tracking",
   h1: "See which ad brings",

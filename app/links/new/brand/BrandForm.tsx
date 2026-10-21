@@ -100,9 +100,9 @@ export default function BrandForm({
   }
 
   return (
-    <form onSubmit={submit} className="space-y-5 rounded-2xl border border-slate-800 bg-[#111811] p-6">
+    <form onSubmit={submit} className="space-y-5 rounded-2xl border border-border bg-surface p-6">
       <div>
-        <label className="block text-xs text-slate-400 mb-1" htmlFor="brand-name">Name</label>
+        <label className="block text-xs text-muted mb-1" htmlFor="brand-name">Name</label>
         <input
           id="brand-name"
           value={name}
@@ -110,55 +110,55 @@ export default function BrandForm({
           placeholder="e.g. Instagram bio"
           maxLength={60}
           required
-          className="w-full rounded-xl bg-slate-900 border border-slate-700 px-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#25D366]"
+          className="w-full rounded-xl bg-surface border border-border-strong px-4 py-2.5 text-sm text-text placeholder:text-muted/70 focus:outline-none focus:border-accent"
         />
-        <p className="mt-1 text-xs text-slate-500">Just for you - visitors never see this name.</p>
+        <p className="mt-1 text-xs text-muted">Just for you - visitors never see this name.</p>
       </div>
 
       {showAddress ? (
         <div>
-          <label className="block text-xs text-slate-400 mb-1" htmlFor="brand-slug">Brand address</label>
+          <label className="block text-xs text-muted mb-1" htmlFor="brand-slug">Brand address</label>
           <div className="flex items-center gap-2">
-            <span className="shrink-0 font-mono text-xs text-slate-500">{originHost}/w/</span>
+            <span className="shrink-0 font-mono text-xs text-muted">{originHost}/w/</span>
             <input
               id="brand-slug"
               value={slug}
               onChange={(e) => setSlug(sanitizeBrandSlugInput(e.target.value))}
               placeholder="yourcompany (optional)"
-              className="min-w-0 flex-1 rounded-xl bg-slate-900 border border-slate-700 px-3 py-2 text-sm font-mono text-white placeholder-slate-600 focus:outline-none focus:border-[#25D366]"
+              className="min-w-0 flex-1 rounded-xl bg-surface border border-border-strong px-3 py-2 text-sm font-mono text-text placeholder:text-muted/70 focus:outline-none focus:border-accent"
             />
           </div>
           <div className="mt-1 text-xs">
-            {slugCheck.state === "checking" && <span className="text-slate-500">Checking…</span>}
+            {slugCheck.state === "checking" && <span className="text-muted">Checking…</span>}
             {slugCheck.state === "available" && (
-              <span className="inline-flex items-center gap-1 text-[#25D366]"><Check className="h-3.5 w-3.5" /> Available</span>
+              <span className="inline-flex items-center gap-1 text-accent"><Check className="h-3.5 w-3.5" /> Available</span>
             )}
             {slugCheck.state === "taken" && (
-              <span className="inline-flex items-center gap-1 text-red-400"><X className="h-3.5 w-3.5" /> Already taken</span>
+              <span className="inline-flex items-center gap-1 text-danger"><X className="h-3.5 w-3.5" /> Already taken</span>
             )}
             {slugCheck.state === "invalid" && (
-              <span className="text-amber-400">3–30 characters: lowercase letters, numbers, hyphens.</span>
+              <span className="text-warning">3–30 characters: lowercase letters, numbers, hyphens.</span>
             )}
-            {slugCheck.state === "idle" && <span className="text-slate-500">Leave empty for a random address.</span>}
+            {slugCheck.state === "idle" && <span className="text-muted">Leave empty for a random address.</span>}
           </div>
         </div>
       ) : (
         <button
           type="button"
           onClick={() => setShowAddress(true)}
-          className="text-xs font-semibold text-[#25D366] hover:underline"
+          className="text-xs font-semibold text-accent hover:underline"
         >
           + Use my brand name in the address (optional)
         </button>
       )}
 
       <div>
-        <label className="block text-xs text-slate-400 mb-2">WhatsApp number</label>
+        <label className="block text-xs text-muted mb-2">WhatsApp number</label>
         <PhoneInput defaultCountry={defaultCountry} onChange={setPhone} required />
       </div>
 
       <div>
-        <label className="block text-xs text-slate-400 mb-1" htmlFor="brand-message">First message (optional)</label>
+        <label className="block text-xs text-muted mb-1" htmlFor="brand-message">First message (optional)</label>
         <textarea
           id="brand-message"
           value={message}
@@ -166,24 +166,24 @@ export default function BrandForm({
           maxLength={600}
           rows={2}
           placeholder="Hi, I'd like more information."
-          className="w-full rounded-xl bg-slate-900 border border-slate-700 px-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#25D366]"
+          className="w-full rounded-xl bg-surface border border-border-strong px-4 py-2.5 text-sm text-text placeholder:text-muted/70 focus:outline-none focus:border-accent"
         />
-        <p className="mt-1 text-xs text-slate-500">Shown in WhatsApp. The visitor chooses whether to send it.</p>
+        <p className="mt-1 text-xs text-muted">Shown in WhatsApp. The visitor chooses whether to send it.</p>
       </div>
 
-      {error && <p role="alert" className="text-sm text-red-400">{error}</p>}
+      {error && <p role="alert" className="text-sm text-danger">{error}</p>}
 
-      <p className="text-xs text-slate-500">{formatUsageLine(planLabel, used, limit)}</p>
+      <p className="text-xs text-muted">{formatUsageLine(planLabel, used, limit)}</p>
 
       <div className="flex items-center gap-3">
         <button
           type="submit"
           disabled={creating || !phone.valid}
-          className="rounded-full bg-[#25D366] hover:bg-[#1fba58] disabled:opacity-50 px-6 py-2.5 text-sm font-bold text-black transition-colors"
+          className="rounded-full bg-accent hover:bg-accent-hover disabled:opacity-50 px-6 py-2.5 text-sm font-bold text-on-accent transition-colors"
         >
           {creating ? "Creating…" : simple ? "Create WhatsApp link" : "Create brand link"}
         </button>
-        <Link href="/links/new" className="text-sm font-semibold text-slate-400 hover:text-white">
+        <Link href="/links/new" className="text-sm font-semibold text-muted hover:text-text">
           Cancel
         </Link>
       </div>

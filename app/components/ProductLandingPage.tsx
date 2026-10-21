@@ -1,4 +1,5 @@
 import Link from "next/link";
+import ThemedImage from "../ui/ThemedImage";
 import type { LucideIcon } from "lucide-react";
 import { ArrowRight, CheckCircle2 } from "lucide-react";
 import {
@@ -11,6 +12,9 @@ import {
   type PlanKey,
 } from "@/lib/plan-limits";
 import { PLAN_PRICES } from "@/lib/billing";
+import { ButtonLink, Card, cx } from "../ui";
+import { Container, Section, SectionHeader } from "../ui/marketing/Section";
+import { ScrollReveal } from "../ui/marketing/ScrollReveal";
 
 export type PlanHighlight = "rotator" | "adLinks" | "shortLinks" | "widget";
 
@@ -32,6 +36,8 @@ export type ProductLandingContent = {
   highlight: PlanHighlight;
   qa: ProductLandingQa[];
   crossLinks: ProductLandingCrossLink[];
+  /** Optional hero illustration (generated art in public/art/products). */
+  art?: { src: string; alt: string };
 };
 
 const PLAN_ORDER: PlanKey[] = ["free", "basic", "pro", "ultimate"];
@@ -64,174 +70,164 @@ function planRow(plan: PlanKey) {
 }
 
 export default function ProductLandingPage({ content }: { content: ProductLandingContent }) {
-  const { icon: Icon, eyebrow, h1, h1Highlight, intro, toolHref, toolLabel, whoFor, steps, benefits, highlight, qa, crossLinks } = content;
+  const { icon: Icon, eyebrow, h1, h1Highlight, intro, toolHref, toolLabel, whoFor, steps, benefits, highlight, qa, crossLinks, art } = content;
   const rows = PLAN_ORDER.map(planRow);
   const signupHref = `/signup?redirect=${encodeURIComponent(toolHref)}`;
+  const hl = (on: boolean) => (on ? "font-semibold text-accent" : "text-muted");
 
   return (
-    <main>
-      <section className="hero-bg border-b border-slate-800/70 px-4 py-16 sm:py-24">
-        <div className="mx-auto max-w-4xl text-center">
-          <div className="mx-auto mb-6 flex h-14 w-14 items-center justify-center rounded-2xl border border-[#25D366]/30 bg-[#25D366]/15">
-            <Icon className="h-7 w-7 text-[#25D366]" />
+    <main className="ds-light bg-bg text-text">
+      <ScrollReveal />
+      <section className="relative overflow-hidden border-b border-border py-16 sm:py-24">
+        <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-[460px]" style={{ background: "var(--grad-hero)" }} />
+        <Container className={cx("relative grid items-center gap-12", art ? "lg:grid-cols-[1.1fr_1fr]" : "")}>
+          <div className={art ? "" : "mx-auto max-w-4xl text-center"}>
+            <div className={cx("mb-6 flex size-14 items-center justify-center rounded-2xl bg-accent-soft text-accent", !art && "mx-auto")}>
+              <Icon className="size-7" aria-hidden />
+            </div>
+            <p className="eyebrow">{eyebrow}</p>
+            <h1 className={cx("mt-4 text-4xl font-bold leading-[1.08] tracking-tight text-text sm:text-5xl", !art && "mx-auto max-w-3xl")}>
+              {h1} <span className="text-gradient-brand">{h1Highlight}</span>
+            </h1>
+            <p className={cx("mt-6 max-w-2xl text-lg leading-8 text-muted", !art && "mx-auto")}>{intro}</p>
+            <div className={cx("mt-8 flex flex-col gap-3 sm:flex-row", !art && "justify-center")}>
+              <ButtonLink href={signupHref} size="lg">Start free trial <ArrowRight className="size-4" aria-hidden /></ButtonLink>
+              <ButtonLink href="/pricing" variant="outline" size="lg">See plans</ButtonLink>
+            </div>
+            <p className="mt-4 text-sm text-muted">
+              Try it in the <Link href={toolHref} className="font-medium text-accent hover:underline">{toolLabel}</Link> tool.
+            </p>
           </div>
-          <p className="mb-3 text-xs font-bold uppercase tracking-[0.25em] text-[#25D366]">{eyebrow}</p>
-          <h1 className="mx-auto max-w-3xl text-4xl font-extrabold leading-tight text-white sm:text-5xl">
-            {h1} <span className="gradient-text">{h1Highlight}</span>
-          </h1>
-          <p className="mx-auto mt-6 max-w-2xl text-base leading-8 text-slate-400 sm:text-lg">{intro}</p>
-          <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
-            <Link href={signupHref} className="inline-flex items-center justify-center gap-2 rounded-full bg-[#25D366] px-6 py-3 text-sm font-bold text-black transition-colors hover:bg-[#1fba58]">
-              Start free trial <ArrowRight className="h-4 w-4" />
-            </Link>
-            <Link href="/pricing" className="inline-flex items-center justify-center rounded-full border border-slate-700 px-6 py-3 text-sm font-semibold text-white transition-colors hover:border-[#25D366]">
-              See plans
-            </Link>
-          </div>
-          <p className="mt-4 text-sm text-slate-500">
-            Try it in the <Link href={toolHref} className="text-[#25D366] hover:underline">{toolLabel}</Link> tool.
-          </p>
-        </div>
+          {art && (
+            <div className="relative mx-auto w-full max-w-xl">
+              <div aria-hidden className="absolute inset-8 rounded-full bg-jade-bright/15 blur-3xl" />
+              <ThemedImage src={art.src} alt={art.alt} width={1536} height={1024} priority sizes="(max-width: 1024px) 92vw, 540px" className="float-soft relative w-full [mask-image:radial-gradient(closest-side,#000_74%,transparent_100%)]" />
+            </div>
+          )}
+        </Container>
       </section>
 
-      <section className="px-4 py-16 sm:py-20">
-        <div className="mx-auto max-w-5xl">
-          <div className="mx-auto mb-10 max-w-2xl text-center">
-            <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#25D366]">Who it&apos;s for</p>
-            <h2 className="mt-3 text-3xl font-bold text-white">Built for teams that chat on WhatsApp every day</h2>
-          </div>
-          <div className="grid gap-4 md:grid-cols-2">
+      <Section>
+        <Container>
+          <SectionHeader eyebrow="Who it's for" title="Built for teams that chat on WhatsApp every day" />
+          <div className="mt-12 grid gap-4 md:grid-cols-2">
             {whoFor.map((item) => (
-              <article key={item.title} className="rounded-2xl border border-slate-800 bg-[#111811] p-6">
-                <h3 className="font-bold text-white">{item.title}</h3>
-                <p className="mt-2 text-sm leading-6 text-slate-400">{item.text}</p>
-              </article>
+              <Card as="article" key={item.title} data-animate>
+                <h3 className="font-bold text-text">{item.title}</h3>
+                <p className="mt-2 text-sm leading-6 text-muted">{item.text}</p>
+              </Card>
             ))}
           </div>
-        </div>
-      </section>
+        </Container>
+      </Section>
 
-      <section className="border-y border-slate-800/70 bg-[#0d110d] px-4 py-16 sm:py-20">
-        <div className="mx-auto max-w-5xl">
-          <div className="mx-auto mb-10 max-w-2xl text-center">
-            <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#25D366]">How it works</p>
-            <h2 className="mt-3 text-3xl font-bold text-white">Three steps to get going</h2>
-          </div>
-          <ol className="grid gap-4 md:grid-cols-3">
+      <Section tone="surface">
+        <Container>
+          <SectionHeader eyebrow="How it works" title="Three steps to get going" />
+          <ol className="mt-12 grid gap-4 md:grid-cols-3">
             {steps.map((step, index) => (
-              <li key={step.title} className="rounded-2xl border border-slate-800 bg-[#111811] p-6">
-                <div className="mb-4 flex h-9 w-9 items-center justify-center rounded-full bg-[#25D366]/10 text-sm font-bold text-[#25D366]">{index + 1}</div>
-                <h3 className="font-semibold text-white">{step.title}</h3>
-                <p className="mt-2 text-sm leading-6 text-slate-400">{step.text}</p>
+              <li key={step.title} className="rounded-3xl border border-border bg-bg p-6" data-animate>
+                <div className="mb-4 flex size-10 items-center justify-center rounded-full bg-accent text-sm font-bold text-on-accent shadow-accent">{index + 1}</div>
+                <h3 className="font-semibold text-text">{step.title}</h3>
+                <p className="mt-2 text-sm leading-6 text-muted">{step.text}</p>
               </li>
             ))}
           </ol>
-        </div>
-      </section>
+        </Container>
+      </Section>
 
-      <section className="px-4 py-16 sm:py-20">
-        <div className="mx-auto max-w-5xl">
-          <div className="mx-auto mb-10 max-w-2xl text-center">
-            <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#25D366]">Key benefits</p>
-            <h2 className="mt-3 text-3xl font-bold text-white">Why teams use it</h2>
-          </div>
-          <ul className="grid gap-3 md:grid-cols-2">
+      <Section>
+        <Container>
+          <SectionHeader eyebrow="Key benefits" title="Why teams use it" />
+          <ul className="mt-12 grid gap-3 md:grid-cols-2">
             {benefits.map((benefit) => (
-              <li key={benefit} className="flex items-start gap-2.5 rounded-xl border border-slate-800 bg-[#111811] p-4 text-sm leading-6 text-slate-300">
-                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#25D366]" />
+              <li key={benefit} className="surface-card flex items-start gap-3 rounded-2xl p-4 text-sm leading-6 text-text" data-animate>
+                <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden />
                 {benefit}
               </li>
             ))}
           </ul>
-        </div>
-      </section>
+        </Container>
+      </Section>
 
-      <section className="border-y border-slate-800/70 bg-[#0d110d] px-4 py-16 sm:py-20">
-        <div className="mx-auto max-w-5xl">
-          <div className="mx-auto mb-10 max-w-2xl text-center">
-            <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#25D366]">Which plan includes it</p>
-            <h2 className="mt-3 text-3xl font-bold text-white">Plan limits at a glance</h2>
-            <p className="mt-3 text-sm text-slate-400">New accounts get a 3-day free trial with everything in Solo ($9/month), including 100 routed leads, with no card required.</p>
-          </div>
-          <div className="overflow-x-auto rounded-2xl border border-slate-800">
-            <table className="w-full min-w-[640px] text-left text-sm">
+      <Section tone="surface">
+        <Container>
+          <SectionHeader eyebrow="Which plan includes it" title="Plan limits at a glance">New accounts get a 3-day free trial with everything in Solo ($9/month), including 100 routed leads, with no card required.</SectionHeader>
+          <div className="mt-10 overflow-x-auto rounded-3xl border border-border bg-bg" data-animate>
+            <table className="w-full min-w-[640px] text-start text-sm">
               <thead>
-                <tr className="border-b border-slate-800 bg-[#111811] text-slate-400">
-                  <th className="px-4 py-3 font-semibold">Plan</th>
-                  <th className="px-4 py-3 font-semibold">Price</th>
-                  <th className="px-4 py-3 font-semibold">Links</th>
-                  <th className="px-4 py-3 font-semibold">Salespeople / rotator</th>
-                  <th className="px-4 py-3 font-semibold">Ad links</th>
-                  <th className="px-4 py-3 font-semibold">Website button</th>
-                  <th className="px-4 py-3 font-semibold">Reports</th>
+                <tr className="border-b border-border bg-surface-2 text-muted">
+                  {["Plan", "Price", "Links", "Salespeople / rotator", "Ad links", "Website button", "Reports"].map((h) => <th key={h} className="px-4 py-3 text-start font-semibold">{h}</th>)}
                 </tr>
               </thead>
               <tbody>
                 {rows.map((row) => (
-                  <tr key={row.plan} className={`border-b border-slate-800/60 last:border-0 ${row.plan === "basic" ? "bg-[#25D366]/5" : ""}`}>
-                    <td className="px-4 py-3 font-semibold text-white">{row.name}</td>
-                    <td className="px-4 py-3 text-slate-300">{row.price}/mo</td>
-                    <td className={`px-4 py-3 text-slate-300 ${highlight === "rotator" || highlight === "shortLinks" ? "font-semibold text-[#25D366]" : ""}`}>{row.links}</td>
-                    <td className={`px-4 py-3 text-slate-300 ${highlight === "rotator" ? "font-semibold text-[#25D366]" : ""}`}>{row.numbersPerRotator}</td>
-                    <td className={`px-4 py-3 text-slate-300 ${highlight === "adLinks" ? "font-semibold text-[#25D366]" : ""}`}>{row.adLinks ? "Yes" : "—"}</td>
-                    <td className={`px-4 py-3 text-slate-300 ${highlight === "widget" ? "font-semibold text-[#25D366]" : ""}`}>{row.widget ? "Yes" : "—"}</td>
-                    <td className="px-4 py-3 text-slate-300">{row.reports}</td>
+                  <tr key={row.plan} className={cx("border-b border-border last:border-0", row.plan === "basic" && "bg-accent-soft/50")}>
+                    <td className="px-4 py-3 font-semibold text-text">{row.name}</td>
+                    <td className="px-4 py-3 text-muted">{row.price}/mo</td>
+                    <td className={cx("px-4 py-3", hl(highlight === "rotator" || highlight === "shortLinks"))}>{row.links}</td>
+                    <td className={cx("px-4 py-3", hl(highlight === "rotator"))}>{row.numbersPerRotator}</td>
+                    <td className={cx("px-4 py-3", hl(highlight === "adLinks"))}>{row.adLinks ? "Yes" : "—"}</td>
+                    <td className={cx("px-4 py-3", hl(highlight === "widget"))}>{row.widget ? "Yes" : "—"}</td>
+                    <td className="px-4 py-3 text-muted">{row.reports}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-          <p className="mt-4 text-xs text-slate-500">New accounts get a 3-day free trial with 100 routed leads. After the trial, a paid plan is required to keep routing. Audience (device, OS, country & city) is included on Growth and Agency.</p>
-        </div>
-      </section>
+          <p className="mt-4 text-xs text-muted">New accounts get a 3-day free trial with 100 routed leads. After the trial, a paid plan is required to keep routing. Audience (device, OS, country & city) is included on Growth and Agency.</p>
+        </Container>
+      </Section>
 
-      <section className="px-4 py-16 sm:py-20">
-        <div className="mx-auto max-w-4xl">
-          <p className="mb-6 text-xs font-bold uppercase tracking-[0.2em] text-[#25D366]">Questions</p>
-          <div className="space-y-6">
+      <Section>
+        <Container className="max-w-4xl">
+          <p className="eyebrow mb-8">Questions</p>
+          <div className="space-y-3">
             {qa.map((item) => (
-              <div key={item.q}>
-                <p className="font-semibold text-white">{item.q}</p>
-                <p className="mt-1.5 text-sm leading-6 text-slate-400">{item.a}</p>
-              </div>
+              <details key={item.q} className="group surface-card rounded-2xl px-6 py-1 open:shadow-raise" data-animate>
+                <summary className="flex min-h-14 list-none items-center justify-between gap-4 py-3 font-semibold text-text [&::-webkit-details-marker]:hidden">
+                  {item.q}
+                  <span aria-hidden className="shrink-0 text-xl text-accent transition-transform duration-200 group-open:rotate-45">+</span>
+                </summary>
+                <p className="pb-5 text-sm leading-7 text-muted">{item.a}</p>
+              </details>
             ))}
           </div>
-        </div>
-      </section>
+        </Container>
+      </Section>
 
-      <section className="border-t border-slate-800/70 px-4 py-16 sm:py-20">
-        <div className="mx-auto max-w-5xl">
-          <h2 className="mb-6 text-center text-2xl font-bold text-white">Related tools</h2>
+      <Section tone="surface" className="py-16 sm:py-20">
+        <Container>
+          <h2 className="mb-8 text-center text-2xl font-bold text-text">Related tools</h2>
           <div className="grid gap-4 sm:grid-cols-3">
             {crossLinks.map((link) => (
-              <Link key={link.href} href={link.href} className="rounded-2xl border border-slate-800 bg-[#111811] p-5 transition-colors hover:border-[#25D366]/50">
-                <h3 className="font-semibold text-white">{link.title}</h3>
-                <p className="mt-2 text-sm leading-6 text-slate-400">{link.text}</p>
+              <Link key={link.href} href={link.href} className="surface-card block rounded-2xl bg-bg p-5" data-animate>
+                <h3 className="font-semibold text-text">{link.title}</h3>
+                <p className="mt-2 text-sm leading-6 text-muted">{link.text}</p>
               </Link>
             ))}
           </div>
-        </div>
-      </section>
+        </Container>
+      </Section>
 
-      <section className="px-4 pb-20">
-        <div className="mx-auto max-w-5xl overflow-hidden rounded-3xl border border-[#25D366]/30 bg-gradient-to-br from-[#25D366]/15 to-[#0d1a0d] p-7 sm:p-10">
-          <div className="grid gap-8 lg:grid-cols-[1fr_auto] lg:items-center">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#25D366]">Ready to try it?</p>
-              <h2 className="mt-3 text-3xl font-bold text-white">Start free. Add structure when the volume arrives.</h2>
-              <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-400">No card required for the 3-day free trial. Wazap does not read WhatsApp messages and is not affiliated with WhatsApp or Meta.</p>
-            </div>
-            <div className="flex flex-col gap-3 sm:flex-row lg:flex-col">
-              <Link href={signupHref} className="inline-flex items-center justify-center gap-2 rounded-full bg-[#25D366] px-6 py-3 text-sm font-bold text-black hover:bg-[#1fba58]">
-                Start free trial <ArrowRight className="h-4 w-4" />
-              </Link>
-              <Link href="/pricing" className="inline-flex items-center justify-center gap-2 rounded-full border border-slate-600 px-6 py-3 text-sm font-semibold text-white hover:border-[#25D366]">
-                See plans
-              </Link>
+      <Section className="pb-20 pt-16 sm:pt-20">
+        <Container>
+          <div className="relative overflow-hidden rounded-[2rem] bg-ink px-6 py-12 text-white shadow-float sm:px-12" data-animate>
+            <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(55%_90%_at_85%_120%,rgb(15_169_104/0.5),transparent_70%)]" />
+            <div className="relative grid gap-8 lg:grid-cols-[1fr_auto] lg:items-center">
+              <div>
+                <p className="text-[11px] font-semibold tracking-[0.15em] text-white/70 uppercase">Ready to try it?</p>
+                <h2 className="mt-3 text-3xl font-bold tracking-tight">Start free. Add structure when the volume arrives.</h2>
+                <p className="mt-3 max-w-2xl text-sm leading-7 text-white/70">No card required for the 3-day free trial. Wazap does not read WhatsApp messages and is not affiliated with WhatsApp or Meta.</p>
+              </div>
+              <div className="flex flex-col gap-3 sm:flex-row lg:flex-col">
+                <ButtonLink href={signupHref} variant="inverse" size="lg">Start free trial <ArrowRight className="size-4" aria-hidden /></ButtonLink>
+                <ButtonLink href="/pricing" variant="inverseOutline" size="lg">See plans</ButtonLink>
+              </div>
             </div>
           </div>
-        </div>
-      </section>
+        </Container>
+      </Section>
     </main>
   );
 }

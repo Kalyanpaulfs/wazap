@@ -27,5 +27,6 @@ export async function POST(req: Request) {
   const email = normalizeEmail(body.email);
   if (!email) return NextResponse.json({ error: "Enter a valid email address." }, { status: 400 });
   const result = await issueEmailCode(email, "login", ip);
-  return result.ok ? NextResponse.json({ sent: true }) : NextResponse.json({ error: result.error }, { status: result.status });
+  const devOtp = process.env.NODE_ENV === "development" && process.env.dev_otp === "true";
+  return result.ok ? NextResponse.json({ sent: true, devOtp }) : NextResponse.json({ error: result.error }, { status: result.status });
 }

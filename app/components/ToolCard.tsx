@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Lock, Sparkles, type LucideIcon } from "lucide-react";
+import { ArrowRight, Lock, Sparkles, type LucideIcon } from "lucide-react";
 import type { ToolCard as ToolCardData } from "@/lib/tool-catalog";
 
 // Shared premium-dark card used by both app/links/new (Create a link) and
@@ -10,26 +10,16 @@ export function ToolCardLink({ card, Icon }: { card: ToolCardData; Icon: LucideI
     <Link
       href={card.href}
       aria-disabled={card.locked ? "true" : undefined}
-      className={`flex flex-col gap-3 rounded-2xl border p-5 ${
-        card.locked ? "border-slate-800 bg-[#0d130e] opacity-70" : "border-slate-800 bg-[#111811] hover:border-[#25D366]"
-      }`}
+      className={`group flex items-center gap-4 rounded-2xl border border-border bg-surface p-4 ${card.locked ? "opacity-60" : ""}`}
     >
-      <div className="flex items-start justify-between gap-2">
-        <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-700 bg-slate-950 text-[#25D366]">
-          {card.locked ? <Lock className="h-5 w-5" /> : <Icon className="h-5 w-5" />}
-        </span>
-        {!card.locked && card.badge && (
-          <span className="rounded-full border border-[#25D366]/30 bg-[#25D366]/10 px-2.5 py-1 text-xs font-semibold text-[#25D366]">
-            {card.badge}
-          </span>
-        )}
-      </div>
-      <div>
-        <p className="text-sm text-slate-400">{card.question}</p>
-        <p className="mt-1 font-bold text-white">{card.name}</p>
-      </div>
-      <p className="text-xs text-slate-500">{card.description}</p>
-      {!card.locked && card.note && <p className="text-xs text-slate-600">{card.note}</p>}
+      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent transition-transform duration-200 group-hover:scale-105">
+        {card.locked ? <Lock className="h-5 w-5" /> : <Icon className="h-5 w-5" />}
+      </span>
+      <span className="min-w-0">
+        <span className="block truncate text-sm font-semibold text-text">{card.name}</span>
+        <span className="mt-0.5 block text-[13px] leading-5 text-muted">{card.locked ? card.description : card.question}</span>
+      </span>
+      {!card.locked && <ArrowRight className="ms-auto h-4 w-4 shrink-0 -translate-x-1 text-muted opacity-0 transition-all duration-200 group-hover:translate-x-0 group-hover:text-accent group-hover:opacity-100 rtl:rotate-180" aria-hidden />}
     </Link>
   );
 }
@@ -40,14 +30,14 @@ export function ToolCardLink({ card, Icon }: { card: ToolCardData; Icon: LucideI
 // own once the catalog grows past it - no flag to keep in sync by hand.
 export function ToolComingSoonCard() {
   return (
-    <div className="flex flex-col gap-3 rounded-2xl border border-dashed border-slate-800 bg-[#0d130e] p-5 opacity-70">
-      <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-700 bg-slate-950 text-slate-500">
+    <div className="flex flex-col gap-3 rounded-2xl border border-dashed border-border bg-surface p-5 opacity-70">
+      <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-surface-2 text-muted">
         <Sparkles className="h-5 w-5" />
       </span>
       <div>
-        <p className="mt-1 font-bold text-slate-400">More free tools coming soon</p>
+        <p className="mt-1 font-bold text-muted">More free tools coming soon</p>
       </div>
-      <p className="text-xs text-slate-500">We&apos;re building more. Nothing to do here yet.</p>
+      <p className="text-xs text-muted">We&apos;re building more. Nothing to do here yet.</p>
     </div>
   );
 }

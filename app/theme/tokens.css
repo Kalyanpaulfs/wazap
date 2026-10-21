@@ -1,0 +1,87 @@
+/* Wazap design tokens — "Midnight Jade", light theme (single source of truth).
+   Components read these through Tailwind utilities (bg-surface, text-muted, border-border, shadow-raise …)
+   and never hard-code hex. Dark theme: the [data-theme="dark"] block at the bottom overrides the same variables, so no component needs a dark: variant.
+   <html data-theme> is always resolved to light or dark by app/theme/theme-script.ts; the user's choice (light/dark/auto) lives in localStorage. */
+@theme static {
+  --color-bg: #f7f8f5;
+  --color-surface: #ffffff;
+  --color-surface-2: #f0f2ee;
+  --color-border: #e3e6e0;
+  --color-border-strong: #cdd2ca;
+  --color-text: #0e1726;
+  --color-muted: #5b6676;
+  --color-accent: #087f50;
+  --color-jade-bright: #0fa968; /* decorative only: gradients, glows, large art — never text */
+  --color-accent-hover: #06703f;
+  --color-accent-soft: #e3f7ec;
+  --color-on-accent: #ffffff;
+  --color-highlight: #e9a23b;
+  --color-highlight-soft: #fdf1dc;
+  --color-ink: #0e1726;
+  --color-ink-2: #131c2b;
+  --color-success: #0b7a4d;
+  --color-warning: #8a5a0b;
+  --color-danger: #d1344a;
+  --color-info: #2563eb;
+
+
+  --shadow-hairline: 0 0 0 1px rgb(14 23 38 / 0.06);
+  --shadow-raise: 0 10px 30px -14px rgb(14 23 38 / 0.18);
+  --shadow-float: 0 24px 60px -24px rgb(14 23 38 / 0.22);
+  --shadow-accent: 0 8px 20px -10px rgb(15 169 104 / 0.55);
+
+  /* Named so they never shadow Tailwind's own ease-out / ease-in-out utilities. */
+  --ease-premium: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-smooth: cubic-bezier(0.77, 0, 0.175, 1);
+}
+
+/* Fonts: variables are set by next/font on <html> in layout.tsx. */
+@theme inline {
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-jakarta), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+}
+
+:root {
+  --grad-brand: linear-gradient(135deg, #0fa968 0%, #0e9aa7 100%);
+  --grad-highlight: linear-gradient(135deg, #f4b860 0%, #e9a23b 100%);
+  --grad-hero: radial-gradient(60% 50% at 50% 0%, rgb(15 169 104 / 0.14) 0%, transparent 70%);
+  --dur-fast: 140ms;
+  --dur-base: 220ms;
+  --dur-slow: 650ms;
+}
+
+:root { color-scheme: light; }
+
+/* Dark theme: deep ink-navy surfaces with a luminous jade accent. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --color-bg: #0a0f14;
+  --color-surface: #101720;
+  --color-surface-2: #172029;
+  --color-border: #1f2a36;
+  --color-border-strong: #2e3d4d;
+  --color-text: #eef2f6;
+  --color-muted: #9aa6b6;
+  --color-accent: #34d58c;
+  --color-jade-bright: #1fd486;
+  --color-accent-hover: #5fe3a8;
+  --color-accent-soft: #0f2b21;
+  --color-on-accent: #04140d;
+  --color-highlight: #f0b45a;
+  --color-highlight-soft: #2b2112;
+  --color-ink: #05090d;
+  --color-ink-2: #0b1117;
+  --color-success: #4ade9a;
+  --color-warning: #f0b45a;
+  --color-danger: #ef5b6b;
+  --color-info: #6ea8fe;
+
+  --shadow-hairline: 0 0 0 1px rgb(255 255 255 / 0.07);
+  --shadow-raise: 0 12px 32px -14px rgb(0 0 0 / 0.65);
+  --shadow-float: 0 28px 64px -24px rgb(0 0 0 / 0.75);
+  --shadow-accent: 0 8px 22px -10px rgb(52 213 140 / 0.45);
+
+  --grad-brand: linear-gradient(135deg, #34d58c 0%, #2bb6c4 100%);
+  --grad-hero: radial-gradient(60% 50% at 50% 0%, rgb(52 213 140 / 0.16) 0%, transparent 70%);
+}

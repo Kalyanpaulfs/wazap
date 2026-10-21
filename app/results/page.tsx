@@ -45,7 +45,7 @@ const SOURCE_PREVIEW_ROWS = [
 ];
 
 function ChangeBadge({ change }: { change: Change }) {
-  const color = change.isNew || change.direction === "up" ? "text-[#25D366]" : change.direction === "down" ? "text-red-400" : "text-slate-500";
+  const color = change.isNew || change.direction === "up" ? "text-accent" : change.direction === "down" ? "text-danger" : "text-muted";
   return <span className={`text-xs font-semibold ${color}`}>{formatChange(change)}</span>;
 }
 
@@ -88,38 +88,38 @@ export default async function ResultsPage({
       <main className="px-4 py-7 sm:px-7 sm:py-9">
         <div className="mx-auto max-w-4xl space-y-6">
           <header className="text-center">
-            <p className="text-xs font-bold uppercase tracking-[.2em] text-[#25D366]">Results</p>
-            <h1 className="mt-2 flex items-center justify-center gap-2 text-2xl font-bold text-white sm:text-3xl">
-              <Lock className="h-6 w-6 text-slate-500" /> Choose a plan to see your results
+            <p className="text-xs font-bold uppercase tracking-[.2em] text-accent">Results</p>
+            <h1 className="mt-2 flex items-center justify-center gap-2 text-2xl font-bold text-text sm:text-3xl">
+              <Lock className="h-6 w-6 text-muted" /> Choose a plan to see your results
             </h1>
-            <p className="mt-2 text-slate-400">Clicks per day, per link and per salesperson, with CSV export.</p>
+            <p className="mt-2 text-muted">Clicks per day, per link and per salesperson, with CSV export.</p>
           </header>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <article className="rounded-3xl border border-slate-800 bg-[#111811] p-6">
-              <h2 className="font-bold text-white">{`Basic results · Solo $${PLAN_PRICES.basic}/mo`}</h2>
-              <ul className="mt-4 space-y-2.5 text-sm text-slate-300">
+            <article className="rounded-3xl border border-border bg-surface p-6">
+              <h2 className="font-bold text-text">{`Basic results · Solo $${PLAN_PRICES.basic}/mo`}</h2>
+              <ul className="mt-4 space-y-2.5 text-sm text-muted">
                 {BASIC_FEATURES.map((feature) => (
                   <li key={feature} className="flex items-start gap-2">
-                    <Check className="mt-0.5 h-4 w-4 flex-none text-[#25D366]" /> {feature}
+                    <Check className="mt-0.5 h-4 w-4 flex-none text-accent" /> {feature}
                   </li>
                 ))}
               </ul>
-              <Link href="/billing#plans" className="mt-6 inline-flex rounded-full bg-[#25D366] px-5 py-2.5 text-sm font-bold text-black hover:bg-[#1fba58]">
+              <Link href="/billing#plans" className="mt-6 inline-flex rounded-full bg-accent px-5 py-2.5 text-sm font-bold text-on-accent hover:bg-accent-hover">
                 See plans
               </Link>
             </article>
 
-            <article className="rounded-3xl border border-slate-800 bg-[#111811] p-6">
-              <h2 className="font-bold text-white">{`Full results · Growth $${PLAN_PRICES.pro}/mo`}</h2>
-              <ul className="mt-4 space-y-2.5 text-sm text-slate-300">
+            <article className="rounded-3xl border border-border bg-surface p-6">
+              <h2 className="font-bold text-text">{`Full results · Growth $${PLAN_PRICES.pro}/mo`}</h2>
+              <ul className="mt-4 space-y-2.5 text-sm text-muted">
                 {FULL_FEATURES.map((feature) => (
                   <li key={feature} className="flex items-start gap-2">
-                    <Check className="mt-0.5 h-4 w-4 flex-none text-[#25D366]" /> {feature}
+                    <Check className="mt-0.5 h-4 w-4 flex-none text-accent" /> {feature}
                   </li>
                 ))}
               </ul>
-              <Link href="/billing#plans" className="mt-6 inline-flex rounded-full bg-[#25D366] px-5 py-2.5 text-sm font-bold text-black hover:bg-[#1fba58]">
+              <Link href="/billing#plans" className="mt-6 inline-flex rounded-full bg-accent px-5 py-2.5 text-sm font-bold text-on-accent hover:bg-accent-hover">
                 See plans
               </Link>
             </article>
@@ -160,7 +160,7 @@ export default async function ResultsPage({
           href={hrefFor({ tab: key })}
           aria-current={tab === key ? "page" : undefined}
           className={`rounded-full border px-4 py-1.5 text-sm font-semibold ${
-            tab === key ? "border-[#25D366] bg-[#25D366]/10 text-[#25D366]" : "border-slate-700 text-slate-300 hover:border-slate-500"
+            tab === key ? "border-accent bg-accent-soft text-accent" : "border-border-strong text-muted hover:border-border-strong"
           }`}
         >
           {label}
@@ -177,21 +177,21 @@ export default async function ResultsPage({
       <div className="mx-auto max-w-7xl space-y-6">
         <header>
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-2xl font-bold text-white sm:text-3xl">Results</h1>
-            <span className="rounded-full border border-slate-700 px-2.5 py-0.5 text-xs font-semibold text-slate-300">
+            <h1 className="text-2xl font-bold text-text sm:text-3xl">Results</h1>
+            <span className="rounded-full border border-border-strong px-2.5 py-0.5 text-xs font-semibold text-muted">
               {tier === "basic" ? "Basic" : "Full"} · {planName}
             </span>
           </div>
-          <p className="mt-1 text-slate-400">How many people clicked your links, where they came from, and who they went to.</p>
+          <p className="mt-1 text-muted">How many people clicked your links, where they came from, and who they went to.</p>
         </header>
 
         {routingBlocked && (
-          <section className="rounded-2xl border border-amber-400/30 bg-amber-400/10 p-5" aria-label="Links paused">
+          <section className="rounded-2xl border border-warning/30 bg-highlight-soft p-5" aria-label="Links paused">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
-              <p className="text-sm font-semibold text-white">
+              <p className="text-sm font-semibold text-text">
                 You&apos;ve used the {TRIAL_ROUTED_LEADS} leads in your free trial. Choose a plan to keep routing.
               </p>
-              <Link href="/billing#plans" className="text-sm font-semibold text-[#25D366] hover:underline">
+              <Link href="/billing#plans" className="text-sm font-semibold text-accent hover:underline">
                 Choose a plan →
               </Link>
             </div>
@@ -208,8 +208,8 @@ export default async function ResultsPage({
                 aria-current={!selection.isCustom && selection.period === value ? "page" : undefined}
                 className={`rounded-full border px-4 py-1.5 text-sm font-semibold transition-colors ${
                   !selection.isCustom && selection.period === value
-                    ? "border-[#25D366] bg-[#25D366]/10 text-[#25D366]"
-                    : "border-slate-700 text-slate-300 hover:border-slate-500"
+                    ? "border-accent bg-accent-soft text-accent"
+                    : "border-border-strong text-muted hover:border-border-strong"
                 }`}
               >
                 {RESULTS_PERIOD_LABELS[value]}
@@ -218,11 +218,11 @@ export default async function ResultsPage({
           </div>
 
           {tier === "full" ? (
-            <form action="/results" method="get" className="flex flex-wrap items-center gap-2 rounded-full border border-slate-700 px-3 py-1.5" aria-label="Custom date range">
+            <form action="/results" method="get" className="flex flex-wrap items-center gap-2 rounded-full border border-border-strong px-3 py-1.5" aria-label="Custom date range">
               <input type="hidden" name="tab" value={tab} />
               {sp.link && <input type="hidden" name="link" value={sp.link} />}
               {sp.compare && <input type="hidden" name="compare" value={sp.compare} />}
-              <label className="flex items-center gap-1.5 text-sm text-slate-300">
+              <label className="flex items-center gap-1.5 text-sm text-muted">
                 From
                 <input
                   type="date"
@@ -231,10 +231,10 @@ export default async function ResultsPage({
                   defaultValue={selection.fromValue}
                   min={data.earliestCustomDate}
                   max={data.todayInputValue}
-                  className="rounded-md border border-slate-700 bg-slate-950 px-2 py-1 text-sm text-white [color-scheme:dark]"
+                  className="rounded-md border border-border-strong bg-bg px-2 py-1 text-sm text-text [color-scheme:dark]"
                 />
               </label>
-              <label className="flex items-center gap-1.5 text-sm text-slate-300">
+              <label className="flex items-center gap-1.5 text-sm text-muted">
                 To
                 <input
                   type="date"
@@ -243,13 +243,13 @@ export default async function ResultsPage({
                   defaultValue={selection.toValue}
                   min={data.earliestCustomDate}
                   max={data.todayInputValue}
-                  className="rounded-md border border-slate-700 bg-slate-950 px-2 py-1 text-sm text-white [color-scheme:dark]"
+                  className="rounded-md border border-border-strong bg-bg px-2 py-1 text-sm text-text [color-scheme:dark]"
                 />
               </label>
               <button
                 type="submit"
                 className={`rounded-full border px-3 py-1 text-sm font-semibold transition-colors ${
-                  selection.isCustom ? "border-[#25D366] bg-[#25D366]/10 text-[#25D366]" : "border-slate-700 text-slate-300 hover:border-slate-500"
+                  selection.isCustom ? "border-accent bg-accent-soft text-accent" : "border-border-strong text-muted hover:border-border-strong"
                 }`}
               >
                 Custom range
@@ -258,7 +258,7 @@ export default async function ResultsPage({
           ) : (
             <Link
               href="/billing#plans"
-              className="inline-flex items-center gap-1.5 rounded-full border border-slate-800 px-4 py-1.5 text-sm font-semibold text-slate-500 hover:border-slate-600"
+              className="inline-flex items-center gap-1.5 rounded-full border border-border px-4 py-1.5 text-sm font-semibold text-muted hover:border-border-strong"
             >
               <Lock className="h-3.5 w-3.5" /> Custom · Growth
             </Link>
@@ -269,7 +269,7 @@ export default async function ResultsPage({
               href={hrefFor({ compare: compareOn ? "0" : undefined })}
               aria-pressed={compareOn}
               className={`rounded-full border px-4 py-1.5 text-sm font-semibold transition-colors ${
-                compareOn ? "border-[#25D366] bg-[#25D366]/10 text-[#25D366]" : "border-slate-700 text-slate-300 hover:border-slate-500"
+                compareOn ? "border-accent bg-accent-soft text-accent" : "border-border-strong text-muted hover:border-border-strong"
               }`}
             >
               Compare with previous period
@@ -284,57 +284,57 @@ export default async function ResultsPage({
 
           <a
             href={`/api/reports/export${data.exportQuery ? `?${data.exportQuery}` : ""}`}
-            className="ml-auto inline-flex items-center gap-1.5 rounded-full border border-slate-700 px-4 py-1.5 text-sm font-semibold text-white hover:border-[#25D366]"
+            className="ml-auto inline-flex items-center gap-1.5 rounded-full border border-border-strong px-4 py-1.5 text-sm font-semibold text-text hover:border-accent"
           >
             <Download className="h-4 w-4" /> Download CSV
           </a>
         </div>
 
         {selection.isCustom === false && selection.customError && (
-          <p className="rounded-xl border border-amber-700/40 bg-amber-950/20 px-4 py-2.5 text-sm text-amber-300">
+          <p className="rounded-xl border border-warning/40 bg-highlight-soft px-4 py-2.5 text-sm text-warning">
             {selection.customError} Showing {RESULTS_PERIOD_LABELS[selection.period]} instead.
           </p>
         )}
         {selection.clampedToToday && (
-          <p className="rounded-xl border border-slate-800 bg-slate-950/40 px-4 py-2.5 text-sm text-slate-400">
+          <p className="rounded-xl border border-border bg-bg/40 px-4 py-2.5 text-sm text-muted">
             The To date was in the future, so it was adjusted to today.
           </p>
         )}
 
         {/* Summary sentence */}
-        <p className="text-slate-300">{data.summarySentence}</p>
+        <p className="text-muted">{data.summarySentence}</p>
 
         {/* 3 big numbers */}
         <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3" aria-label="Results summary">
-          <article className="rounded-2xl border border-slate-800 bg-[#111811] p-5">
+          <article className="rounded-2xl border border-border bg-surface p-5">
             <div className="flex items-center justify-between">
-              <Zap className="h-5 w-5 text-[#25D366]" />
+              <Zap className="h-5 w-5 text-accent" />
               {data.clicksChange && <ChangeBadge change={data.clicksChange} />}
             </div>
-            <p className="mt-4 text-2xl font-bold text-white">{data.clicksCurrent.toLocaleString()}</p>
-            <p className="mt-1 text-sm font-semibold text-slate-300">Clicks</p>
-            {data.clicksChange && <p className="mt-1 text-xs text-slate-600">vs previous period</p>}
+            <p className="mt-4 text-2xl font-bold text-text">{data.clicksCurrent.toLocaleString()}</p>
+            <p className="mt-1 text-sm font-semibold text-muted">Clicks</p>
+            {data.clicksChange && <p className="mt-1 text-xs text-muted">vs previous period</p>}
           </article>
 
           {data.busiestLink && (
-            <article className="rounded-2xl border border-slate-800 bg-[#111811] p-5">
+            <article className="rounded-2xl border border-border bg-surface p-5">
               <div className="flex items-center justify-between">
-                <Link2 className="h-5 w-5 text-[#25D366]" />
+                <Link2 className="h-5 w-5 text-accent" />
               </div>
-              <p className="mt-4 text-2xl font-bold text-white">{data.busiestLink.clicks.toLocaleString()}</p>
-              <p className="mt-1 text-sm font-semibold text-slate-300 truncate" title={data.busiestLink.name}>
+              <p className="mt-4 text-2xl font-bold text-text">{data.busiestLink.clicks.toLocaleString()}</p>
+              <p className="mt-1 text-sm font-semibold text-muted truncate" title={data.busiestLink.name}>
                 Busiest link · {data.busiestLink.name}
               </p>
             </article>
           )}
 
           {data.topSalesperson && (
-            <article className="rounded-2xl border border-slate-800 bg-[#111811] p-5">
+            <article className="rounded-2xl border border-border bg-surface p-5">
               <div className="flex items-center justify-between">
-                <Users className="h-5 w-5 text-[#25D366]" />
+                <Users className="h-5 w-5 text-accent" />
               </div>
-              <p className="mt-4 text-2xl font-bold text-white">{data.topSalesperson.clicks.toLocaleString()}</p>
-              <p className="mt-1 text-sm font-semibold text-slate-300 truncate" title={data.topSalesperson.name}>
+              <p className="mt-4 text-2xl font-bold text-text">{data.topSalesperson.clicks.toLocaleString()}</p>
+              <p className="mt-1 text-sm font-semibold text-muted truncate" title={data.topSalesperson.name}>
                 Top salesperson · {data.topSalesperson.name}
               </p>
             </article>
@@ -344,27 +344,27 @@ export default async function ResultsPage({
         {tabNav}
 
         {tab === "overview" && (
-          <section className="rounded-3xl border border-slate-800 bg-[#111811] p-5 sm:p-7" aria-label="Clicks per day">
-            <h2 className="font-bold text-white">Clicks per day</h2>
+          <section className="rounded-3xl border border-border bg-surface p-5 sm:p-7" aria-label="Clicks per day">
+            <h2 className="font-bold text-text">Clicks per day</h2>
             {data.isEmpty ? (
-              <div className="mt-5 rounded-2xl border border-dashed border-slate-700 p-10 text-center text-slate-500">
-                <BarChart3 className="mx-auto h-8 w-8 text-slate-600" />
+              <div className="mt-5 rounded-2xl border border-dashed border-border-strong p-10 text-center text-muted">
+                <BarChart3 className="mx-auto h-8 w-8 text-muted" />
                 <p className="mt-3">No clicks yet in {data.periodText}.</p>
-                <Link href="/links/new" className="mt-4 inline-flex rounded-full bg-[#25D366] px-5 py-2.5 text-sm font-bold text-black hover:bg-[#1fba58]">
+                <Link href="/links/new" className="mt-4 inline-flex rounded-full bg-accent px-5 py-2.5 text-sm font-bold text-on-accent hover:bg-accent-hover">
                   Create a lead routing link
                 </Link>
               </div>
             ) : (
               <>
-                <p className="mt-1 text-xs text-slate-500">
+                <p className="mt-1 text-xs text-muted">
                   {data.chatSeries.length && data.chatSeries[0].label.startsWith("Week of") ? "Grouped by week for long ranges." : "Every day in the period."}
                 </p>
                 <div className="mt-6 flex h-40 items-end gap-1" role="img" aria-label="Clicks per day in the selected period">
                   {data.chatSeries.map((point) => (
                     <div key={point.key} className="group flex min-w-0 flex-1 flex-col items-center justify-end gap-2">
-                      <div className="text-[10px] text-slate-500 opacity-0 transition-opacity group-hover:opacity-100">{point.count}</div>
+                      <div className="text-[10px] text-muted opacity-0 transition-opacity group-hover:opacity-100">{point.count}</div>
                       <div
-                        className="w-full rounded-t-md bg-[#25D366] transition-all"
+                        className="w-full rounded-t-md bg-accent transition-all"
                         style={{ height: `${Math.max(point.count ? 6 : 2, (point.count / data.maxChatSeries) * 120)}px`, opacity: point.count ? 0.85 : 0.12 }}
                         title={`${point.label}: ${point.count} click${point.count === 1 ? "" : "s"}`}
                       />
@@ -374,7 +374,7 @@ export default async function ResultsPage({
               </>
             )}
             {onActiveTrial && (
-              <p className={`mt-5 text-sm font-semibold ${quota.used >= TRIAL_ROUTED_LEADS - 10 ? "text-red-400" : "text-slate-300"}`}>
+              <p className={`mt-5 text-sm font-semibold ${quota.used >= TRIAL_ROUTED_LEADS - 10 ? "text-danger" : "text-muted"}`}>
                 {quota.used} of {TRIAL_ROUTED_LEADS} trial leads used · {trialDaysLeft(routerUser, now)} day{trialDaysLeft(routerUser, now) !== 1 ? "s" : ""} left
               </p>
             )}
@@ -382,17 +382,17 @@ export default async function ResultsPage({
         )}
 
         {tab === "link" && (
-          <article className="overflow-hidden rounded-3xl border border-slate-800 bg-[#111811]">
-            <div className="border-b border-slate-800 px-5 py-4">
-              <h2 className="font-bold text-white">By link</h2>
+          <article className="overflow-hidden rounded-3xl border border-border bg-surface">
+            <div className="border-b border-border px-5 py-4">
+              <h2 className="font-bold text-text">By link</h2>
             </div>
             {data.linkRows.length === 0 ? (
-              <p className="px-5 py-8 text-center text-sm text-slate-500">No links yet.</p>
+              <p className="px-5 py-8 text-center text-sm text-muted">No links yet.</p>
             ) : (
               <>
                 <div className="hidden overflow-x-auto sm:block">
                   <table className="w-full min-w-[480px] text-left text-sm">
-                    <thead className="text-xs uppercase tracking-wide text-slate-600">
+                    <thead className="text-xs uppercase tracking-wide text-muted">
                       <tr>
                         <th className="px-5 py-3">Name</th>
                         <th className="px-4 py-3">Type</th>
@@ -408,20 +408,20 @@ export default async function ResultsPage({
                     </thead>
                     <tbody>
                       {data.linkRows.map((row) => (
-                        <tr key={row.id} className="border-t border-slate-800/70">
-                          <td className="px-5 py-3.5 font-semibold text-white">
+                        <tr key={row.id} className="border-t border-border">
+                          <td className="px-5 py-3.5 font-semibold text-text">
                             <Link href={linkDetailsHref(row.filterType, row.id)} className="hover:underline">
                               {row.name}
                             </Link>
                           </td>
                           <td className="px-4 py-3.5">
-                            <span className="rounded-full border border-slate-700 px-2 py-0.5 text-xs text-slate-300">{renameLinkTypeLabel(row.typeLabel)}</span>
+                            <span className="rounded-full border border-border-strong px-2 py-0.5 text-xs text-muted">{renameLinkTypeLabel(row.typeLabel)}</span>
                           </td>
-                          <td className="px-4 py-3.5 text-slate-300">{row.current}</td>
-                          <td className="px-4 py-3.5 text-slate-300">{row.share}%</td>
+                          <td className="px-4 py-3.5 text-muted">{row.current}</td>
+                          <td className="px-4 py-3.5 text-muted">{row.share}%</td>
                           {tier === "full" && compareOn && (
                             <>
-                              <td className="px-4 py-3.5 text-slate-500">{row.previous}</td>
+                              <td className="px-4 py-3.5 text-muted">{row.previous}</td>
                               <td className="px-4 py-3.5">
                                 <ChangeBadge change={row.change} />
                               </td>
@@ -435,14 +435,14 @@ export default async function ResultsPage({
 
                 <div className="space-y-3 p-4 sm:hidden">
                   {data.linkRows.map((row) => (
-                    <div key={row.id} className="rounded-2xl border border-slate-800 bg-slate-950/40 p-4">
+                    <div key={row.id} className="rounded-2xl border border-border bg-bg/40 p-4">
                       <div className="flex items-start justify-between gap-3">
-                        <Link href={linkDetailsHref(row.filterType, row.id)} className="font-semibold text-white hover:underline">
+                        <Link href={linkDetailsHref(row.filterType, row.id)} className="font-semibold text-text hover:underline">
                           {row.name}
                         </Link>
-                        <span className="rounded-full border border-slate-700 px-2 py-0.5 text-xs text-slate-300">{renameLinkTypeLabel(row.typeLabel)}</span>
+                        <span className="rounded-full border border-border-strong px-2 py-0.5 text-xs text-muted">{renameLinkTypeLabel(row.typeLabel)}</span>
                       </div>
-                      <p className="mt-2 text-sm text-slate-400">
+                      <p className="mt-2 text-sm text-muted">
                         {row.current} clicks · {row.share}% share
                         {tier === "full" && compareOn && <> · <ChangeBadge change={row.change} /></>}
                       </p>
@@ -455,39 +455,39 @@ export default async function ResultsPage({
         )}
 
         {tab === "salesperson" && (
-          <section className="rounded-3xl border border-slate-800 bg-[#111811] p-5 sm:p-7" aria-label="By salesperson">
+          <section className="rounded-3xl border border-border bg-surface p-5 sm:p-7" aria-label="By salesperson">
             <div className="flex items-center gap-2">
-              <Users className="h-5 w-5 text-[#25D366]" />
-              <h2 className="font-bold text-white">By salesperson</h2>
+              <Users className="h-5 w-5 text-accent" />
+              <h2 className="font-bold text-text">By salesperson</h2>
             </div>
-            <p className="mt-1 text-xs text-slate-500">Clicks sent to each salesperson, grouped by lead rotator, this period.</p>
+            <p className="mt-1 text-xs text-muted">Clicks sent to each salesperson, grouped by lead rotator, this period.</p>
             {data.salespersonGroups.length ? (
               <>
                 <div className="mt-5 space-y-7">
                   {data.salespersonGroups.map((group) => (
                     <div key={group.id}>
-                      <p className="text-sm font-semibold text-white">{group.name}</p>
+                      <p className="text-sm font-semibold text-text">{group.name}</p>
                       <div className="mt-3 space-y-3">
                         {group.destinations.map((row) => (
                           <div key={row.destination}>
                             <div className="flex items-center justify-between gap-3 text-sm">
                               {row.salespersonName ? (
                                 <span>
-                                  <span className="block font-semibold text-white">{row.salespersonName}</span>
-                                  <span className="block font-mono text-xs text-slate-500">+{row.destination}</span>
+                                  <span className="block font-semibold text-text">{row.salespersonName}</span>
+                                  <span className="block font-mono text-xs text-muted">+{row.destination}</span>
                                 </span>
                               ) : (
-                                <span className="font-mono text-slate-300">+{row.destination}</span>
+                                <span className="font-mono text-muted">+{row.destination}</span>
                               )}
                               <div className="flex items-center gap-2">
-                                <strong className="text-white">
+                                <strong className="text-text">
                                   {row.count} clicks · {row.pct}%
                                 </strong>
                                 {tier === "full" && compareOn && <ChangeBadge change={row.change} />}
                               </div>
                             </div>
-                            <div className="mt-1.5 h-2 rounded-full bg-slate-900">
-                              <div className="h-2 rounded-full bg-[#25D366]" style={{ width: `${Math.max(row.count ? 4 : 0, row.pct)}%` }} />
+                            <div className="mt-1.5 h-2 rounded-full bg-surface">
+                              <div className="h-2 rounded-full bg-accent" style={{ width: `${Math.max(row.count ? 4 : 0, row.pct)}%` }} />
                             </div>
                           </div>
                         ))}
@@ -495,32 +495,32 @@ export default async function ResultsPage({
                     </div>
                   ))}
                 </div>
-                <p className="mt-6 text-xs text-slate-500">
+                <p className="mt-6 text-xs text-muted">
                   Lead rotators take turns, so shares should be similar. A big gap can mean a number was added later or paused.
                 </p>
               </>
             ) : (
-              <p className="mt-5 rounded-xl border border-dashed border-slate-700 p-5 text-sm text-slate-500">No lead rotator clicks in this period.</p>
+              <p className="mt-5 rounded-xl border border-dashed border-border-strong p-5 text-sm text-muted">No lead rotator clicks in this period.</p>
             )}
           </section>
         )}
 
         {tab === "source" && (
           tier === "full" ? (
-            <article className="overflow-hidden rounded-3xl border border-slate-800 bg-[#111811]">
-              <div className="border-b border-slate-800 px-5 py-4">
-                <h2 className="font-bold text-white">Ads &amp; campaigns</h2>
-                <p className="mt-1 text-xs text-slate-500">Clicks on your ad links, by the source and campaign you set on each link. Lead rotators and WhatsApp links don&apos;t record where people came from. Use an ad link to track a source.</p>
+            <article className="overflow-hidden rounded-3xl border border-border bg-surface">
+              <div className="border-b border-border px-5 py-4">
+                <h2 className="font-bold text-text">Ads &amp; campaigns</h2>
+                <p className="mt-1 text-xs text-muted">Clicks on your ad links, by the source and campaign you set on each link. Lead rotators and WhatsApp links don&apos;t record where people came from. Use an ad link to track a source.</p>
               </div>
               {data.sourceRows.length === 0 ? (
-                <div className="px-5 py-8 text-center text-sm text-slate-500">
+                <div className="px-5 py-8 text-center text-sm text-muted">
                   <p>No ad link clicks yet in {data.periodText}.</p>
-                  <Link href="/links/new/ad" className="mt-3 inline-flex rounded-full border border-slate-700 px-4 py-2 text-xs font-semibold text-slate-200 hover:border-[#25D366]">Create an ad link</Link>
+                  <Link href="/links/new/ad" className="mt-3 inline-flex rounded-full border border-border-strong px-4 py-2 text-xs font-semibold text-text hover:border-accent">Create an ad link</Link>
                 </div>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full min-w-[480px] text-left text-sm">
-                    <thead className="text-xs uppercase tracking-wide text-slate-600">
+                    <thead className="text-xs uppercase tracking-wide text-muted">
                       <tr>
                         <th className="px-5 py-3">Source / campaign</th>
                         <th className="px-4 py-3">This period</th>
@@ -534,12 +534,12 @@ export default async function ResultsPage({
                     </thead>
                     <tbody>
                       {data.sourceRows.map((row) => (
-                        <tr key={row.label} className="border-t border-slate-800/70">
-                          <td className="px-5 py-3.5 font-semibold text-white">{row.label}</td>
-                          <td className="px-4 py-3.5 text-slate-300">{row.current}</td>
+                        <tr key={row.label} className="border-t border-border">
+                          <td className="px-5 py-3.5 font-semibold text-text">{row.label}</td>
+                          <td className="px-4 py-3.5 text-muted">{row.current}</td>
                           {compareOn && (
                             <>
-                              <td className="px-4 py-3.5 text-slate-500">{row.previous}</td>
+                              <td className="px-4 py-3.5 text-muted">{row.previous}</td>
                               <td className="px-4 py-3.5">
                                 <ChangeBadge change={row.change} />
                               </td>
@@ -553,14 +553,14 @@ export default async function ResultsPage({
               )}
             </article>
           ) : (
-            <article className="relative overflow-hidden rounded-3xl border border-slate-800 bg-[#111811]">
-              <div className="border-b border-slate-800 px-5 py-4">
-                <h2 className="font-bold text-white">Ads &amp; campaigns</h2>
-                <p className="mt-1 text-xs text-slate-500">Clicks on your ad links, by the source and campaign you set on each link. Lead rotators and WhatsApp links don&apos;t record where people came from. Use an ad link to track a source.</p>
+            <article className="relative overflow-hidden rounded-3xl border border-border bg-surface">
+              <div className="border-b border-border px-5 py-4">
+                <h2 className="font-bold text-text">Ads &amp; campaigns</h2>
+                <p className="mt-1 text-xs text-muted">Clicks on your ad links, by the source and campaign you set on each link. Lead rotators and WhatsApp links don&apos;t record where people came from. Use an ad link to track a source.</p>
               </div>
               <div className="overflow-x-auto pointer-events-none select-none opacity-60 blur-[3px] grayscale">
                 <table className="w-full min-w-[480px] text-left text-sm">
-                  <thead className="text-xs uppercase tracking-wide text-slate-600">
+                  <thead className="text-xs uppercase tracking-wide text-muted">
                     <tr>
                       <th className="px-5 py-3">Source / campaign</th>
                       <th className="px-4 py-3">This period</th>
@@ -568,18 +568,18 @@ export default async function ResultsPage({
                   </thead>
                   <tbody>
                     {SOURCE_PREVIEW_ROWS.map((row) => (
-                      <tr key={row.label} className="border-t border-slate-800/70">
-                        <td className="px-5 py-3.5 font-semibold text-white">{row.label}</td>
-                        <td className="px-4 py-3.5 text-slate-300">{row.current}</td>
+                      <tr key={row.label} className="border-t border-border">
+                        <td className="px-5 py-3.5 font-semibold text-text">{row.label}</td>
+                        <td className="px-4 py-3.5 text-muted">{row.current}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
-              <div className="absolute inset-0 flex items-center justify-center bg-[#111811]/40 p-5">
+              <div className="absolute inset-0 flex items-center justify-center bg-surface/40 p-5">
                 <Link
                   href="/billing#plans"
-                  className="inline-flex items-center gap-2 rounded-full bg-[#25D366] px-5 py-2.5 text-sm font-bold text-black hover:bg-[#1fba58]"
+                  className="inline-flex items-center gap-2 rounded-full bg-accent px-5 py-2.5 text-sm font-bold text-on-accent hover:bg-accent-hover"
                 >
                   <Lock className="h-4 w-4" /> Unlock with Growth
                 </Link>

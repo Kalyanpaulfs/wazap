@@ -35,10 +35,10 @@ const STATUS_LABELS: Record<string, string> = { open: "Open", investigating: "In
 
 // Open/Investigating = amber, Waiting for you = blue, Solved = green, Closed = slate.
 function statusChipClass(status?: string) {
-  if (status === "solved") return "bg-[#25D366]/15 text-[#25D366]";
-  if (status === "closed") return "bg-slate-700/40 text-slate-400";
-  if (status === "waiting") return "bg-sky-500/15 text-sky-300";
-  return "bg-amber-500/15 text-amber-300";
+  if (status === "solved") return "bg-accent-soft text-accent";
+  if (status === "closed") return "bg-surface-2 text-muted";
+  if (status === "waiting") return "bg-info/15 text-info";
+  return "bg-highlight-soft text-warning";
 }
 
 function renderText(text: string) {
@@ -46,7 +46,7 @@ function renderText(text: string) {
     const bold = part.match(/^\*\*([^*]+)\*\*$/);
     if (bold) return <strong key={i}>{bold[1]}</strong>;
     const link = part.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
-    if (link && /^(\/[^/]|https:\/\/wazap\.lt\/)/.test(link[2])) return <a key={i} href={link[2]} className="text-[#25D366] underline">{link[1]}</a>;
+    if (link && /^(\/[^/]|https:\/\/wazap\.lt\/)/.test(link[2])) return <a key={i} href={link[2]} className="text-accent underline">{link[1]}</a>;
     return <span key={i}>{part}</span>;
   });
 }
@@ -417,129 +417,129 @@ export default function ChatWidget() {
   if (pathname?.startsWith("/admin")) return null;
 
   return <div className="fixed bottom-4 right-4 z-50 flex flex-col items-end gap-3 sm:bottom-6 sm:right-6">
-    {open && <div id="wazap-support-panel" role="region" aria-label="Wazap support chat" onKeyDown={event => { if (event.key === "Escape") closeChat(); }} className="w-[calc(100vw-2rem)] max-w-sm max-h-[calc(100dvh-110px)] rounded-2xl border border-[#25D366]/25 bg-[#0d1a0d] shadow-2xl flex flex-col overflow-hidden">
-      <div className="flex items-center gap-3 px-4 py-3.5 border-b border-[#25D366]/15 bg-[#111811]">
-        {ready && screen !== "home" ? <button type="button" aria-label="Back" onClick={goBack} className="w-9 h-9 rounded-full border border-[#25D366]/20 flex items-center justify-center text-slate-300 hover:text-white hover:border-[#25D366]/40 shrink-0 transition-colors"><ChevronLeft size={18} /></button>
-          : <div className="w-9 h-9 rounded-full bg-[#25D366]/15 flex items-center justify-center shrink-0"><Headphones size={18} className="text-[#25D366]" /></div>}
-        <div className="flex-1 min-w-0"><p className="text-sm font-semibold text-white truncate">Wazap Support</p><p className="text-[11px] text-slate-400">Real people · replies within 12 hours</p></div>
-        <button aria-label="Close support chat" onClick={closeChat} className="text-slate-400 hover:text-white shrink-0 ml-1"><X size={17} /></button>
+    {open && <div id="wazap-support-panel" role="region" aria-label="Wazap support chat" onKeyDown={event => { if (event.key === "Escape") closeChat(); }} className="w-[calc(100vw-2rem)] max-w-sm max-h-[calc(100dvh-110px)] rounded-2xl border border-accent/25 bg-surface-2 shadow-2xl flex flex-col overflow-hidden">
+      <div className="flex items-center gap-3 px-4 py-3.5 border-b border-accent/15 bg-surface">
+        {ready && screen !== "home" ? <button type="button" aria-label="Back" onClick={goBack} className="w-9 h-9 rounded-full border border-accent/20 flex items-center justify-center text-muted hover:text-text hover:border-accent/40 shrink-0 transition-colors"><ChevronLeft size={18} /></button>
+          : <div className="w-9 h-9 rounded-full bg-accent-soft flex items-center justify-center shrink-0"><Headphones size={18} className="text-accent" /></div>}
+        <div className="flex-1 min-w-0"><p className="text-sm font-semibold text-text truncate">Wazap Support</p><p className="text-[11px] text-muted">Real people · replies within 12 hours</p></div>
+        <button aria-label="Close support chat" onClick={closeChat} className="text-muted hover:text-text shrink-0 ml-1"><X size={17} /></button>
       </div>
 
-      {checking ? <p role="status" className="p-6 text-sm text-slate-400">Restoring your chat…</p> : !ready ? <form onSubmit={start} className="p-5 space-y-4 overflow-y-auto">
-        <div><h2 className="text-lg font-semibold text-white">How can we reach you?</h2><p className="text-xs leading-5 text-slate-400 mt-2">Leave your details and we&apos;ll get you connected to support. We reply within 12 hours. Your enquiry stays linked to you.</p></div>
-        <div><label htmlFor="chat-name" className="block text-xs text-slate-300 mb-1.5">Full name</label><input ref={nameRef} id="chat-name" name="name" autoComplete="name" required minLength={2} maxLength={120} value={contact.name} onChange={event => setContact({ ...contact, name: event.target.value })} className="wp-chat-field" placeholder="Your full name" /></div>
-        <div><label htmlFor="chat-email" className="block text-xs text-slate-300 mb-1.5">Email address</label><input id="chat-email" type="email" name="email" autoComplete="email" required maxLength={255} value={contact.email} onChange={event => setContact({ ...contact, email: event.target.value })} className="wp-chat-field" placeholder="you@company.com" /></div>
-        <div><label htmlFor="chat-phone" className="block text-xs text-slate-300 mb-1.5">Phone / WhatsApp number</label><input id="chat-phone" type="tel" name="tel" autoComplete="tel" required maxLength={40} value={contact.phone} onChange={event => setContact({ ...contact, phone: event.target.value })} className="wp-chat-field" placeholder="+971 50 123 4567" /><p className="mt-1 text-[11px] text-slate-500">Include your country code, starting with +.</p></div>
-        <label className="flex items-start gap-2 text-[11px] leading-5 text-slate-300"><input type="checkbox" checked={newsletter} onChange={event => setNewsletter(event.target.checked)} className="mt-1" />Send me Wazap newsletters and product updates (optional). Email confirmation is required.</label>
-        <p className="text-[11px] leading-5 text-slate-400">We use these details to respond to your enquiry and keep its history. This does not subscribe you to marketing. <Link href="/privacy" className="text-[#25D366] underline">Privacy policy</Link></p>
-        {notice && <p role="alert" className="text-xs text-amber-200">{notice}</p>}
+      {checking ? <p role="status" className="p-6 text-sm text-muted">Restoring your chat…</p> : !ready ? <form onSubmit={start} className="p-5 space-y-4 overflow-y-auto">
+        <div><h2 className="text-lg font-semibold text-text">How can we reach you?</h2><p className="text-xs leading-5 text-muted mt-2">Leave your details and we&apos;ll get you connected to support. We reply within 12 hours. Your enquiry stays linked to you.</p></div>
+        <div><label htmlFor="chat-name" className="block text-xs text-muted mb-1.5">Full name</label><input ref={nameRef} id="chat-name" name="name" autoComplete="name" required minLength={2} maxLength={120} value={contact.name} onChange={event => setContact({ ...contact, name: event.target.value })} className="wp-chat-field" placeholder="Your full name" /></div>
+        <div><label htmlFor="chat-email" className="block text-xs text-muted mb-1.5">Email address</label><input id="chat-email" type="email" name="email" autoComplete="email" required maxLength={255} value={contact.email} onChange={event => setContact({ ...contact, email: event.target.value })} className="wp-chat-field" placeholder="you@company.com" /></div>
+        <div><label htmlFor="chat-phone" className="block text-xs text-muted mb-1.5">Phone / WhatsApp number</label><input id="chat-phone" type="tel" name="tel" autoComplete="tel" required maxLength={40} value={contact.phone} onChange={event => setContact({ ...contact, phone: event.target.value })} className="wp-chat-field" placeholder="+971 50 123 4567" /><p className="mt-1 text-[11px] text-muted">Include your country code, starting with +.</p></div>
+        <label className="flex items-start gap-2 text-[11px] leading-5 text-muted"><input type="checkbox" checked={newsletter} onChange={event => setNewsletter(event.target.checked)} className="mt-1" />Send me Wazap newsletters and product updates (optional). Email confirmation is required.</label>
+        <p className="text-[11px] leading-5 text-muted">We use these details to respond to your enquiry and keep its history. This does not subscribe you to marketing. <Link href="/privacy" className="text-accent underline">Privacy policy</Link></p>
+        {notice && <p role="alert" className="text-xs text-warning">{notice}</p>}
         <button type="submit" disabled={loading} className="wp-primary w-full justify-center disabled:opacity-50">{loading ? "Saving your details…" : "Continue"}<ArrowRight size={16} /></button>
       </form> : <>
 
         {screen === "home" && <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
-          {notice && <p role="status" className="text-xs text-amber-200">{notice}</p>}
+          {notice && <p role="status" className="text-xs text-warning">{notice}</p>}
           <button type="button" onClick={() => setScreen("topic")} className="wp-primary w-full justify-center"><Plus size={16} />New ticket</button>
-          {session?.user && <Link href="/support/tickets" className="block text-center text-xs text-[#25D366] underline">My tickets</Link>}
-          {whatsapp?.available && <a href={whatsapp.url} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 rounded-xl bg-[#25D366]/15 border border-[#25D366]/30 px-3 py-2.5 text-sm font-medium text-[#25D366]"><Smartphone size={15} />Chat on WhatsApp</a>}
-          {whatsapp && !whatsapp.available && whatsapp.reason === "plan" && <Link href="/billing#plans" className="flex items-center justify-center gap-2 rounded-xl border border-slate-700 px-3 py-2.5 text-xs text-slate-500"><Smartphone size={15} />WhatsApp support · Growth & Agency</Link>}
+          {session?.user && <Link href="/support/tickets" className="block text-center text-xs text-accent underline">My tickets</Link>}
+          {whatsapp?.available && <a href={whatsapp.url} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 rounded-xl bg-accent-soft border border-accent/30 px-3 py-2.5 text-sm font-medium text-accent"><Smartphone size={15} />Chat on WhatsApp</a>}
+          {whatsapp && !whatsapp.available && whatsapp.reason === "plan" && <Link href="/billing#plans" className="flex items-center justify-center gap-2 rounded-xl border border-border-strong px-3 py-2.5 text-xs text-muted"><Smartphone size={15} />WhatsApp support · Growth & Agency</Link>}
           <div>
-            <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">Your tickets</h3>
-            {ticketsLoading ? <p className="text-xs text-slate-500">Loading…</p> : homeTickets.length === 0 ? <p className="text-xs text-slate-500">No open tickets yet.</p> : <ul className="space-y-2">
-              {homeTickets.map(t => <li key={t.id}><button type="button" onClick={() => openTicket(t.id)} className="w-full flex items-center justify-between gap-2 rounded-xl border border-slate-800 bg-[#111811] px-3 py-2.5 text-left hover:border-[#25D366]/40 transition-colors">
-                <span className="min-w-0"><span className="block text-sm text-white">#{t.number} · {TOPIC_LABELS[t.topic] || t.topic}</span><span className={`mt-1 inline-block rounded-full px-1.5 py-0.5 text-[10px] font-medium ${statusChipClass(t.status)}`}>{STATUS_LABELS[t.status] || t.status}</span></span>
-                {t.unread > 0 && <span className="shrink-0 w-2 h-2 rounded-full bg-[#25D366]" aria-hidden="true" />}
+            <h3 className="text-xs font-semibold text-muted uppercase tracking-wide mb-2">Your tickets</h3>
+            {ticketsLoading ? <p className="text-xs text-muted">Loading…</p> : homeTickets.length === 0 ? <p className="text-xs text-muted">No open tickets yet.</p> : <ul className="space-y-2">
+              {homeTickets.map(t => <li key={t.id}><button type="button" onClick={() => openTicket(t.id)} className="w-full flex items-center justify-between gap-2 rounded-xl border border-border bg-surface px-3 py-2.5 text-left hover:border-accent/40 transition-colors">
+                <span className="min-w-0"><span className="block text-sm text-text">#{t.number} · {TOPIC_LABELS[t.topic] || t.topic}</span><span className={`mt-1 inline-block rounded-full px-1.5 py-0.5 text-[10px] font-medium ${statusChipClass(t.status)}`}>{STATUS_LABELS[t.status] || t.status}</span></span>
+                {t.unread > 0 && <span className="shrink-0 w-2 h-2 rounded-full bg-accent" aria-hidden="true" />}
               </button></li>)}
             </ul>}
           </div>
         </div>}
 
         {screen === "topic" && <div className="flex-1 overflow-y-auto px-4 py-4">
-          <p className="text-sm text-slate-300 mb-3">What&apos;s this about?</p>
+          <p className="text-sm text-muted mb-3">What&apos;s this about?</p>
           <div className="grid grid-cols-2 gap-2.5">
-            {TOPICS.map(item => <button key={item.id} type="button" onClick={() => pickTopic(item.id)} className="flex flex-col items-center gap-2 rounded-xl border border-slate-800 bg-[#111811] px-3 py-4 text-center text-sm text-white hover:border-[#25D366]/40 transition-colors">
-              <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#25D366]/10 text-[#25D366]"><item.icon size={17} /></span>
+            {TOPICS.map(item => <button key={item.id} type="button" onClick={() => pickTopic(item.id)} className="flex flex-col items-center gap-2 rounded-xl border border-border bg-surface px-3 py-4 text-center text-sm text-text hover:border-accent/40 transition-colors">
+              <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent-soft text-accent"><item.icon size={17} /></span>
               {item.label}
             </button>)}
           </div>
         </div>}
 
         {screen === "answers" && <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
-          {personal && personal.sentences.length > 0 && <div className="rounded-xl border border-[#25D366]/20 bg-[#25D366]/5 px-3 py-2.5 text-xs text-slate-300 space-y-1">{personal.sentences.map((s, i) => <p key={i}>{s}</p>)}</div>}
-          {answersLoading ? <p className="text-xs text-slate-500">Loading…</p> : <div className="space-y-2">
-            {quickAnswers.map(a => <button key={a.id} type="button" onClick={() => pickAnswer(a)} className="w-full text-left rounded-xl border border-slate-800 bg-[#111811] px-3 py-2.5 text-sm text-white hover:border-[#25D366]/40">{a.title}</button>)}
+          {personal && personal.sentences.length > 0 && <div className="rounded-xl border border-accent/20 bg-accent-soft px-3 py-2.5 text-xs text-muted space-y-1">{personal.sentences.map((s, i) => <p key={i}>{s}</p>)}</div>}
+          {answersLoading ? <p className="text-xs text-muted">Loading…</p> : <div className="space-y-2">
+            {quickAnswers.map(a => <button key={a.id} type="button" onClick={() => pickAnswer(a)} className="w-full text-left rounded-xl border border-border bg-surface px-3 py-2.5 text-sm text-text hover:border-accent/40">{a.title}</button>)}
           </div>}
-          <button type="button" onClick={() => { setFormQuickAnswerId(null); setParentTicketId(null); setFormOrigin("answers"); setScreen("form"); }} className="w-full text-center text-xs text-slate-500 underline pt-1">None of these — raise a ticket</button>
+          <button type="button" onClick={() => { setFormQuickAnswerId(null); setParentTicketId(null); setFormOrigin("answers"); setScreen("form"); }} className="w-full text-center text-xs text-muted underline pt-1">None of these — raise a ticket</button>
         </div>}
 
         {screen === "answer" && activeAnswer && <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
-          <h3 className="text-sm font-semibold text-white">{activeAnswer.title}</h3>
-          <p className="text-sm leading-relaxed text-slate-300 whitespace-pre-line">{renderText(activeAnswer.body)}</p>
-          {personal && personal.sentences.length > 0 && <div className="rounded-xl border border-[#25D366]/20 bg-[#25D366]/5 px-3 py-2.5 text-xs text-slate-300 space-y-1">{personal.sentences.map((s, i) => <p key={i}>{s}</p>)}</div>}
+          <h3 className="text-sm font-semibold text-text">{activeAnswer.title}</h3>
+          <p className="text-sm leading-relaxed text-muted whitespace-pre-line">{renderText(activeAnswer.body)}</p>
+          {personal && personal.sentences.length > 0 && <div className="rounded-xl border border-accent/20 bg-accent-soft px-3 py-2.5 text-xs text-muted space-y-1">{personal.sentences.map((s, i) => <p key={i}>{s}</p>)}</div>}
           {activeAnswer.action && <Link href={activeAnswer.action.href} className="wp-primary w-full justify-center">{activeAnswer.action.label}</Link>}
-          <button type="button" onClick={markSolved} className="w-full rounded-xl border border-[#25D366]/40 px-3 py-2.5 text-sm text-[#25D366]">✓ This solved my problem</button>
-          <button type="button" onClick={stillNeedHelp} className="w-full flex items-center justify-center gap-1.5 text-sm text-slate-300 underline">Still need help · Raise ticket<ArrowRight size={14} /></button>
+          <button type="button" onClick={markSolved} className="w-full rounded-xl border border-accent/40 px-3 py-2.5 text-sm text-accent">✓ This solved my problem</button>
+          <button type="button" onClick={stillNeedHelp} className="w-full flex items-center justify-center gap-1.5 text-sm text-muted underline">Still need help · Raise ticket<ArrowRight size={14} /></button>
         </div>}
 
         {screen === "form" && <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-3">
-          {existing ? <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-3 text-xs text-amber-100 space-y-3">
+          {existing ? <div className="rounded-xl border border-warning/30 bg-highlight-soft px-3 py-3 text-xs text-warning space-y-3">
             <p>You already have ticket #{existing.number} open about this.</p>
             <div className="flex gap-2">
-              <button type="button" disabled={loading || uploading} onClick={addToExistingTicket} className="flex-1 rounded-lg bg-[#25D366] text-black text-xs font-semibold py-2 disabled:opacity-50">Add to #{existing.number}</button>
-              <button type="button" disabled={loading || uploading} onClick={() => createTicketRequest(true)} className="flex-1 rounded-lg border border-slate-700 text-slate-300 text-xs py-2 disabled:opacity-50">It&apos;s a different problem</button>
+              <button type="button" disabled={loading || uploading} onClick={addToExistingTicket} className="flex-1 rounded-lg bg-accent text-on-accent text-xs font-semibold py-2 disabled:opacity-50">Add to #{existing.number}</button>
+              <button type="button" disabled={loading || uploading} onClick={() => createTicketRequest(true)} className="flex-1 rounded-lg border border-border-strong text-muted text-xs py-2 disabled:opacity-50">It&apos;s a different problem</button>
             </div>
           </div> : <form onSubmit={event => { event.preventDefault(); createTicketRequest(false); }} className="flex flex-col gap-3">
             <div>
-              <label htmlFor="ticket-message" className="block text-xs text-slate-300 mb-1.5">Tell us what&apos;s happening</label>
+              <label htmlFor="ticket-message" className="block text-xs text-muted mb-1.5">Tell us what&apos;s happening</label>
               <textarea id="ticket-message" value={input} onChange={event => setInput(event.target.value)} rows={4} maxLength={4000} className="wp-chat-field resize-none w-full" placeholder="Describe the problem…" />
-              {TOPIC_HINTS[topic] && <p className="mt-1 text-[11px] text-slate-500">{TOPIC_HINTS[topic]}</p>}
+              {TOPIC_HINTS[topic] && <p className="mt-1 text-[11px] text-muted">{TOPIC_HINTS[topic]}</p>}
             </div>
-            {pending && <div className="flex items-center gap-2"><img src={pending.previewUrl} alt="Screenshot preview" className="w-10 h-10 rounded-lg object-cover border border-slate-700" /><span className="flex-1 min-w-0 truncate text-xs text-slate-400">{pending.name}</span><button type="button" aria-label="Remove screenshot" onClick={clearPending} className="text-slate-400 hover:text-white"><X size={14} /></button></div>}
+            {pending && <div className="flex items-center gap-2"><img src={pending.previewUrl} alt="Screenshot preview" className="w-10 h-10 rounded-lg object-cover border border-border-strong" /><span className="flex-1 min-w-0 truncate text-xs text-muted">{pending.name}</span><button type="button" aria-label="Remove screenshot" onClick={clearPending} className="text-muted hover:text-text"><X size={14} /></button></div>}
             <div className="flex items-center gap-2">
               <input ref={fileInputRef} type="file" accept="image/png,image/jpeg,image/webp" onChange={onPickFile} className="hidden" />
-              <button type="button" aria-label="Attach a screenshot" onClick={() => fileInputRef.current?.click()} className="w-9 h-9 rounded-xl border border-slate-700 text-slate-300 hover:text-white hover:border-[#25D366]/40 flex items-center justify-center shrink-0"><Paperclip size={16} /></button>
-              <span className="text-[11px] text-slate-500">Optional screenshot</span>
+              <button type="button" aria-label="Attach a screenshot" onClick={() => fileInputRef.current?.click()} className="w-9 h-9 rounded-xl border border-border-strong text-muted hover:text-text hover:border-accent/40 flex items-center justify-center shrink-0"><Paperclip size={16} /></button>
+              <span className="text-[11px] text-muted">Optional screenshot</span>
             </div>
             <button type="submit" disabled={loading || uploading || (!input.trim() && !pending)} className="wp-primary w-full justify-center disabled:opacity-50">{loading || uploading ? "Sending…" : "Raise ticket"}</button>
           </form>}
-          {notice && <p role="alert" className="text-xs text-amber-200">{notice}</p>}
+          {notice && <p role="alert" className="text-xs text-warning">{notice}</p>}
         </div>}
 
         {screen === "ticket" && <>
-          <div className="flex items-center gap-2 px-4 py-2.5 border-b border-[#25D366]/10 bg-[#111811]">
-            <span className="text-xs font-semibold text-white">#{ticket?.number || "…"}</span>
-            <span className="text-[11px] text-slate-500">· {TOPIC_LABELS[ticket?.topic || "other"]}</span>
+          <div className="flex items-center gap-2 px-4 py-2.5 border-b border-accent/10 bg-surface">
+            <span className="text-xs font-semibold text-text">#{ticket?.number || "…"}</span>
+            <span className="text-[11px] text-muted">· {TOPIC_LABELS[ticket?.topic || "other"]}</span>
             <span className={`ml-auto text-[10px] px-2 py-0.5 rounded-full font-medium ${statusChipClass(ticket?.status)}`}>{STATUS_LABELS[ticket?.status || "open"]}</span>
           </div>
-          {ticket?.status === "solved" && <div className="flex items-center justify-between gap-2 px-4 py-2 bg-[#25D366]/10 border-b border-[#25D366]/20 text-xs text-[#25D366]">
-            <span>Solved ✓ — not fixed?</span>{ticket.canReopen ? <button type="button" onClick={reopenTicket} disabled={loading} className="underline font-semibold disabled:opacity-50">Reopen</button> : <span className="text-slate-500">Start a new ticket</span>}
+          {ticket?.status === "solved" && <div className="flex items-center justify-between gap-2 px-4 py-2 bg-accent-soft border-b border-accent/20 text-xs text-accent">
+            <span>Solved ✓ — not fixed?</span>{ticket.canReopen ? <button type="button" onClick={reopenTicket} disabled={loading} className="underline font-semibold disabled:opacity-50">Reopen</button> : <span className="text-muted">Start a new ticket</span>}
           </div>}
-          {ticket?.status === "closed" && <div className="px-4 py-2 bg-slate-800/40 border-b border-slate-700 text-xs text-slate-400">This ticket is closed.</div>}
+          {ticket?.status === "closed" && <div className="px-4 py-2 bg-surface-2 border-b border-border-strong text-xs text-muted">This ticket is closed.</div>}
           <div aria-live="polite" aria-relevant="additions text" className="flex-1 overflow-y-auto px-4 py-4 space-y-3 min-h-0 max-h-[340px]">
             {ticket?.messages.map(message => <div key={message.id} className={`flex ${message.sender === "visitor" ? "justify-end" : "justify-start"}`}>
-              {message.sender === "bot" ? <div className="w-full max-w-[90%] rounded-2xl border border-slate-700 bg-slate-800/40 px-3 py-2 text-xs text-slate-400">{message.body}</div>
-                : <div dir="auto" className={`rounded-2xl px-3 py-2.5 text-sm max-w-[85%] leading-relaxed whitespace-pre-line break-words ${message.sender === "visitor" ? "bg-[#25D366] text-black" : "bg-[#183322] border border-[#365b40] text-slate-100"}`}>
+              {message.sender === "bot" ? <div className="w-full max-w-[90%] rounded-2xl border border-border-strong bg-surface-2 px-3 py-2 text-xs text-muted">{message.body}</div>
+                : <div dir="auto" className={`rounded-2xl px-3 py-2.5 text-sm max-w-[85%] leading-relaxed whitespace-pre-line break-words ${message.sender === "visitor" ? "bg-accent text-on-accent" : "bg-accent-soft border border-accent/30 text-text"}`}>
                   {message.sender === "visitor" ? message.body : renderText(message.body)}
-                  {message.attachments.map(a => <a key={a.id} href={attachmentUrl(a.id)} target="_blank" rel="noopener noreferrer" className="block mt-1.5"><img src={attachmentUrl(a.id)} alt="Screenshot" className="max-w-[200px] rounded-lg border border-black/10" /></a>)}
+                  {message.attachments.map(a => <a key={a.id} href={attachmentUrl(a.id)} target="_blank" rel="noopener noreferrer" className="block mt-1.5"><img src={attachmentUrl(a.id)} alt="Screenshot" className="max-w-[200px] rounded-lg border border-border" /></a>)}
                 </div>}
             </div>)}
             <div ref={bottomRef} />
           </div>
-          {pending && <div className="flex items-center gap-2 px-4 pb-2"><img src={pending.previewUrl} alt="Screenshot preview" className="w-10 h-10 rounded-lg object-cover border border-slate-700" /><span className="flex-1 min-w-0 truncate text-xs text-slate-400">{pending.name}</span><button type="button" aria-label="Remove screenshot" onClick={clearPending} disabled={uploading} className="text-slate-400 hover:text-white disabled:opacity-40"><X size={14} /></button></div>}
-          {notice && <p role="status" className="px-4 pb-2 text-xs text-amber-200">{notice}</p>}
-          {ticket?.status !== "closed" ? <form onSubmit={sendTicketMessage} className="flex items-center gap-2 px-3 py-3 border-t border-[#25D366]/20 bg-[#111811]">
+          {pending && <div className="flex items-center gap-2 px-4 pb-2"><img src={pending.previewUrl} alt="Screenshot preview" className="w-10 h-10 rounded-lg object-cover border border-border-strong" /><span className="flex-1 min-w-0 truncate text-xs text-muted">{pending.name}</span><button type="button" aria-label="Remove screenshot" onClick={clearPending} disabled={uploading} className="text-muted hover:text-text disabled:opacity-40"><X size={14} /></button></div>}
+          {notice && <p role="status" className="px-4 pb-2 text-xs text-warning">{notice}</p>}
+          {ticket?.status !== "closed" ? <form onSubmit={sendTicketMessage} className="flex items-center gap-2 px-3 py-3 border-t border-accent/20 bg-surface">
             <input ref={fileInputRef} type="file" accept="image/png,image/jpeg,image/webp" onChange={onPickFile} className="hidden" />
-            <button type="button" aria-label="Attach a screenshot" onClick={() => fileInputRef.current?.click()} disabled={loading || uploading} className="w-9 h-9 rounded-xl border border-slate-700 text-slate-300 hover:text-white hover:border-[#25D366]/40 disabled:opacity-40 flex items-center justify-center shrink-0"><Paperclip size={16} /></button>
-            <input dir="auto" ref={inputRef} value={input} onChange={event => setInput(event.target.value)} aria-label="Message Wazap support" maxLength={4000} placeholder="Write your message…" className="flex-1 min-w-0 rounded-xl bg-slate-900 border border-slate-700 px-3 py-2 text-sm text-white" />
-            <button aria-label="Send support message" type="submit" disabled={(!input.trim() && !pending) || loading || uploading} className="w-9 h-9 rounded-xl bg-[#25D366] disabled:opacity-40 flex items-center justify-center shrink-0"><Send size={17} className="text-black" /></button>
-          </form> : <div className="px-3 py-3 border-t border-[#25D366]/20 bg-[#111811]"><button type="button" onClick={startNewFromClosed} className="wp-primary w-full justify-center">Start new ticket</button></div>}
+            <button type="button" aria-label="Attach a screenshot" onClick={() => fileInputRef.current?.click()} disabled={loading || uploading} className="w-9 h-9 rounded-xl border border-border-strong text-muted hover:text-text hover:border-accent/40 disabled:opacity-40 flex items-center justify-center shrink-0"><Paperclip size={16} /></button>
+            <input dir="auto" ref={inputRef} value={input} onChange={event => setInput(event.target.value)} aria-label="Message Wazap support" maxLength={4000} placeholder="Write your message…" className="flex-1 min-w-0 rounded-xl bg-surface border border-border-strong px-3 py-2 text-sm text-text" />
+            <button aria-label="Send support message" type="submit" disabled={(!input.trim() && !pending) || loading || uploading} className="w-9 h-9 rounded-xl bg-accent disabled:opacity-40 flex items-center justify-center shrink-0"><Send size={17} className="text-on-accent" /></button>
+          </form> : <div className="px-3 py-3 border-t border-accent/20 bg-surface"><button type="button" onClick={startNewFromClosed} className="wp-primary w-full justify-center">Start new ticket</button></div>}
         </>}
 
-        <p className="px-4 pb-3 pt-1 text-[10px] leading-4 text-slate-500 bg-[#111811]">Never share passwords, login codes or card details.</p>
+        <p className="px-4 pb-3 pt-1 text-[10px] leading-4 text-muted bg-surface">Never share passwords, login codes or card details.</p>
       </>}
     </div>}
-    <button ref={launcherRef} onClick={() => (open ? closeChat() : setOpen(true))} className="relative w-12 h-12 rounded-full bg-[#25D366] hover:bg-[#1fba58] shadow-lg flex items-center justify-center sm:w-14 sm:h-14" aria-label={open ? "Close support chat" : unreadCount > 0 ? `Open support chat, ${unreadCount} new repl${unreadCount === 1 ? "y" : "ies"}` : "Open support chat"} aria-expanded={open} aria-controls="wazap-support-panel">
-      {open ? <X size={22} className="text-black" /> : <MessageCircle size={24} className="text-black" />}
-      {!open && unreadCount > 0 && <span aria-hidden="true" className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center border border-[#0d1a0d]">{unreadCount > 9 ? "9+" : unreadCount}</span>}
+    <button ref={launcherRef} onClick={() => (open ? closeChat() : setOpen(true))} className="relative w-12 h-12 rounded-full bg-accent hover:bg-accent-hover shadow-lg flex items-center justify-center sm:w-14 sm:h-14" aria-label={open ? "Close support chat" : unreadCount > 0 ? `Open support chat, ${unreadCount} new repl${unreadCount === 1 ? "y" : "ies"}` : "Open support chat"} aria-expanded={open} aria-controls="wazap-support-panel">
+      {open ? <X size={22} className="text-on-accent" /> : <MessageCircle size={24} className="text-on-accent" />}
+      {!open && unreadCount > 0 && <span aria-hidden="true" className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-danger text-white text-[10px] font-bold flex items-center justify-center border border-surface-2">{unreadCount > 9 ? "9+" : unreadCount}</span>}
     </button>
   </div>;
 }

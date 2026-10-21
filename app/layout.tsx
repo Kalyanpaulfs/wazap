@@ -1,18 +1,19 @@
 import type { Metadata, Viewport } from "next";
-import { Geist } from "next/font/google";
+import { Inter, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
-import "./design/home.css";
-import "./design/system.css";
+import "./theme/base.css";
+import "./theme/utilities.css";
 import SharedExperience from "./design/SharedExperience";
 import Providers from "./Providers";
 import ServiceWorkerRegister from "./ServiceWorkerRegister";
-import Footer from "./Footer";
 import AppFrame from "./product/AppFrame";
 import "./product/product.css";
 import ChatWidget from "./components/ChatWidget";
 import VisitTracker from "./VisitTracker";
+import { themeScript } from "./theme/theme-script";
 
-const geist = Geist({ subsets: ["latin"], variable: "--font-geist-sans" });
+const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
+const jakarta = Plus_Jakarta_Sans({ subsets: ["latin"], variable: "--font-jakarta", display: "swap" });
 
 const BASE = "https://wazap.lt";
 const organizationJsonLd = {
@@ -29,7 +30,10 @@ const organizationJsonLd = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#25D366",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#F7F8F5" },
+    { media: "(prefers-color-scheme: dark)", color: "#0A0F14" },
+  ],
   width: "device-width",
   initialScale: 1,
   maximumScale: 5,
@@ -63,12 +67,12 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      { url: "/icon.svg", type: "image/svg+xml" },
-      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
-      { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
+      { url: "/icon.svg?v=20261015", type: "image/svg+xml" },
+      { url: "/icon-192.png?v=20261015", sizes: "192x192", type: "image/png" },
+      { url: "/icon-512.png?v=20261015", sizes: "512x512", type: "image/png" },
     ],
-    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180" }],
-    shortcut: "/icon-192.png",
+    apple: [{ url: "/apple-touch-icon.png?v=20261015", sizes: "180x180" }],
+    shortcut: "/favicon.ico?v=20261015",
   },
   manifest: "/manifest.json",
   appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "Wazap" },
@@ -93,14 +97,17 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${geist.variable} h-full`}>
-      <body className="min-h-full flex flex-col bg-[#0a0f0a] text-slate-200 antialiased">
+    <html lang="en" className={`${inter.variable} ${jakarta.variable} h-full`} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
+      <body className="min-h-full flex flex-col bg-bg text-text antialiased">
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd).replace(/</g, "\\u003c") }}
         />
         <Providers>
-          <AppFrame footer={<Footer />}>{children}</AppFrame>
+          <AppFrame>{children}</AppFrame>
           <ChatWidget />
           <SharedExperience />
         </Providers>

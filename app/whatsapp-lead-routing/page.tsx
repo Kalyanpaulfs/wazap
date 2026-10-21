@@ -28,6 +28,7 @@ const jsonLd = {
 };
 
 const content: ProductLandingContent = {
+  art: { src: "/art/products/product-lead-routing.webp", alt: "Round-robin arrow ring above four team members, one taking the current turn" },
   icon: Route,
   eyebrow: "WhatsApp lead routing",
   h1: "Route every WhatsApp lead to the",

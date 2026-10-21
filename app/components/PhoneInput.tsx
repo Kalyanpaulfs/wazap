@@ -153,7 +153,7 @@ export default function PhoneInput({
             aria-label="Country"
             value={ownCountry ?? ""}
             onChange={(e) => setOwnCountry(e.target.value || null)}
-            className={selectClassName ?? "rounded-xl bg-slate-900 border border-slate-700 px-3 py-2.5 text-sm text-white focus:outline-none focus:border-[#25D366]"}
+            className={selectClassName ?? "rounded-xl bg-surface border border-border-strong px-3 py-2.5 text-sm text-text focus:outline-none focus:border-accent"}
           >
             <option value="">Choose country</option>
             {COUNTRIES.map((c) => (
@@ -183,23 +183,23 @@ export default function PhoneInput({
           maxLength={Math.max(countryRawMaxLength(effectiveCountry, raw.startsWith("0")), 17)}
           required={required}
           placeholder={placeholder}
-          className={numberClassName ?? "min-w-0 flex-1 rounded-xl bg-slate-900 border border-slate-700 px-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#25D366] font-mono"}
+          className={numberClassName ?? "min-w-0 flex-1 rounded-xl bg-surface border border-border-strong px-4 py-2.5 text-sm text-text placeholder:text-muted/70 focus:outline-none focus:border-accent font-mono"}
         />
       </div>
-      {lengthHint && <p className="mt-1 text-xs text-slate-500">{lengthHint}</p>}
+      {lengthHint && <p className="mt-1 text-xs text-muted">{lengthHint}</p>}
       {showPreview && (
         result.ok ? (
-          <p className="mt-1 text-xs text-[#25D366]">WhatsApp will open: {formatForPreview(result.e164Digits)}</p>
+          <p className="mt-1 text-xs text-accent">WhatsApp will open: {formatForPreview(result.e164Digits)}</p>
         ) : tooShort ? (
-          <p role="alert" className="mt-1 text-xs text-amber-400">
+          <p role="alert" className="mt-1 text-xs text-warning">
             Too short — {countryName ?? "this country"}&apos;s numbers need {lengthRange!.min === lengthRange!.max ? lengthRange!.min : `at least ${lengthRange!.min}`} digits.
           </p>
         ) : result.error ? (
-          <p role="alert" className="mt-1 text-xs text-red-400">{result.error}</p>
+          <p role="alert" className="mt-1 text-xs text-danger">{result.error}</p>
         ) : null
       )}
       {!countryName && !showCountrySelect && !raw && (
-        <p className="mt-1 text-xs text-amber-400">Choose a country above first.</p>
+        <p className="mt-1 text-xs text-warning">Choose a country above first.</p>
       )}
     </div>
   );

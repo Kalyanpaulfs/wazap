@@ -13,7 +13,7 @@ export default function SmartBackLink({ fallback = "/support" }: { fallback?: st
     else router.push(fallback);
   }
   return (
-    <button type="button" onClick={goBack} className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-400 hover:text-white">
+    <button type="button" onClick={goBack} className="inline-flex items-center gap-1.5 text-sm font-semibold text-muted hover:text-text">
       <ArrowLeft className="h-4 w-4" /> Back
     </button>
   );

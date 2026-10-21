@@ -1,1 +1,15 @@
-export default function WorkspaceLoading(){return <div className="px-5 py-10 sm:px-8" role="status" aria-label="Loading workspace"><div className="h-4 w-32 rounded bg-green-900/30"/><div className="mt-4 h-9 w-64 max-w-full rounded bg-green-900/30"/><div className="mt-8 grid gap-5 sm:grid-cols-3">{[1,2,3].map(item=><div key={item} className="h-40 rounded-2xl border border-green-900/40 bg-[#101810]"/>)}</div><p className="mt-5 text-xs text-slate-400">Preparing your workspace…</p></div>}
+// Shared skeleton shown while any workspace page loads: sits in the same
+// frame (gutter, max width) as real pages so nothing shifts when content lands.
+export default function WorkspaceLoading() {
+  return (
+    <div className="wp-skel-page" role="status" aria-busy="true" aria-label="Loading">
+      <div className="wp-skel h-8 w-56 max-w-full" />
+      <div className="wp-skel mt-3 h-4 w-96 max-w-full" />
+      <div className="mt-8 grid gap-5 sm:grid-cols-3">
+        {[1, 2, 3].map(i => <div key={i} className="wp-skel h-28 !rounded-2xl" />)}
+      </div>
+      <div className="wp-skel mt-6 h-64 !rounded-2xl" />
+      <span className="sr-only">Loading…</span>
+    </div>
+  );
+}

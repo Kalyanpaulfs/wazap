@@ -87,9 +87,9 @@ export default function RotatorForm({
   }
 
   return (
-    <form onSubmit={submit} className="space-y-5 rounded-2xl border border-slate-800 bg-[#111811] p-6">
+    <form onSubmit={submit} className="space-y-5 rounded-2xl border border-border bg-surface p-6">
       <div>
-        <label className="block text-xs text-slate-400 mb-1" htmlFor="rotator-name">Name</label>
+        <label className="block text-xs text-muted mb-1" htmlFor="rotator-name">Name</label>
         <input
           id="rotator-name"
           value={name}
@@ -97,18 +97,18 @@ export default function RotatorForm({
           placeholder="e.g. Sales team"
           maxLength={100}
           required
-          className="w-full rounded-xl bg-slate-900 border border-slate-700 px-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#25D366]"
+          className="w-full rounded-xl bg-surface border border-border-strong px-4 py-2.5 text-sm text-text placeholder:text-muted/70 focus:outline-none focus:border-accent"
         />
-        <p className="mt-1 text-xs text-slate-500">Just for you - visitors never see this name.</p>
+        <p className="mt-1 text-xs text-muted">Just for you - visitors never see this name.</p>
       </div>
 
       <div>
-        <label className="block text-xs text-slate-400 mb-2" htmlFor="rotator-dial">Country code (applies to all)</label>
+        <label className="block text-xs text-muted mb-2" htmlFor="rotator-dial">Country code (applies to all)</label>
         <select
           id="rotator-dial"
           value={country ?? ""}
           onChange={(e) => setCountry(e.target.value || null)}
-          className="rounded-xl bg-slate-900 border border-slate-700 px-3 py-2.5 text-sm text-white focus:outline-none focus:border-[#25D366]"
+          className="rounded-xl bg-surface border border-border-strong px-3 py-2.5 text-sm text-text focus:outline-none focus:border-accent"
         >
           <option value="">Choose country</option>
           {COUNTRIES.map((c) => (
@@ -117,11 +117,11 @@ export default function RotatorForm({
             </option>
           ))}
         </select>
-        <p className="mt-1 text-xs text-slate-500">A salesperson&apos;s number can still paste their own &ldquo;+country&rdquo; number - it wins over this for that row.</p>
+        <p className="mt-1 text-xs text-muted">A salesperson&apos;s number can still paste their own &ldquo;+country&rdquo; number - it wins over this for that row.</p>
       </div>
 
       <div className="space-y-2">
-        <label className="block text-xs text-slate-400">Salespeople (name is optional)</label>
+        <label className="block text-xs text-muted">Salespeople (name is optional)</label>
         {rows.map((row, i) => (
           <div key={i} className="flex gap-2">
             <input
@@ -129,7 +129,7 @@ export default function RotatorForm({
               onChange={(e) => setRows((prev) => prev.map((v, j) => (j === i ? { ...v, name: e.target.value } : v)))}
               placeholder="e.g. Ravi"
               aria-label={`Salesperson ${i + 1} name (optional)`}
-              className="min-w-0 w-28 sm:w-36 shrink-0 self-start rounded-xl bg-slate-900 border border-slate-700 px-3 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#25D366]"
+              className="min-w-0 w-28 sm:w-36 shrink-0 self-start rounded-xl bg-surface border border-border-strong px-3 py-2.5 text-sm text-text placeholder:text-muted/70 focus:outline-none focus:border-accent"
             />
             <div className="min-w-0 flex-1">
               <PhoneInput
@@ -144,7 +144,7 @@ export default function RotatorForm({
               <button
                 type="button"
                 onClick={() => removeRow(i)}
-                className="shrink-0 self-start text-slate-600 hover:text-red-400 p-2 transition-colors"
+                className="shrink-0 self-start text-muted hover:text-danger p-2 transition-colors"
                 aria-label={`Remove salesperson ${i + 1}`}
               >
                 <Trash2 className="h-4 w-4" />
@@ -152,17 +152,17 @@ export default function RotatorForm({
             )}
           </div>
         ))}
-        <p className="text-xs text-slate-500">{salespeopleCounterText(rows.length, numbersLimit, planLabel, nextPlanHint)}</p>
+        <p className="text-xs text-muted">{salespeopleCounterText(rows.length, numbersLimit, planLabel, nextPlanHint)}</p>
         {!atLimit ? (
           <button
             type="button"
             onClick={addRow}
-            className="text-xs font-semibold text-[#25D366] hover:underline"
+            className="text-xs font-semibold text-accent hover:underline"
           >
             + Add salesperson
           </button>
         ) : (
-          <p className="text-xs text-amber-400">
+          <p className="text-xs text-warning">
             Your {planLabel} plan allows {numbersLimit} salespeople per rotator.{" "}
             {nextPlanHint && (
               <Link href="/billing#plans" className="underline">
@@ -174,7 +174,7 @@ export default function RotatorForm({
       </div>
 
       <div>
-        <label className="block text-xs text-slate-400 mb-1" htmlFor="rotator-message">First message (optional)</label>
+        <label className="block text-xs text-muted mb-1" htmlFor="rotator-message">First message (optional)</label>
         <textarea
           id="rotator-message"
           value={message}
@@ -182,24 +182,24 @@ export default function RotatorForm({
           maxLength={2000}
           placeholder="Hi, I'd like more information."
           rows={2}
-          className="w-full rounded-xl bg-slate-900 border border-slate-700 px-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#25D366]"
+          className="w-full rounded-xl bg-surface border border-border-strong px-4 py-2.5 text-sm text-text placeholder:text-muted/70 focus:outline-none focus:border-accent"
         />
-        <p className="mt-1 text-xs text-slate-500">Shown in WhatsApp for every salesperson. The visitor chooses whether to send it.</p>
+        <p className="mt-1 text-xs text-muted">Shown in WhatsApp for every salesperson. The visitor chooses whether to send it.</p>
       </div>
 
-      {error && <p role="alert" className="text-sm text-red-400">{error}</p>}
+      {error && <p role="alert" className="text-sm text-danger">{error}</p>}
 
-      <p className="text-xs text-slate-500">{formatUsageLine(planLabel, used, limit)}</p>
+      <p className="text-xs text-muted">{formatUsageLine(planLabel, used, limit)}</p>
 
       <div className="flex items-center gap-3">
         <button
           type="submit"
           disabled={creating || !country || validRowCount < MIN_SALESPEOPLE}
-          className="rounded-full bg-[#25D366] hover:bg-[#1fba58] disabled:opacity-50 px-6 py-2.5 text-sm font-bold text-black transition-colors"
+          className="rounded-full bg-accent hover:bg-accent-hover disabled:opacity-50 px-6 py-2.5 text-sm font-bold text-on-accent transition-colors"
         >
           {creating ? "Creating…" : "Create lead rotator"}
         </button>
-        <Link href="/links/new" className="text-sm font-semibold text-slate-400 hover:text-white">
+        <Link href="/links/new" className="text-sm font-semibold text-muted hover:text-text">
           Cancel
         </Link>
       </div>

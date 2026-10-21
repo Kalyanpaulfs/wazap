@@ -40,7 +40,7 @@ export default function LinkFilterSelect({
       value={value}
       onChange={onChange}
       aria-label="Filter by link"
-      className="rounded-full border border-slate-700 bg-slate-950 px-4 py-1.5 text-sm font-semibold text-slate-200 hover:border-slate-500 focus:outline-none focus:border-[#25D366] [color-scheme:dark]"
+      className="rounded-full border border-border-strong bg-bg px-4 py-1.5 text-sm font-semibold text-text hover:border-border-strong focus:outline-none focus:border-accent [color-scheme:dark]"
     >
       <option value="">All links</option>
       {[...grouped.entries()].map(([typeLabel, opts]) => (

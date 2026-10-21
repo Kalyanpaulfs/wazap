@@ -50,6 +50,11 @@ export async function issueEmailCode(email: string, purpose: EmailCodePurpose, i
     return tx.emailCode.create({ data: { email, purpose, codeHash: codeHash(email, purpose, code), expiresAt } });
   });
 
+  if (process.env.NODE_ENV === "development" && process.env.dev_otp === "true" && purpose === "login") {
+    await prisma.emailCode.update({ where: { id: record.id }, data: { usedAt: new Date() } });
+    return { ok: true };
+  }
+
   // Local development only: Brevo accepts sends from the server's authorised IP,
   // so print the code instead of emailing it. Never active in production.
   if (process.env.NODE_ENV !== "production" && process.env.EMAIL_CODE_DEV_LOG === "true") {

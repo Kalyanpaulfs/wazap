@@ -3,7 +3,8 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { AlertTriangle, ArrowRight, Crown, MessageCircle, Plus } from "lucide-react";
+import { CreateLinkButton } from "@/app/ui/CreateLinkButton";
+import { AlertTriangle, ArrowRight, Crown, MessageCircle } from "lucide-react";
 import { linkPlan, routerQuota, TRIAL_METERED_ASSET_TYPES, TRIAL_ROUTED_LEADS } from "@/lib/router-entitlements";
 import { getPlanDaysLeft, isPlanExpired } from "@/lib/billing";
 import { downgradeIfExpired } from "@/lib/billing-expiry";
@@ -123,30 +124,27 @@ export default async function DashboardPage({
 
           <header className="wp-overview-heading">
             <div>
-              <p className="wp-eyebrow">YOUR BUSINESS WORKSPACE</p>
               <h1>{session.user.name ? `Hi, ${session.user.name}` : "Hi there"}</h1>
               <p>Keep your conversations moving. Start with what needs your attention.</p>
             </div>
-            <Link prefetch={false} href="/links/new" className="wp-primary">
-              <Plus size={16} /> Create link
-            </Link>
+            <CreateLinkButton />
           </header>
 
           {(inTrial || trialEnded) && (
             <div
-              className={`rounded-2xl border p-4 ${trialEnded || trialCapHit ? "border-red-500/40 bg-red-500/10" : "border-yellow-500/30 bg-yellow-500/5"}`}
+              className={`rounded-2xl border p-4 ${trialEnded || trialCapHit ? "border-danger/40 bg-danger/10" : "border-warning/30 bg-highlight-soft"}`}
             >
               <div className="flex flex-wrap items-center gap-3">
-                <AlertTriangle className={`h-5 w-5 shrink-0 ${trialEnded || trialCapHit ? "text-red-400" : "text-yellow-400"}`} />
+                <AlertTriangle className={`h-5 w-5 shrink-0 ${trialEnded || trialCapHit ? "text-danger" : "text-warning"}`} />
                 <div className="flex-1">
-                  <p className={`text-sm font-semibold ${trialEnded || trialCapHit ? "text-red-300" : "text-yellow-300"}`}>
+                  <p className={`text-sm font-semibold ${trialEnded || trialCapHit ? "text-danger" : "text-warning"}`}>
                     {trialEnded
                       ? "Your free trial has ended — your links are paused"
                       : trialCapHit
                       ? `You've used your ${TRIAL_ROUTED_LEADS} trial leads`
                       : `Your free trial ends in ${productTrialDaysLeft} day${productTrialDaysLeft !== 1 ? "s" : ""} · ${routerQuotaInfo.used} of ${TRIAL_ROUTED_LEADS} trial leads used`}
                   </p>
-                  <p className="mt-0.5 text-xs text-slate-400">
+                  <p className="mt-0.5 text-xs text-muted">
                     {trialEnded
                       ? "Choose a plan and your lead rotators, WhatsApp links and ad links start working again."
                       : trialCapHit
@@ -156,7 +154,7 @@ export default async function DashboardPage({
                 </div>
                 <Link
                   href="/billing"
-                  className="rounded-full bg-[#25D366] px-4 py-1.5 text-xs font-semibold text-black transition-colors hover:bg-[#1fba58]"
+                  className="rounded-full bg-accent px-4 py-1.5 text-xs font-semibold text-on-accent transition-colors hover:bg-accent-hover"
                 >
                   Choose a plan
                 </Link>
@@ -166,27 +164,27 @@ export default async function DashboardPage({
 
           {expiryWarning && (
             <div
-              className={`rounded-2xl border p-4 ${daysLeft === 0 ? "border-red-500/40 bg-red-500/10" : "border-yellow-500/30 bg-yellow-500/5"}`}
+              className={`rounded-2xl border p-4 ${daysLeft === 0 ? "border-danger/40 bg-danger/10" : "border-warning/30 bg-highlight-soft"}`}
             >
               <div className="flex flex-wrap items-center gap-3">
                 <AlertTriangle
-                  className={`h-5 w-5 shrink-0 ${daysLeft === 0 ? "text-red-400" : "text-yellow-400"}`}
+                  className={`h-5 w-5 shrink-0 ${daysLeft === 0 ? "text-danger" : "text-warning"}`}
                 />
                 <div className="flex-1">
                   <p
-                    className={`text-sm font-semibold ${daysLeft === 0 ? "text-red-300" : "text-yellow-300"}`}
+                    className={`text-sm font-semibold ${daysLeft === 0 ? "text-danger" : "text-warning"}`}
                   >
                     {daysLeft === 0
                       ? "Your plan has expired"
                       : `Your ${PLAN_LABELS[plan]} plan expires in ${daysLeft} day${daysLeft !== 1 ? "s" : ""}`}
                   </p>
-                  <p className="mt-0.5 text-xs text-slate-400">
+                  <p className="mt-0.5 text-xs text-muted">
                     When it ends, your lead rotators, WhatsApp links and ad links stop working. Renew to keep them running.
                   </p>
                 </div>
                 <Link
                   href="/billing"
-                  className="rounded-full bg-[#25D366] px-4 py-1.5 text-xs font-semibold text-black transition-colors hover:bg-[#1fba58]"
+                  className="rounded-full bg-accent px-4 py-1.5 text-xs font-semibold text-on-accent transition-colors hover:bg-accent-hover"
                 >
                   Renew
                 </Link>
@@ -195,18 +193,18 @@ export default async function DashboardPage({
           )}
 
           <section className="grid gap-4 sm:grid-cols-3">
-            <div id="billing" className="rounded-2xl border border-slate-800 bg-[#111811] p-5 scroll-mt-5">
-              <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Current plan</p>
+            <div id="billing" className="rounded-2xl border border-border bg-surface p-5 scroll-mt-5">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted">Current plan</p>
               <div className="mt-3 flex items-center gap-2">
-                <Crown className="h-5 w-5 text-[#25d366]" />
-                <span className="text-xl font-bold text-white">{inTrial ? "Free trial" : PLAN_LABELS[plan]}</span>
+                <Crown className="h-5 w-5 text-accent" />
+                <span className="text-xl font-bold text-text">{inTrial ? "Free trial" : PLAN_LABELS[plan]}</span>
               </div>
               {inTrial && (
-                <span className="mt-2 inline-flex rounded-full border border-[#25D366]/30 bg-[#25D366]/10 px-2.5 py-1 text-xs font-semibold text-[#25D366]">
+                <span className="mt-2 inline-flex rounded-full border border-accent/30 bg-accent-soft px-2.5 py-1 text-xs font-semibold text-accent">
                   {productTrialDaysLeft} day{productTrialDaysLeft !== 1 ? "s" : ""} left · no card required
                 </span>
               )}
-              <p className="mt-2 text-xs leading-relaxed text-slate-400">
+              <p className="mt-2 text-xs leading-relaxed text-muted">
                 {billingStatusSentence({
                   plan: billingSummary?.plan ?? plan,
                   inTrial,
@@ -218,60 +216,58 @@ export default async function DashboardPage({
                   pendingChange: billingSummary?.pendingChange ?? null,
                 })}
               </p>
-              <Link href="/billing" className="mt-3 inline-block text-xs font-semibold text-[#25D366] hover:underline">
+              <Link href="/billing" className="mt-3 inline-block text-xs font-semibold text-accent hover:underline">
                 {trialEnded ? "Choose a plan →" : "Manage billing →"}
               </Link>
             </div>
 
-            <Link href="/links" className="rounded-2xl border border-slate-800 bg-[#111811] p-5 hover:border-[#25D366]">
-              <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Links</p>
-              <div className="mt-3 text-xl font-bold text-white">{used} of {limit} used</div>
-              <span className="mt-3 inline-block text-xs font-semibold text-[#25D366]">Open My links →</span>
+            <Link href="/links" className="rounded-2xl border border-border bg-surface p-5 hover:border-accent">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted">Links</p>
+              <div className="mt-3 text-xl font-bold text-text">{used} of {limit} used</div>
+              <span className="mt-3 inline-block text-xs font-semibold text-accent">Open My links →</span>
             </Link>
 
-            <Link href="/results" className="rounded-2xl border border-slate-800 bg-[#111811] p-5 hover:border-[#25D366]">
-              <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Clicks</p>
-              <div className="mt-3 text-xl font-bold text-white">{totals.chatsToday} today · {totals.chats7d} / 7 days</div>
-              <span className="mt-3 inline-block text-xs font-semibold text-[#25D366]">See results →</span>
+            <Link href="/results" className="rounded-2xl border border-border bg-surface p-5 hover:border-accent">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted">Clicks</p>
+              <div className="mt-3 text-xl font-bold text-text">{totals.chatsToday} today · {totals.chats7d} / 7 days</div>
+              <span className="mt-3 inline-block text-xs font-semibold text-accent">See results →</span>
             </Link>
           </section>
 
           <Link
             href={nextStep.href}
-            className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#25D366]/30 bg-[#25D366]/10 p-5"
+            className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-accent/30 bg-accent-soft p-5"
           >
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-[#25D366]">Next step</p>
-              <p className="mt-1 text-lg font-bold text-white">{nextStep.label}</p>
+              <p className="text-xs font-semibold uppercase tracking-wider text-accent">Next step</p>
+              <p className="mt-1 text-lg font-bold text-text">{nextStep.label}</p>
             </div>
-            <ArrowRight className="h-5 w-5 text-[#25D366]" />
+            <ArrowRight className="h-5 w-5 text-accent" />
           </Link>
 
-          <section className="rounded-3xl border border-slate-800 bg-[#111811] p-5 sm:p-7" aria-label="Your latest links">
+          <section className="rounded-3xl border border-border bg-surface p-5 sm:p-7" aria-label="Your latest links">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
-              <h2 className="font-bold text-white">Your latest links</h2>
-              <Link href="/links" className="text-sm font-semibold text-[#25D366] hover:underline">
+              <h2 className="font-bold text-text">Your latest links</h2>
+              <Link href="/links" className="text-sm font-semibold text-accent hover:underline">
                 See all links →
               </Link>
             </div>
             {!hasAnyLinks ? (
-              <div className="mt-5 rounded-2xl border border-dashed border-slate-700 p-10 text-center text-slate-500">
-                <p className="text-white font-semibold">No links yet</p>
+              <div className="mt-5 rounded-2xl border border-dashed border-border-strong p-10 text-center text-muted">
+                <p className="text-text font-semibold">No links yet</p>
                 <p className="mt-1 text-sm">Create your first link in 1 minute.</p>
-                <Link href="/links/new" className="mt-4 inline-flex rounded-full bg-[#25D366] px-5 py-2.5 text-sm font-bold text-black hover:bg-[#1fba58]">
-                  Create link
-                </Link>
+                <CreateLinkButton className="mt-4" />
               </div>
             ) : (
               <div className="mt-5 space-y-3">
                 {lastLinks.map((row) => (
-                  <div key={`${row.kind}-${row.id}`} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-800 bg-slate-950/40 p-4">
+                  <div key={`${row.kind}-${row.id}`} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-bg/40 p-4">
                     <div>
-                      <Link href={row.editHref} className="font-semibold text-white hover:text-[#25D366] hover:underline">
+                      <Link href={row.editHref} className="font-semibold text-text hover:text-accent hover:underline">
                         {row.name}
                       </Link>
-                      <div className="mt-1 flex items-center gap-2 text-xs text-slate-500">
-                        <span className="rounded-full border border-slate-700 px-2 py-0.5 text-slate-300">{LINK_KIND_NAME[row.kind]}</span>
+                      <div className="mt-1 flex items-center gap-2 text-xs text-muted">
+                        <span className="rounded-full border border-border-strong px-2 py-0.5 text-muted">{LINK_KIND_NAME[row.kind]}</span>
                         <span>{row.metric.toLocaleString()} clicks</span>
                       </div>
                     </div>
@@ -283,10 +279,10 @@ export default async function DashboardPage({
           </section>
 
           {supportMessages.length > 0 && (
-            <section className="rounded-2xl border border-[#25D366]/20 bg-[#111811] p-5 sm:p-6">
+            <section className="rounded-2xl border border-accent/20 bg-surface p-5 sm:p-6">
               <div className="mb-4 flex items-center gap-2">
-                <MessageCircle className="h-5 w-5 text-[#25D366]" />
-                <h2 className="font-semibold text-white">
+                <MessageCircle className="h-5 w-5 text-accent" />
+                <h2 className="font-semibold text-text">
                   Latest Support Replies
                 </h2>
               </div>
@@ -294,14 +290,14 @@ export default async function DashboardPage({
                 {supportMessages.map((m) => (
                   <div
                     key={m.id}
-                    className="rounded-xl border border-slate-800 bg-slate-950/50 p-4"
+                    className="rounded-xl border border-border bg-bg/50 p-4"
                   >
                     <div className="mb-3 flex items-start justify-between gap-3">
                       <div>
-                        <p className="text-sm font-semibold text-white">
+                        <p className="text-sm font-semibold text-text">
                           {m.subject}
                         </p>
-                        <p className="text-xs text-slate-500">
+                        <p className="text-xs text-muted">
                           Your message from{" "}
                           {new Date(m.createdAt).toLocaleDateString("en-GB", {
                             day: "numeric",
@@ -310,12 +306,12 @@ export default async function DashboardPage({
                         </p>
                       </div>
                       {m.repliedAt && (
-                        <span className="shrink-0 rounded-full border border-[#25D366]/30 bg-[#25D366]/10 px-2 py-1 text-[11px] font-medium text-[#25D366]">
+                        <span className="shrink-0 rounded-full border border-accent/30 bg-accent-soft px-2 py-1 text-[11px] font-medium text-accent">
                           Replied
                         </span>
                       )}
                     </div>
-                    <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-300">
+                    <p className="whitespace-pre-wrap text-sm leading-relaxed text-muted">
                       {m.adminReply}
                     </p>
                   </div>

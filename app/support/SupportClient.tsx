@@ -37,7 +37,7 @@ const QUICK_ANSWERS: { group: AnswerGroup; q: string; a: React.ReactNode }[] = [
     q: "How do I create a lead routing link?",
     a: (
       <>
-        Go to <Link href="/links/new/rotator" className="text-[#25D366] underline">Lead rotator</Link>, name your rotator, add at least two
+        Go to <Link href="/links/new/rotator" className="text-accent underline">Lead rotator</Link>, name your rotator, add at least two
         salespeople with their WhatsApp numbers, and share the generated link. Each click opens WhatsApp with the next
         person in rotation — you can also download a QR code from the rotator card.
       </>
@@ -58,8 +58,8 @@ const QUICK_ANSWERS: { group: AnswerGroup; q: string; a: React.ReactNode }[] = [
     q: "Where do I see my results?",
     a: (
       <>
-        <Link href="/results" className="text-[#25D366] underline">Results</Link> shows live click and routing
-        activity on the Overview tab for the free trial and every paid plan (the free plan sees a locked preview). <Link href="/results?tab=source" className="text-[#25D366] underline">By source &amp; campaign</Link> (Growth and
+        <Link href="/results" className="text-accent underline">Results</Link> shows live click and routing
+        activity on the Overview tab for the free trial and every paid plan (the free plan sees a locked preview). <Link href="/results?tab=source" className="text-accent underline">By source &amp; campaign</Link> (Growth and
         above) adds fuller breakdowns by source, campaign, and date range.
       </>
     ),
@@ -69,13 +69,13 @@ const QUICK_ANSWERS: { group: AnswerGroup; q: string; a: React.ReactNode }[] = [
     q: "What does each plan include?",
     a: (
       <>
-        <strong className="text-white">Free trial (3 days):</strong> everything in Solo — 5 links, 3 salespeople per rotator, 100 leads, website button, basic reports. After the trial, links pause until you choose a plan.{" "}
-        <strong className="text-white">Solo ($9/mo):</strong> same, ongoing — no 3-day limit.{" "}
-        <strong className="text-white">Growth ($19/mo):</strong> 20 links (incl. ad links), 10 salespeople per rotator,
+        <strong className="text-text">Free trial (3 days):</strong> everything in Solo — 5 links, 3 salespeople per rotator, 100 leads, website button, basic reports. After the trial, links pause until you choose a plan.{" "}
+        <strong className="text-text">Solo ($9/mo):</strong> same, ongoing — no 3-day limit.{" "}
+        <strong className="text-text">Growth ($19/mo):</strong> 20 links (incl. ad links), 10 salespeople per rotator,
         full reports.{" "}
-        <strong className="text-white">Agency ($49/mo):</strong> 55 links (any type), 20 salespeople per rotator,
+        <strong className="text-text">Agency ($49/mo):</strong> 55 links (any type), 20 salespeople per rotator,
         full reports. See{" "}
-        <Link href="/billing#plans" className="text-[#25D366] underline">Plans</Link> for the full comparison.
+        <Link href="/billing#plans" className="text-accent underline">Plans</Link> for the full comparison.
       </>
     ),
   },
@@ -84,7 +84,7 @@ const QUICK_ANSWERS: { group: AnswerGroup; q: string; a: React.ReactNode }[] = [
     q: "How do I change plan or turn off auto-pay?",
     a: (
       <>
-        Go to <Link href="/billing" className="text-[#25D366] underline">Billing</Link>. You can change your plan or
+        Go to <Link href="/billing" className="text-accent underline">Billing</Link>. You can change your plan or
         turn auto-pay on or off — turning it off keeps your access until the current period ends.
       </>
     ),
@@ -95,7 +95,7 @@ const QUICK_ANSWERS: { group: AnswerGroup; q: string; a: React.ReactNode }[] = [
     a: (
       <>
         New paid subscriptions can request a refund within 7 days of purchase. See our{" "}
-        <Link href="/refund" className="text-[#25D366] underline">Refund policy</Link> for details, or just ask us and
+        <Link href="/refund" className="text-accent underline">Refund policy</Link> for details, or just ask us and
         we&apos;ll help.
       </>
     ),
@@ -105,7 +105,7 @@ const QUICK_ANSWERS: { group: AnswerGroup; q: string; a: React.ReactNode }[] = [
     q: "Is my data safe? How do I download or delete it?",
     a: (
       <>
-        Yes. From <Link href="/account" className="text-[#25D366] underline">Account &amp; data</Link> you can download
+        Yes. From <Link href="/account" className="text-accent underline">Account &amp; data</Link> you can download
         a full export of your data or close your account. Closure has a 7-day recovery window before anything is
         permanently removed.
       </>
@@ -135,18 +135,18 @@ export default function SupportClient({ loggedIn, whatsapp, openTicketCount }: {
       <div className="mx-auto max-w-3xl">
         {/* Hero */}
         <div className="mb-8 text-center sm:text-left">
-          <h1 className="text-3xl font-bold text-white sm:text-4xl">Help &amp; support</h1>
-          <p className="mt-2.5 text-[15px] text-slate-300">Real people. We reply within 12 hours.</p>
+          <h1 className="text-3xl font-bold text-text sm:text-4xl">Help &amp; support</h1>
+          <p className="mt-2.5 text-[15px] text-muted">Real people. We reply within 12 hours.</p>
 
           <div className="relative mt-6">
-            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
             <input
               type="search"
               value={search}
               onChange={event => setSearch(event.target.value)}
               placeholder="Search quick answers…"
               aria-label="Search quick answers"
-              className="w-full rounded-full border border-slate-800 bg-[#111811] py-3 pl-11 pr-4 text-sm text-white placeholder-slate-500 transition-colors focus:border-[#25D366]/50 focus:outline-none"
+              className="w-full rounded-full border border-border bg-surface py-3 pl-11 pr-4 text-sm text-text placeholder:text-muted transition-colors focus:border-accent/50 focus:outline-none"
             />
           </div>
         </div>
@@ -156,14 +156,14 @@ export default function SupportClient({ loggedIn, whatsapp, openTicketCount }: {
           <button
             type="button"
             onClick={openNewTicket}
-            className="group flex flex-col items-start gap-3 rounded-2xl border border-[#25D366]/20 bg-[#0d1a0d] p-5 text-left shadow-sm transition-colors hover:border-[#25D366]/50"
+            className="group flex flex-col items-start gap-3 rounded-2xl border border-accent/20 bg-surface-2 p-5 text-left shadow-sm transition-colors hover:border-accent/50"
           >
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#25D366]/15 text-[#25D366]">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent-soft text-accent">
               <MessageCircle className="h-5 w-5" />
             </span>
-            <span className="text-sm font-semibold text-white">Start a ticket</span>
-            <span className="text-xs leading-5 text-slate-400">Tell us what&apos;s wrong — a real person replies within 12 hours.</span>
-            <span className="mt-auto flex items-center gap-1 text-xs font-medium text-[#25D366] opacity-0 transition-opacity group-hover:opacity-100">
+            <span className="text-sm font-semibold text-text">Start a ticket</span>
+            <span className="text-xs leading-5 text-muted">Tell us what&apos;s wrong — a real person replies within 12 hours.</span>
+            <span className="mt-auto flex items-center gap-1 text-xs font-medium text-accent opacity-0 transition-opacity group-hover:opacity-100">
               Open <ChevronRight className="h-3.5 w-3.5" />
             </span>
           </button>
@@ -171,19 +171,19 @@ export default function SupportClient({ loggedIn, whatsapp, openTicketCount }: {
           {loggedIn && (
             <Link
               href="/support/tickets"
-              className="group flex flex-col items-start gap-3 rounded-2xl border border-slate-800 bg-[#111811] p-5 text-left shadow-sm transition-colors hover:border-[#25D366]/40"
+              className="group flex flex-col items-start gap-3 rounded-2xl border border-border bg-surface p-5 text-left shadow-sm transition-colors hover:border-accent/40"
             >
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-800/60 text-slate-300">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-surface-2 text-muted">
                 <Ticket className="h-5 w-5" />
               </span>
-              <span className="flex items-center gap-2 text-sm font-semibold text-white">
+              <span className="flex items-center gap-2 text-sm font-semibold text-text">
                 My tickets
                 {openTicketCount !== null && openTicketCount > 0 && (
-                  <span className="rounded-full bg-[#25D366]/15 px-2 py-0.5 text-[11px] font-semibold text-[#25D366]">{openTicketCount} open</span>
+                  <span className="rounded-full bg-accent-soft px-2 py-0.5 text-[11px] font-semibold text-accent">{openTicketCount} open</span>
                 )}
               </span>
-              <span className="text-xs leading-5 text-slate-400">See every ticket you&apos;ve raised, and their status.</span>
-              <span className="mt-auto flex items-center gap-1 text-xs font-medium text-[#25D366] opacity-0 transition-opacity group-hover:opacity-100">
+              <span className="text-xs leading-5 text-muted">See every ticket you&apos;ve raised, and their status.</span>
+              <span className="mt-auto flex items-center gap-1 text-xs font-medium text-accent opacity-0 transition-opacity group-hover:opacity-100">
                 View <ChevronRight className="h-3.5 w-3.5" />
               </span>
             </Link>
@@ -194,14 +194,14 @@ export default function SupportClient({ loggedIn, whatsapp, openTicketCount }: {
               href={whatsapp.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="group flex flex-col items-start gap-3 rounded-2xl border border-[#25D366]/20 bg-[#0d1a0d] p-5 text-left shadow-sm transition-colors hover:border-[#25D366]/50"
+              className="group flex flex-col items-start gap-3 rounded-2xl border border-accent/20 bg-surface-2 p-5 text-left shadow-sm transition-colors hover:border-accent/50"
             >
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#25D366]/15 text-[#25D366]">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent-soft text-accent">
                 <Smartphone className="h-5 w-5" />
               </span>
-              <span className="text-sm font-semibold text-white">WhatsApp</span>
-              <span className="text-xs leading-5 text-slate-400">Chat with us directly on WhatsApp.</span>
-              <span className="mt-auto flex items-center gap-1 text-xs font-medium text-[#25D366] opacity-0 transition-opacity group-hover:opacity-100">
+              <span className="text-sm font-semibold text-text">WhatsApp</span>
+              <span className="text-xs leading-5 text-muted">Chat with us directly on WhatsApp.</span>
+              <span className="mt-auto flex items-center gap-1 text-xs font-medium text-accent opacity-0 transition-opacity group-hover:opacity-100">
                 Chat <ChevronRight className="h-3.5 w-3.5" />
               </span>
             </a>
@@ -209,42 +209,42 @@ export default function SupportClient({ loggedIn, whatsapp, openTicketCount }: {
           {whatsapp && !whatsapp.available && whatsapp.reason === "plan" && (
             <Link
               href="/billing#plans"
-              className="flex flex-col items-start gap-3 rounded-2xl border border-slate-800 bg-[#111811] p-5 text-left opacity-80 shadow-sm transition-colors hover:border-slate-700"
+              className="flex flex-col items-start gap-3 rounded-2xl border border-border bg-surface p-5 text-left opacity-80 shadow-sm transition-colors hover:border-border-strong"
             >
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-800/60 text-slate-500">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-surface-2 text-muted">
                 <Lock className="h-5 w-5" />
               </span>
-              <span className="text-sm font-semibold text-slate-300">WhatsApp · Growth & Agency</span>
-              <span className="text-xs leading-5 text-slate-500">Upgrade to Growth or Agency to chat with us on WhatsApp.</span>
+              <span className="text-sm font-semibold text-muted">WhatsApp · Growth & Agency</span>
+              <span className="text-xs leading-5 text-muted">Upgrade to Growth or Agency to chat with us on WhatsApp.</span>
             </Link>
           )}
 
           <Link
             href="/contact"
-            className="group flex flex-col items-start gap-3 rounded-2xl border border-slate-800 bg-[#111811] p-5 text-left shadow-sm transition-colors hover:border-[#25D366]/40"
+            className="group flex flex-col items-start gap-3 rounded-2xl border border-border bg-surface p-5 text-left shadow-sm transition-colors hover:border-accent/40"
           >
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-800/60 text-slate-300">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-surface-2 text-muted">
               <Mail className="h-5 w-5" />
             </span>
-            <span className="text-sm font-semibold text-white">Send us an email</span>
-            <span className="text-xs leading-5 text-slate-400">Prefer email? Fill in a short form and we reply by email.</span>
-            <span className="mt-auto flex items-center gap-1 text-xs font-medium text-[#25D366] opacity-0 transition-opacity group-hover:opacity-100">
+            <span className="text-sm font-semibold text-text">Send us an email</span>
+            <span className="text-xs leading-5 text-muted">Prefer email? Fill in a short form and we reply by email.</span>
+            <span className="mt-auto flex items-center gap-1 text-xs font-medium text-accent opacity-0 transition-opacity group-hover:opacity-100">
               Open form <ChevronRight className="h-3.5 w-3.5" />
             </span>
           </Link>
         </div>
 
-        <div className="mt-6 flex items-start gap-2 rounded-2xl border border-[#25D366]/20 bg-[#25D366]/5 p-4 text-sm text-slate-300">
-          <Ticket className="mt-0.5 h-4 w-4 shrink-0 text-[#25D366]" />
+        <div className="mt-6 flex items-start gap-2 rounded-2xl border border-accent/20 bg-accent-soft p-4 text-sm text-muted">
+          <Ticket className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
           <span>Raise a ticket any time. Our team replies within 12 hours.</span>
         </div>
 
         {/* Quick answers */}
-        <h2 className="mt-12 mb-4 text-lg font-semibold text-white">Quick answers</h2>
+        <h2 className="mt-12 mb-4 text-lg font-semibold text-text">Quick answers</h2>
         {filteredGroups.length === 0 ? (
-          <p className="rounded-xl border border-slate-800 bg-[#111811] px-4 py-6 text-center text-sm text-slate-400">
+          <p className="rounded-xl border border-border bg-surface px-4 py-6 text-center text-sm text-muted">
             No quick answers match &ldquo;{search}&rdquo;. Try{" "}
-            <button type="button" onClick={openNewTicket} className="text-[#25D366] underline">starting a ticket</button> instead.
+            <button type="button" onClick={openNewTicket} className="text-accent underline">starting a ticket</button> instead.
           </p>
         ) : (
           <div className="space-y-6">
@@ -252,17 +252,17 @@ export default function SupportClient({ loggedIn, whatsapp, openTicketCount }: {
               const Icon = GROUP_ICONS[group];
               return (
                 <div key={group}>
-                  <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                    <Icon className="h-3.5 w-3.5 text-[#25D366]" />
+                  <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted">
+                    <Icon className="h-3.5 w-3.5 text-accent" />
                     {group}
                   </div>
                   <div className="space-y-2">
                     {items.map(({ q, a }) => (
-                      <details key={q} className="group rounded-xl border border-slate-800 bg-[#111811] px-4 py-3 open:border-[#25D366]/30">
-                        <summary className="cursor-pointer list-none text-sm font-medium text-white marker:content-none">
+                      <details key={q} className="group rounded-xl border border-border bg-surface px-4 py-3 open:border-accent/30">
+                        <summary className="cursor-pointer list-none text-sm font-medium text-text marker:content-none">
                           {q}
                         </summary>
-                        <p className="mt-2 text-sm leading-6 text-slate-300">{a}</p>
+                        <p className="mt-2 text-sm leading-6 text-muted">{a}</p>
                       </details>
                     ))}
                   </div>
@@ -272,10 +272,10 @@ export default function SupportClient({ loggedIn, whatsapp, openTicketCount }: {
           </div>
         )}
 
-        <div className="mt-12 flex flex-wrap justify-center gap-4 border-t border-slate-800 pt-6 text-sm">
-          <Link href="/refund" className="text-[#25D366] hover:underline">Refund policy</Link>
-          <Link href="/terms" className="text-[#25D366] hover:underline">Terms</Link>
-          <Link href="/privacy" className="text-[#25D366] hover:underline">Privacy</Link>
+        <div className="mt-12 flex flex-wrap justify-center gap-4 border-t border-border pt-6 text-sm">
+          <Link href="/refund" className="text-accent hover:underline">Refund policy</Link>
+          <Link href="/terms" className="text-accent hover:underline">Terms</Link>
+          <Link href="/privacy" className="text-accent hover:underline">Privacy</Link>
         </div>
       </div>
     </div>

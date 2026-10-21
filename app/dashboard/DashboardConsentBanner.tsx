@@ -34,13 +34,13 @@ export default function DashboardConsentBanner({ initialShow }: { initialShow: b
   }
 
   return (
-    <div role="status" className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-800 bg-[#111811] p-4">
-      <p className="text-sm text-white">{WORDING}</p>
+    <div role="status" className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-surface p-4">
+      <p className="text-sm text-text">{WORDING}</p>
       <div className="flex shrink-0 gap-3">
-        <button type="button" disabled={busy} onClick={() => respond(true)} className="rounded-full bg-[#25D366] px-4 py-1.5 text-xs font-semibold text-black transition-colors hover:bg-[#1fba58] disabled:opacity-50">
+        <button type="button" disabled={busy} onClick={() => respond(true)} className="rounded-full bg-accent px-4 py-1.5 text-xs font-semibold text-on-accent transition-colors hover:bg-accent-hover disabled:opacity-50">
           Yes
         </button>
-        <button type="button" disabled={busy} onClick={() => respond(false)} className="rounded-full border border-slate-700 px-4 py-1.5 text-xs font-semibold text-slate-200 transition-colors hover:border-slate-500 disabled:opacity-50">
+        <button type="button" disabled={busy} onClick={() => respond(false)} className="rounded-full border border-border-strong px-4 py-1.5 text-xs font-semibold text-text transition-colors hover:border-border-strong disabled:opacity-50">
           No thanks
         </button>
       </div>

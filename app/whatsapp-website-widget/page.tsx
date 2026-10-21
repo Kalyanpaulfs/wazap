@@ -28,6 +28,7 @@ const jsonLd = {
 };
 
 const content: ProductLandingContent = {
+  art: { src: "/art/products/product-website-widget.webp", alt: "A website with a floating WhatsApp chat button" },
   icon: Code2,
   eyebrow: "WhatsApp website widget",
   h1: "Add a WhatsApp chat button to",

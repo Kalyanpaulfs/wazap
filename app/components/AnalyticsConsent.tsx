@@ -90,13 +90,13 @@ export default function AnalyticsConsent() {
   if (!MEASUREMENT_ID || consent !== "unknown") return null;
 
   return (
-    <aside className="fixed inset-x-3 bottom-3 z-[100] mx-auto max-w-3xl rounded-2xl border border-slate-700 bg-[#111811]/95 p-4 shadow-2xl backdrop-blur-md sm:flex sm:items-center sm:gap-5" aria-label="Analytics preferences">
-      <p className="text-sm leading-6 text-slate-300 sm:flex-1">
-        Wazap uses optional Google Analytics cookies to understand traffic and improve its tools. No phone numbers or message content are sent to Google. Read our <Link href="/cookie" className="text-[#25D366] hover:underline">cookie policy</Link>.
+    <aside className="fixed inset-x-3 bottom-3 z-[100] mx-auto max-w-3xl rounded-2xl border border-border-strong bg-surface/95 p-4 shadow-2xl backdrop-blur-md sm:flex sm:items-center sm:gap-5" aria-label="Analytics preferences">
+      <p className="text-sm leading-6 text-muted sm:flex-1">
+        Wazap uses optional Google Analytics cookies to understand traffic and improve its tools. No phone numbers or message content are sent to Google. Read our <Link href="/cookie" className="text-accent hover:underline">cookie policy</Link>.
       </p>
       <div className="mt-3 flex shrink-0 gap-2 sm:mt-0">
-        <button type="button" onClick={() => choose("rejected")} className="rounded-full border border-slate-600 px-4 py-2 text-sm font-semibold text-white hover:border-slate-400">Reject</button>
-        <button type="button" onClick={() => choose("accepted")} className="rounded-full bg-[#25D366] px-4 py-2 text-sm font-bold text-black hover:bg-[#1fba58]">Accept analytics</button>
+        <button type="button" onClick={() => choose("rejected")} className="rounded-full border border-border-strong px-4 py-2 text-sm font-semibold text-text hover:border-border-strong">Reject</button>
+        <button type="button" onClick={() => choose("accepted")} className="rounded-full bg-accent px-4 py-2 text-sm font-bold text-on-accent hover:bg-accent-hover">Accept analytics</button>
       </div>
     </aside>
   );

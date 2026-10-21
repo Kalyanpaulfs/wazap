@@ -22,9 +22,9 @@ export default async function SystemHealthWorkspace(){
  // problem - shown as a neutral note rather than something to worry about.
  const isLocalDev=process.env.NODE_ENV!=='production';
  const backupDetails=<>
-  <p className="text-xs text-slate-400">Last tested: {backup.verifiedAt?fmt(backup.verifiedAt):'never'}</p>
-  {backup.durationSeconds!=null&&<p className="text-xs text-slate-400">Restore verified in {backup.durationSeconds}s{backup.backup?` · ${backup.backup}`:''}.</p>}
-  {backup.reason&&<p className="text-xs text-slate-400">{backup.reason}</p>}
+  <p className="text-xs text-muted">Last tested: {backup.verifiedAt?fmt(backup.verifiedAt):'never'}</p>
+  {backup.durationSeconds!=null&&<p className="text-xs text-muted">Restore verified in {backup.durationSeconds}s{backup.backup?` · ${backup.backup}`:''}.</p>}
+  {backup.reason&&<p className="text-xs text-muted">{backup.reason}</p>}
  </>;
  let backupTone:'green'|'amber'|'red'|'grey',backupHeadline:string,backupSentence:string;
  if(isLocalDev&&backup.status==='missing'){backupTone='grey';backupHeadline='Backups run on the live server';backupSentence='This check only works on the live site, not during local development.';}
@@ -36,10 +36,10 @@ export default async function SystemHealthWorkspace(){
  const oldestWaitingMinutes=oldestWaiting?Math.round((now.getTime()-oldestWaiting.createdAt.getTime())/60000):null;
  const stuck=oldestWaitingMinutes!==null&&oldestWaitingMinutes>15;
  const emailDetails=<>
-  <p className="text-xs text-slate-400">Sent in the last 24 hours: {sent24h}</p>
-  <p className="text-xs text-slate-400">Waiting to send right now: {waitingNow}</p>
-  <p className="text-xs text-slate-400">Failed in the last 24 hours: {failed24h}</p>
-  {oldestWaitingMinutes!==null&&<p className="text-xs text-slate-400">Oldest waiting email: queued {oldestWaitingMinutes} minutes ago.</p>}
+  <p className="text-xs text-muted">Sent in the last 24 hours: {sent24h}</p>
+  <p className="text-xs text-muted">Waiting to send right now: {waitingNow}</p>
+  <p className="text-xs text-muted">Failed in the last 24 hours: {failed24h}</p>
+  {oldestWaitingMinutes!==null&&<p className="text-xs text-muted">Oldest waiting email: queued {oldestWaitingMinutes} minutes ago.</p>}
  </>;
  let emailTone:'green'|'amber'|'red'|'grey',emailHeadline:string,emailSentence:string;
  // Locally, Brevo refuses this machine's IP, so emails always wait or fail here.

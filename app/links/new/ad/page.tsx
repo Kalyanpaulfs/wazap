@@ -38,8 +38,8 @@ export default async function NewAdLinkPage() {
       <div className="mx-auto max-w-2xl space-y-6">
         <BackLink href="/links/new" label="Create a link" />
         <header>
-          <h1 className="text-2xl font-bold text-white sm:text-3xl">Ad link</h1>
-          <p className="mt-1 text-slate-400">See exactly how many clicks each campaign brings.</p>
+          <h1 className="text-2xl font-bold text-text sm:text-3xl">Ad link</h1>
+          <p className="mt-1 text-muted">See exactly how many clicks each campaign brings.</p>
         </header>
         <AdForm planLabel={planLabel} used={used} limit={limit} defaultCountry={defaultCountry} />
       </div>

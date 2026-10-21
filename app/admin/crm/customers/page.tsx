@@ -14,11 +14,11 @@ export const metadata = {
 
 const PLAN_PILL_CLASSES: Record<string, string> = {
   green: "",
-  slate: "border-slate-600 text-slate-400",
-  red: "border-red-500 text-red-400",
-  sky: "border-sky-500 text-sky-300",
-  emerald: "border-emerald-500 text-emerald-300",
-  gold: "border-amber-400 text-amber-300",
+  slate: "border-border text-muted",
+  red: "border-danger text-danger",
+  sky: "border-info text-info",
+  emerald: "border-success text-success",
+  gold: "border-warning text-warning",
 };
 
 const ACCOUNT_OPTIONS: [string, string][] = [
@@ -147,7 +147,7 @@ export default async function AdminCustomersPage({
           </label>
           <button className="wp-crm-secondary">Apply</button>
           {moreFiltersActive && (
-            <Link prefetch={false} href={`/admin/crm/customers${buildQs({ status: null, autopay: null, page: "1" })}`} className="text-xs text-slate-400 hover:text-slate-200">
+            <Link prefetch={false} href={`/admin/crm/customers${buildQs({ status: null, autopay: null, page: "1" })}`} className="text-xs text-muted hover:text-text">
               Clear filters
             </Link>
           )}
@@ -179,7 +179,7 @@ export default async function AdminCustomersPage({
                     <strong>
                       {c.name || c.email}
                       {statusPill && (
-                        <span className={`wp-crm-pill ml-2 ${statusPill.tone === "amber" ? "border-amber-500 text-amber-300" : "border-red-500 text-red-400"}`}>
+                        <span className={`wp-crm-pill ml-2 ${statusPill.tone === "amber" ? "border-warning text-warning" : "border-danger text-danger"}`}>
                           {statusPill.label}
                         </span>
                       )}

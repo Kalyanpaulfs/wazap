@@ -65,11 +65,11 @@ export default function BillingManager({
         type="button"
         onClick={updateCard}
         disabled={cardBusy}
-        className="text-xs font-semibold text-[#25D366] hover:underline disabled:opacity-50"
+        className="text-xs font-semibold text-accent hover:underline disabled:opacity-50"
       >
         {cardBusy ? "Opening…" : "Update card →"}
       </button>
-      {cardError && <p role="alert" className="mt-1 text-xs text-red-400">{cardError}</p>}
+      {cardError && <p role="alert" className="mt-1 text-xs text-danger">{cardError}</p>}
     </div>
   );
 
@@ -177,7 +177,7 @@ export default function BillingManager({
     if (method === "dodo") return updateCardButton;
     if (method !== "paypal") {
       return (
-        <Link href="/support" className="mt-3 inline-flex text-xs font-semibold text-[#25D366] hover:underline">
+        <Link href="/support" className="mt-3 inline-flex text-xs font-semibold text-accent hover:underline">
           Billing support →
         </Link>
       );
@@ -185,12 +185,12 @@ export default function BillingManager({
     return (
       <div className="mt-3">
         {!open ? (
-          <button type="button" onClick={() => setOpen(true)} className="text-xs font-semibold text-slate-400 hover:text-white">
+          <button type="button" onClick={() => setOpen(true)} className="text-xs font-semibold text-muted hover:text-text">
             Cancel renewal
           </button>
         ) : (
-          <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-3">
-            <p className="text-xs leading-5 text-slate-300">
+          <div className="rounded-xl border border-danger/20 bg-danger/10 p-3">
+            <p className="text-xs leading-5 text-muted">
               This stops future PayPal renewals. Access continues
               {expiresAt ? ` through ${new Date(expiresAt).toLocaleDateString()}` : " through the current paid period"}.
             </p>
@@ -198,7 +198,7 @@ export default function BillingManager({
               aria-label="Cancellation reason"
               value={reason}
               onChange={(event) => setReason(event.target.value)}
-              className="mt-3 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white"
+              className="mt-3 w-full rounded-lg border border-border-strong bg-bg px-3 py-2 text-xs text-text"
             >
               <option value="">Why are you cancelling?</option>
               {REASONS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
@@ -208,17 +208,17 @@ export default function BillingManager({
                 type="button"
                 disabled={!reason || busy}
                 onClick={cancel}
-                className="rounded-lg bg-red-500 px-3 py-2 text-xs font-bold text-white disabled:opacity-40"
+                className="rounded-lg bg-danger px-3 py-2 text-xs font-bold text-text disabled:opacity-40"
               >
                 {busy ? "Confirming…" : "Confirm cancellation"}
               </button>
-              <button type="button" disabled={busy} onClick={() => setOpen(false)} className="px-2 text-xs text-slate-400">
+              <button type="button" disabled={busy} onClick={() => setOpen(false)} className="px-2 text-xs text-muted">
                 Keep plan
               </button>
             </div>
           </div>
         )}
-        {notice && <p role="status" className="mt-2 text-xs leading-5 text-slate-400">{notice}</p>}
+        {notice && <p role="status" className="mt-2 text-xs leading-5 text-muted">{notice}</p>}
       </div>
     );
   }
@@ -227,34 +227,34 @@ export default function BillingManager({
   return (
     <div className="mt-3 space-y-3">
       {pendingChange && (
-        <p className="rounded-xl border border-[#25D366]/30 bg-[#25D366]/5 px-3 py-2 text-xs leading-5 text-[#25D366]">
+        <p className="rounded-xl border border-accent/30 bg-accent-soft px-3 py-2 text-xs leading-5 text-accent">
           Changes to {PLAN_LABELS[pendingChange.toPlan] || pendingChange.toPlan} on{" "}
           {pendingChange.effectiveAt ? new Date(pendingChange.effectiveAt).toLocaleDateString("en-GB") : "your next billing date"}
           {pendingChange.kind === "downgrade" && (
-            <button type="button" onClick={cancelScheduledChange} disabled={busy} className="ml-2 font-semibold text-slate-300 underline hover:text-white disabled:opacity-50">
+            <button type="button" onClick={cancelScheduledChange} disabled={busy} className="ml-2 font-semibold text-muted underline hover:text-text disabled:opacity-50">
               Cancel change
             </button>
           )}
         </p>
       )}
-      <p className="text-xs text-slate-400">
-        Auto-pay: <span className={autoRenew ? "font-semibold text-[#25D366]" : "font-semibold text-slate-300"}>{autoRenew ? "On" : "Off"}</span>
+      <p className="text-xs text-muted">
+        Auto-pay: <span className={autoRenew ? "font-semibold text-accent" : "font-semibold text-muted"}>{autoRenew ? "On" : "Off"}</span>
       </p>
       {autoRenew ? (
         !open ? (
-          <button type="button" onClick={() => setOpen(true)} className="text-xs font-semibold text-slate-400 hover:text-white">
+          <button type="button" onClick={() => setOpen(true)} className="text-xs font-semibold text-muted hover:text-text">
             Turn off auto-pay
           </button>
         ) : (
-          <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-3">
-            <p className="text-xs leading-5 text-slate-300">
+          <div className="rounded-xl border border-danger/20 bg-danger/10 p-3">
+            <p className="text-xs leading-5 text-muted">
               Your plan stays active until {expiresAt ? new Date(expiresAt).toLocaleDateString("en-GB") : "the end of your current period"}, then ends.
             </p>
             <select
               aria-label="Cancellation reason"
               value={reason}
               onChange={(event) => setReason(event.target.value)}
-              className="mt-3 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white"
+              className="mt-3 w-full rounded-lg border border-border-strong bg-bg px-3 py-2 text-xs text-text"
             >
               <option value="">Why are you turning it off?</option>
               {REASONS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
@@ -264,11 +264,11 @@ export default function BillingManager({
                 type="button"
                 disabled={!reason || busy}
                 onClick={turnOff}
-                className="rounded-lg bg-red-500 px-3 py-2 text-xs font-bold text-white disabled:opacity-40"
+                className="rounded-lg bg-danger px-3 py-2 text-xs font-bold text-text disabled:opacity-40"
               >
                 {busy ? "Confirming…" : "Confirm"}
               </button>
-              <button type="button" disabled={busy} onClick={() => setOpen(false)} className="px-2 text-xs text-slate-400">
+              <button type="button" disabled={busy} onClick={() => setOpen(false)} className="px-2 text-xs text-muted">
                 Keep auto-pay on
               </button>
             </div>
@@ -279,14 +279,14 @@ export default function BillingManager({
           type="button"
           onClick={turnOn}
           disabled={busy}
-          className="rounded-full bg-[#25D366] px-4 py-1.5 text-xs font-semibold text-black transition-colors hover:bg-[#1fba58] disabled:opacity-50"
+          className="rounded-full bg-accent px-4 py-1.5 text-xs font-semibold text-on-accent transition-colors hover:bg-accent-hover disabled:opacity-50"
         >
           {busy ? "Turning on…" : "Renew"}
         </button>
       )}
-      {notice && <p role="status" className="text-xs leading-5 text-slate-400">{notice}</p>}
+      {notice && <p role="status" className="text-xs leading-5 text-muted">{notice}</p>}
       {updateCardButton}
-      <a href="#plans" className="block text-xs font-semibold text-[#25D366] hover:underline">
+      <a href="#plans" className="block text-xs font-semibold text-accent hover:underline">
         Change plan →
       </a>
     </div>

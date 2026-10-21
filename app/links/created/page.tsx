@@ -67,25 +67,25 @@ export default async function LinkCreatedPage({
           <BackLink href="/links" label="My links" />
         </div>
         <div>
-          <p className="text-sm font-semibold text-[#25D366]">{kindName} created</p>
-          <h1 className="mt-1 text-2xl font-bold text-white sm:text-3xl">Your {kindNameLower} is ready</h1>
-          <p className="mt-1 text-slate-400">{name}</p>
+          <p className="text-sm font-semibold text-accent">{kindName} created</p>
+          <h1 className="mt-1 text-2xl font-bold text-text sm:text-3xl">Your {kindNameLower} is ready</h1>
+          <p className="mt-1 text-muted">{name}</p>
         </div>
 
-        <div className="break-all rounded-2xl border border-slate-800 bg-[#111811] px-5 py-4 font-mono text-base text-white sm:text-lg">
+        <div className="break-all rounded-2xl border border-border bg-surface px-5 py-4 font-mono text-base text-text sm:text-lg">
           {publicUrl.replace(/^https?:\/\//, "")}
         </div>
 
         <CreatedActions publicUrl={publicUrl} name={name} testNote={TEST_NOTE[kind]} />
 
         <div className="flex flex-wrap items-center justify-center gap-4 pt-2 text-sm font-semibold">
-          <Link href={`/links/${sp.type}/${id}`} className="text-slate-300 hover:text-white">
+          <Link href={`/links/${sp.type}/${id}`} className="text-muted hover:text-text">
             View link details
           </Link>
-          <Link href="/links" className="text-slate-300 hover:text-white">
+          <Link href="/links" className="text-muted hover:text-text">
             Go to My links
           </Link>
-          <Link href="/links/new" className="text-[#25D366] hover:underline">
+          <Link href="/links/new" className="text-accent hover:underline">
             Create another
           </Link>
         </div>

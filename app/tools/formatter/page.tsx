@@ -58,7 +58,7 @@ function isMonoAt(node: Node | null, root: HTMLElement) {
 function Preview({ nodes }: { nodes: PreviewNode[] }) {
   return <>{nodes.map((n, i) => {
     if (n.type === "text") return <Fragment key={i}>{n.value}</Fragment>;
-    if (n.type === "mono") return <code key={i} className="rounded bg-[#0b141a] px-1 font-mono">{n.value}</code>;
+    if (n.type === "mono") return <code key={i} className="rounded bg-surface-2 px-1 font-mono">{n.value}</code>;
     const Tag = n.type === "bold" ? "b" : n.type === "italic" ? "i" : "s";
     return <Tag key={i}><Preview nodes={n.children} /></Tag>;
   })}</>;
@@ -69,7 +69,7 @@ function Preview({ nodes }: { nodes: PreviewNode[] }) {
 function StyleButton({ icon, label, on, onClick }: { icon: React.ReactNode; label: string; on: boolean; onClick: () => void }) {
   return (
     <button type="button" onMouseDown={e => e.preventDefault()} onClick={onClick} title={on ? `Remove ${label.toLowerCase()}` : label} aria-label={label} aria-pressed={on}
-      className={`inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm transition-colors ${on ? "border-[#25D366] bg-[#25D366]/20 text-white" : "border-slate-700 bg-slate-900 text-slate-300 hover:border-[#25D366] hover:text-white"}`}>{icon}<span>{label}</span></button>
+      className={`inline-flex min-h-11 items-center gap-1.5 rounded-lg border px-3.5 py-2 text-sm transition-colors ${on ? "border-accent bg-accent/20 font-semibold text-text shadow-hairline" : "border-border bg-surface-2 text-text hover:border-accent hover:text-text"}`}>{icon}<span>{label}</span></button>
   );
 }
 
@@ -148,46 +148,46 @@ export default function FormatterPage() {
 
   return (
     <>
-      <div className="border-b border-green-900/20 bg-[#0a0f0a]/90 px-4 h-10 flex items-center gap-3 text-sm">
-        <Link href="/tools" className="text-slate-500 hover:text-white">← Tools</Link>
-        <span className="text-slate-700">/</span>
-        <span className="text-white font-medium">Text Formatter</span>
-        <span className="ml-auto text-xs text-[#25D366]">Free · unlimited</span>
+      <div className="wp-subbar border-b border-border bg-bg/90 px-4 h-10 flex items-center gap-3 text-sm">
+        <Link href="/tools" className="text-muted hover:text-text">← Tools</Link>
+        <span className="text-border-strong">/</span>
+        <span className="text-text font-medium">Text Formatter</span>
+        <span className="ml-auto text-xs text-accent">Free · unlimited</span>
       </div>
 
       <div className="hero-bg px-4 py-12">
         <div className="mx-auto max-w-2xl space-y-5">
           <div className="text-center">
-            <h1 className="text-3xl font-bold text-white mb-2">WhatsApp Text Formatter</h1>
-            <p className="text-slate-400">Make your WhatsApp messages stand out with <b>bold</b>, <i>italic</i>, <s>strikethrough</s> and monospace — no need to remember the symbols.</p>
+            <h1 className="text-3xl font-bold text-text mb-2">WhatsApp Text Formatter</h1>
+            <p className="text-muted">Make your WhatsApp messages stand out with <b>bold</b>, <i>italic</i>, <s>strikethrough</s> and monospace — no need to remember the symbols.</p>
           </div>
 
-          <div className="rounded-2xl border border-slate-800 bg-[#111811] p-5 space-y-3">
+          <div className="rounded-2xl border border-border bg-surface p-5 space-y-3">
             <div className="flex gap-2 flex-wrap">
               <StyleButton icon={<Bold className="h-4 w-4" />} label="Bold" on={active.bold} onClick={() => toggle("bold")} />
               <StyleButton icon={<Italic className="h-4 w-4" />} label="Italic" on={active.italic} onClick={() => toggle("italic")} />
               <StyleButton icon={<Strikethrough className="h-4 w-4" />} label="Strikethrough" on={active.strike} onClick={() => toggle("strike")} />
               <StyleButton icon={<Code className="h-4 w-4" />} label="Monospace" on={active.mono} onClick={() => toggle("mono")} />
             </div>
-            <div id="formatter-label" className="block text-sm font-medium text-slate-300">Your message</div>
+            <div id="formatter-label" className="block text-sm font-medium text-text">Your message</div>
             <div className="relative">
-              {!text && <div aria-hidden className="pointer-events-none absolute left-4 top-3 text-sm text-slate-600">Type your message, select some words, then tap Bold, Italic, Strikethrough or Monospace.</div>}
+              {!text && <div aria-hidden className="pointer-events-none absolute left-4 top-3 text-sm text-muted">Type your message, select some words, then tap Bold, Italic, Strikethrough or Monospace.</div>}
               <div ref={ref} contentEditable suppressContentEditableWarning role="textbox" aria-multiline="true" aria-labelledby="formatter-label"
                 onInput={() => { sync(); updateActive(); }} onPaste={onPaste} onKeyUp={updateActive} onMouseUp={updateActive}
-                className="min-h-36 w-full whitespace-pre-wrap break-words rounded-xl bg-slate-900 border border-slate-700 px-4 py-3 text-sm text-white focus:outline-none focus:border-[#25D366]" />
+                className="min-h-36 w-full whitespace-pre-wrap break-words rounded-xl bg-surface-2 border border-border px-4 py-3 text-sm text-text focus:outline-none focus:border-accent" />
             </div>
           </div>
 
-          <div className="rounded-2xl border border-slate-800 bg-[#0b141a] p-5">
-            <div className="text-xs text-slate-500 mb-2">Preview</div>
-            <div className="text-[15px] text-slate-100 leading-relaxed break-words whitespace-pre-wrap"><Preview nodes={parseWhatsApp(text)} /></div>
+          <div className="rounded-2xl border border-border bg-surface-2 p-5">
+            <div className="text-xs text-muted mb-2">Preview</div>
+            <div className="text-[15px] text-text leading-relaxed break-words whitespace-pre-wrap"><Preview nodes={parseWhatsApp(text)} /></div>
           </div>
 
           <div className="space-y-2">
-            <button onClick={copy} disabled={!text} className="w-full inline-flex items-center justify-center gap-2 rounded-full bg-[#25D366] hover:bg-[#1fba58] disabled:opacity-50 disabled:hover:bg-[#25D366] py-3 text-sm font-bold text-black transition-colors">
+            <button onClick={copy} disabled={!text} className="w-full inline-flex items-center justify-center gap-2 rounded-full bg-accent hover:bg-accent-hover disabled:opacity-50 disabled:hover:bg-accent py-3 text-sm font-bold text-on-accent transition-colors">
               {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />} {copied ? "Copied — paste into WhatsApp" : "Copy formatted text"}
             </button>
-            {copyError && <p role="alert" className="text-center text-sm text-red-400">{copyError}</p>}
+            {copyError && <p role="alert" className="text-center text-sm text-danger">{copyError}</p>}
           </div>
         </div>
       </div>

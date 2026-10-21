@@ -80,67 +80,67 @@ export default function WidgetGeneratorPage() {
 
   return (
     <>
-      <div className="border-b border-green-900/20 bg-[#0a0f0a]/90 px-4 min-h-10 py-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+      <div className="wp-subbar border-b border-border bg-bg/90 px-4 min-h-10 py-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
         {isLoggedIn ? (
-          <Link href="/links/new" className="text-slate-500 hover:text-white">← Create a link</Link>
+          <Link href="/links/new" className="text-muted hover:text-text">← Create a link</Link>
         ) : (
-          <Link href="/tools" className="text-slate-500 hover:text-white">← Tools</Link>
+          <Link href="/tools" className="text-muted hover:text-text">← Tools</Link>
         )}
-        <span className="text-slate-700">/</span>
-        <span className="text-white font-medium">Widget Generator</span>
+        <span className="text-text">/</span>
+        <span className="text-text font-medium">Widget Generator</span>
       </div>
 
-      <div className="hero-bg px-4 py-12">
+      <div className="px-4 py-12">
         <div className="mx-auto max-w-5xl min-w-0">
           <div className="text-center mb-10">
-            <h1 className="text-3xl font-bold text-white mb-2">WhatsApp Widget Generator</h1>
-            <p className="text-slate-400">Paste one line of code on your website. Visitors can chat with you on WhatsApp instantly.</p>
+            <h1 className="text-3xl font-bold text-text mb-2">WhatsApp Widget Generator</h1>
+            <p className="text-muted">Paste one line of code on your website. Visitors can chat with you on WhatsApp instantly.</p>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {/* Config */}
             <div className="space-y-5">
-              <div className="rounded-2xl border border-slate-800 bg-[#111811] p-6 space-y-4">
-                <h2 className="font-semibold text-white">Your WhatsApp Number</h2>
+              <div className="rounded-2xl border border-border bg-surface p-6 space-y-4">
+                <h2 className="font-semibold text-text">Your WhatsApp Number</h2>
                 <div className="flex flex-col gap-2 sm:flex-row">
                   <select aria-label="Country code" value={dial} onChange={e => setDial(e.target.value)}
-                    className="w-full min-w-0 rounded-xl bg-slate-900 border border-slate-700 px-3 py-2.5 text-sm text-white focus:outline-none focus:border-[#25D366] sm:w-44 sm:shrink-0">
+                    className="w-full min-w-0 rounded-xl bg-surface border border-border-strong px-3 py-2.5 text-sm text-text focus:outline-none focus:border-accent sm:w-44 sm:shrink-0">
                     {COUNTRIES.map(c => <option key={c.code} value={c.dial.replace("+","")}>{c.dial} {c.name}</option>)}
                   </select>
                   <input aria-label="Phone number" type="tel" inputMode="numeric" value={number} onChange={e => setNumber(e.target.value.replace(/\D/g, "").slice(0, 15))} placeholder="Phone number"
-                    className="w-full min-w-0 flex-1 rounded-xl bg-slate-900 border border-slate-700 px-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#25D366]" />
+                    className="w-full min-w-0 flex-1 rounded-xl bg-surface border border-border-strong px-4 py-2.5 text-sm text-text placeholder:text-muted/70 focus:outline-none focus:border-accent" />
                 </div>
                 <div>
-                  <label className="text-xs text-slate-400 block mb-1">Pre-filled message</label>
+                  <label className="text-xs text-muted block mb-1">Pre-filled message</label>
                   <input aria-label="Widget pre-filled message" type="text" value={message} onChange={e => setMessage(e.target.value)}
-                    className="w-full rounded-xl bg-slate-900 border border-slate-700 px-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#25D366]" />
+                    className="w-full rounded-xl bg-surface border border-border-strong px-4 py-2.5 text-sm text-text placeholder:text-muted/70 focus:outline-none focus:border-accent" />
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-slate-800 bg-[#111811] p-6 space-y-4">
-                <h2 className="font-semibold text-white">Appearance</h2>
+              <div className="rounded-2xl border border-border bg-surface p-6 space-y-4">
+                <h2 className="font-semibold text-text">Appearance</h2>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="text-xs text-slate-400 block mb-1">Position</label>
+                    <label className="text-xs text-muted block mb-1">Position</label>
                     <select aria-label="Widget position" value={position} onChange={e => setPosition(e.target.value)}
-                      className="w-full rounded-xl bg-slate-900 border border-slate-700 px-3 py-2.5 text-sm text-white focus:outline-none focus:border-[#25D366]">
+                      className="w-full rounded-xl bg-surface border border-border-strong px-3 py-2.5 text-sm text-text focus:outline-none focus:border-accent">
                       <option value="bottom-right">Bottom Right</option>
                       <option value="bottom-left">Bottom Left</option>
                       <option value="top-right">Top Right</option>
                     </select>
                   </div>
                   <div>
-                    <label className="text-xs text-slate-400 block mb-1">Button Size (px)</label>
+                    <label className="text-xs text-muted block mb-1">Button Size (px)</label>
                     <input aria-label="Widget button size in pixels" type="number" value={size} onChange={e => setSize(e.target.value)} min="40" max="100"
-                      className="w-full rounded-xl bg-slate-900 border border-slate-700 px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#25D366]" />
+                      className="w-full rounded-xl bg-surface border border-border-strong px-4 py-2.5 text-sm text-text focus:outline-none focus:border-accent" />
                   </div>
                 </div>
                 <div>
-                  <label className="text-xs text-slate-400 block mb-2">Button Color</label>
+                  <label className="text-xs text-muted block mb-2">Button Color</label>
                   <div className="flex gap-2 flex-wrap">
                     {["#25D366","#128C7E","#000000","#1a1a2e","#7c3aed","#dc2626","#ea580c","#0070ba"].map(c => (
                       <button aria-label={`Use widget colour ${c}`} aria-pressed={color === c} key={c} onClick={() => setColor(c)}
-                        className={`w-8 h-8 rounded-full border-2 transition-all ${color === c ? "border-white scale-110" : "border-transparent"}`}
+                        className={`w-8 h-8 rounded-full border-2 transition-all ${color === c ? "border-border scale-110" : "border-transparent"}`}
                         style={{ backgroundColor: c }} />
                     ))}
                   </div>
@@ -148,11 +148,11 @@ export default function WidgetGeneratorPage() {
                 <div>
                   <label className="flex items-center gap-2 cursor-pointer mb-2">
                     <input type="checkbox" checked={showLabel} onChange={e => setShowLabel(e.target.checked)} className="rounded" />
-                    <span className="text-sm text-slate-300">Show label bubble</span>
+                    <span className="text-sm text-muted">Show label bubble</span>
                   </label>
                   {showLabel && (
                     <input aria-label="Widget greeting label" type="text" value={label} onChange={e => setLabel(e.target.value)}
-                      className="w-full rounded-xl bg-slate-900 border border-slate-700 px-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#25D366]" />
+                      className="w-full rounded-xl bg-surface border border-border-strong px-4 py-2.5 text-sm text-text placeholder:text-muted/70 focus:outline-none focus:border-accent" />
                   )}
                 </div>
               </div>
@@ -161,45 +161,45 @@ export default function WidgetGeneratorPage() {
             {/* Preview + Code */}
             <div className="space-y-5">
               {/* Preview */}
-              <div className="rounded-2xl border border-slate-800 bg-[#111811] p-6">
-                <h2 className="font-semibold text-white mb-4">Preview</h2>
-                <div className="relative h-48 rounded-xl bg-slate-900 border border-slate-700 overflow-hidden">
-                  <div className="absolute inset-0 flex items-center justify-center text-slate-600 text-sm">Your website here</div>
+              <div className="rounded-2xl border border-border bg-surface p-6">
+                <h2 className="font-semibold text-text mb-4">Preview</h2>
+                <div className="relative h-48 rounded-xl bg-surface border border-border-strong overflow-hidden">
+                  <div className="absolute inset-0 flex items-center justify-center text-muted text-sm">Your website here</div>
                   <div className={`absolute flex flex-col gap-2 ${position === "bottom-right" ? "bottom-4 right-4 items-end" : position === "bottom-left" ? "bottom-4 left-4 items-start" : "top-4 right-4 items-end"}`}>
-                    {showLabel && <div className="bg-gray-800 text-white px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap">{label}</div>}
+                    {showLabel && <div className="bg-muted text-text px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap">{label}</div>}
                     <div className="rounded-full flex items-center justify-center shadow-lg" style={{ width: `${Math.min(parseInt(size), 52)}px`, height: `${Math.min(parseInt(size), 52)}px`, backgroundColor: color }}>
-                      <MessageCircle className="text-white" style={{ width: `${Math.min(parseInt(size), 52) * 0.48}px`, height: `${Math.min(parseInt(size), 52) * 0.48}px` }} />
+                      <MessageCircle className="text-text" style={{ width: `${Math.min(parseInt(size), 52) * 0.48}px`, height: `${Math.min(parseInt(size), 52) * 0.48}px` }} />
                     </div>
-                    <div className="text-slate-600 text-xs">Powered by Wazap</div>
+                    <div className="text-muted text-xs">Powered by Wazap</div>
                   </div>
                 </div>
               </div>
 
               {/* Embed code */}
-              <div className="rounded-2xl border border-slate-800 bg-[#111811] p-6">
+              <div className="rounded-2xl border border-border bg-surface p-6">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
-                    <Code className="h-4 w-4 text-[#25D366]" />
-                    <h2 className="font-semibold text-white">Embed Code</h2>
+                    <Code className="h-4 w-4 text-accent" />
+                    <h2 className="font-semibold text-text">Embed Code</h2>
                   </div>
                   <button onClick={copy} disabled={locked || !validNumber}
-                    className="flex items-center gap-1.5 rounded-full border border-slate-700 hover:border-[#25D366] px-3 py-1.5 text-xs text-slate-300 hover:text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
-                    {copied ? <Check className="h-3.5 w-3.5 text-[#25D366]" /> : <Copy className="h-3.5 w-3.5" />}
+                    className="flex items-center gap-1.5 rounded-full border border-border-strong hover:border-accent px-3 py-1.5 text-xs text-muted hover:text-text transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+                    {copied ? <Check className="h-3.5 w-3.5 text-accent" /> : <Copy className="h-3.5 w-3.5" />}
                     {copied ? "Copied!" : locked ? "Paid plans" : "Copy"}
                   </button>
                 </div>
                 {locked ? (
-                  <div className="rounded-xl bg-slate-900 p-4 text-sm text-slate-300">
+                  <div className="rounded-xl bg-surface p-4 text-sm text-muted">
                     The website button is included in Solo, Growth and Agency.{" "}
-                    <Link href={isLoggedIn ? "/billing#plans" : "/pricing?source=widget"} className="font-semibold text-[#25D366] underline">See plans</Link>
+                    <Link href={isLoggedIn ? "/billing#plans" : "/pricing?source=widget"} className="font-semibold text-accent underline">See plans</Link>
                   </div>
                 ) : (
-                  <pre className="text-xs text-slate-400 bg-slate-900 rounded-xl p-4 overflow-x-auto whitespace-pre-wrap font-mono">{embedCode}</pre>
+                  <pre className="text-xs text-muted bg-surface rounded-xl p-4 overflow-x-auto whitespace-pre-wrap font-mono">{embedCode}</pre>
                 )}
                 {limitError && (
-                  <p className="text-xs text-red-400 mt-2">{limitError}</p>
+                  <p className="text-xs text-danger mt-2">{limitError}</p>
                 )}
-                <p className="text-xs text-slate-500 mt-3">Paste this anywhere before <code className="text-slate-400">&lt;/body&gt;</code> on your website.</p>
+                <p className="text-xs text-muted mt-3">Paste this anywhere before <code className="text-muted">&lt;/body&gt;</code> on your website.</p>
               </div>
             </div>
           </div>

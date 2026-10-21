@@ -40,8 +40,8 @@ export default async function NewRotatorPage() {
       <div className="mx-auto max-w-2xl space-y-6">
         <BackLink href="/links/new" label="Create a link" />
         <header>
-          <h1 className="text-2xl font-bold text-white sm:text-3xl">Lead rotator</h1>
-          <p className="mt-1 text-slate-400">Each new click goes to the next salesperson in your list.</p>
+          <h1 className="text-2xl font-bold text-text sm:text-3xl">Lead rotator</h1>
+          <p className="mt-1 text-muted">Each new click goes to the next salesperson in your list.</p>
         </header>
         <RotatorForm planLabel={planLabel} used={used} limit={limit} numbersLimit={numbersLimit} nextPlanHint={nextPlanHint} defaultCountry={defaultCountry} />
       </div>

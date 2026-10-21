@@ -77,7 +77,7 @@ export default function WazapCardPayment({
       <button
         onClick={() => pay("paypal")}
         disabled={!!loadingProvider}
-        className="flex items-center justify-center gap-2 w-full rounded-full bg-white hover:bg-slate-100 py-3 text-sm font-semibold text-black transition-colors disabled:opacity-50"
+        className="flex items-center justify-center gap-2 w-full rounded-full bg-accent hover:bg-accent-hover py-3 text-sm font-semibold text-on-accent shadow-[0_10px_24px_-10px_color-mix(in_srgb,var(--color-accent)_70%,transparent)] transition-all hover:-translate-y-px disabled:opacity-50"
       >
         {loadingProvider === "paypal" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wallet className="h-4 w-4" />}
         {subscribePaypalLabel}
@@ -86,19 +86,19 @@ export default function WazapCardPayment({
         <button
           onClick={() => pay("dodo")}
           disabled={!!loadingProvider}
-          className="flex items-center justify-center gap-2 w-full rounded-full border border-slate-700 bg-transparent hover:border-[#25D366] py-3 text-sm font-semibold text-slate-200 transition-colors disabled:opacity-50"
+          className="flex items-center justify-center gap-2 w-full rounded-full border border-border-strong bg-transparent hover:border-accent py-3 text-sm font-semibold text-text transition-colors disabled:opacity-50"
         >
         {loadingProvider === "dodo" ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
         {subscribeCardLabel}
-        <span className="rounded-full border border-slate-600 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-400">
+        <span className="rounded-full border border-border-strong px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-muted">
           Dodo
         </span>
       </button>
       )}
-      {manageUrl && <Link href={manageUrl} className="block text-center text-sm font-semibold text-[#25D366]">Manage existing subscription →</Link>}
-      <p className="text-center text-xs leading-5 text-slate-400">Monthly renewal. Cancel from your dashboard. Taxes, if applicable, are shown at checkout.</p>
-      {error && <p className="mt-2 text-xs text-red-400 text-center">{error}</p>}
-      {notice && <p className="mt-2 text-xs text-[#25D366] text-center">{notice}</p>}
+      {manageUrl && <Link href={manageUrl} className="block text-center text-sm font-semibold text-accent">Manage existing subscription →</Link>}
+      <p className="text-center text-xs leading-5 text-muted">Monthly renewal. Cancel from your dashboard. Taxes, if applicable, are shown at checkout.</p>
+      {error && <p className="mt-2 text-xs text-danger text-center">{error}</p>}
+      {notice && <p className="mt-2 text-xs text-accent text-center">{notice}</p>}
     </div>
   );
 }

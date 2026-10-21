@@ -11,9 +11,9 @@ import type {Prisma} from '@prisma/client';
 
 const STATUS_PILL_CLASSES: Record<string,string> = {
  green: '',
- amber: 'border-amber-500 text-amber-300',
- red: 'border-red-500 text-red-400',
- slate: 'border-slate-600 text-slate-400',
+ amber: 'border-warning text-warning',
+ red: 'border-danger text-danger',
+ slate: 'border-border text-muted',
 };
 
 // Old /admin/crm/billing?plan=... had no exact equivalent once plan changes
@@ -115,7 +115,7 @@ export default async function BillingWorkspace({query='',autopay='',plan='',stat
     ))}
    </div>
 
-   <p className="text-xs text-slate-400 my-5">{total} matching payment{total===1?'':'s'}</p>
+   <p className="text-xs text-muted my-5">{total} matching payment{total===1?'':'s'}</p>
 
    <div className="wp-growth-table-wrap">
     <table className="wp-growth-table">
@@ -133,13 +133,13 @@ export default async function BillingWorkspace({query='',autopay='',plan='',stat
          <td>
           {user?(
            <>
-            <strong><Link prefetch={false} href={`/admin/crm/customers/${user.id}`} className="hover:text-[#25D366] transition-colors">{user.name||user.email}</Link></strong>
-            <p className="text-xs text-slate-400 mt-1">{user.email}</p>
+            <strong><Link prefetch={false} href={`/admin/crm/customers/${user.id}`} className="hover:text-accent transition-colors">{user.name||user.email}</Link></strong>
+            <p className="text-xs text-muted mt-1">{user.email}</p>
            </>
           ):(
            <>
-            <strong className="text-slate-400">Deleted customer</strong>
-            <p className="text-xs text-slate-500 mt-1">{p.email}</p>
+            <strong className="text-muted">Deleted customer</strong>
+            <p className="text-xs text-muted mt-1">{p.email}</p>
            </>
           )}
          </td>
@@ -148,7 +148,7 @@ export default async function BillingWorkspace({query='',autopay='',plan='',stat
          <td>{paymentMethodLabel(p.method)}</td>
          <td>
           <span className={`wp-crm-pill ${STATUS_PILL_CLASSES[statusInfo.tone]}`}>{statusInfo.label}</span>
-          {p.txId&&<p className="text-xs text-slate-500 mt-1 break-all" title={p.txId}>{p.txId.length>22?`${p.txId.slice(0,22)}…`:p.txId}</p>}
+          {p.txId&&<p className="text-xs text-muted mt-1 break-all" title={p.txId}>{p.txId.length>22?`${p.txId.slice(0,22)}…`:p.txId}</p>}
           {isRefundLikeStatus(p.status)&&<span className="sr-only">Money returned to the customer</span>}
          </td>
         </tr>

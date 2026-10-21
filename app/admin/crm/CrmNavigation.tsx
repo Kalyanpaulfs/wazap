@@ -20,5 +20,5 @@ export default function CrmNavigation(){
  const path=usePathname();
  const [flagged,setFlagged]=useState(0);
  useEffect(()=>{let stopped=false;async function poll(){try{const res=await fetch('/api/admin/support/flagged-count',{cache:'no-store'});if(res.ok&&!stopped){const json=await res.json();setFlagged(json.count||0);}}catch{/* keep the last known count */}}poll();const id=setInterval(poll,20000);return()=>{stopped=true;clearInterval(id);};},[]);
- return <>{items.map(([label,href,Icon,isActive])=>{const current=isActive(path);return <Link prefetch={false} key={label} href={href} className={`wp-nav-link ${current?'is-active':''}`} aria-current={current?'page':undefined}><Icon size={18}/>{label}{label==='Support'&&flagged>0&&<span className="wp-nav-badge" aria-label={`${flagged} tickets need you`}>{flagged}</span>}</Link>;})}</>;
+ return <>{items.map(([label,href,Icon,isActive])=>{const current=isActive(path);return <Link prefetch={false} key={label} href={href} className={`wp-nav-link ${current?'is-active':''}`} aria-current={current?'page':undefined}><Icon size={18}/><span className="wp-nav-text">{label}</span>{label==='Support'&&flagged>0&&<span className="wp-nav-badge" aria-label={`${flagged} tickets need you`}>{flagged}</span>}</Link>;})}</>;
 }
