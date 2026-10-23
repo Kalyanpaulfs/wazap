@@ -58,10 +58,12 @@ export default async function LinkDetailsPage({
       if (!s.destination) continue;
       last30ByDestination.set(s.destination, (last30ByDestination.get(s.destination) ?? 0) + 1);
     }
+    const pausedNumberSet = new Set(row.pausedNumbers);
     const salespeople = row.numbers.map((number) => ({
       number,
       name: salespersonName(row.numberNames, number),
       last30Days: last30ByDestination.get(number) ?? 0,
+      paused: pausedNumberSet.has(number),
     }));
 
     const planPaused = Boolean(row.planPausedAt);
@@ -85,7 +87,7 @@ export default async function LinkDetailsPage({
         pauseReason={planPaused ? derivePauseReason("rotator", plan) : null}
         planLabel={planLabel}
         defaultCountry={defaultCountry}
-        rotator={{ numbers: row.numbers, numberNames: (row.numberNames as Record<string, string>) ?? {}, message: row.message, salespeople, numbersLimit, nextPlanHint }}
+        rotator={{ numbers: row.numbers, numberNames: (row.numberNames as Record<string, string>) ?? {}, pausedNumbers: row.pausedNumbers, fallbackNumber: row.fallbackNumber, message: row.message, salespeople, numbersLimit, nextPlanHint }}
       />
     );
   }

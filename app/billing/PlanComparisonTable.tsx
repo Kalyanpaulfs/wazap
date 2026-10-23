@@ -6,6 +6,9 @@ import {
   adLinksAvailable,
   widgetAvailable,
   audienceAvailable,
+  teamOutreachAvailable,
+  teamOutreachContactLimit,
+  teamOutreachMemberLimit,
   supportLabel,
   type PlanKey,
 } from "@/lib/plan-limits";
@@ -42,9 +45,16 @@ export default function PlanComparisonTable() {
     row("Website button", PLAN_COLUMNS.map((key) => widgetAvailable(key)) as [Cell, Cell, Cell]),
     row("WhatsApp QR code", [true, true, true]),
     row("Text formatter", [true, true, true]),
+    row("Link shortener", [true, true, true]),
     row("Unlimited routed leads", [true, true, true]),
     row("Reports", PLAN_COLUMNS.map((key) => REPORTS_ROW[key]) as [Cell, Cell, Cell]),
     row("Audience (device, OS, country & city)", PLAN_COLUMNS.map((key) => audienceAvailable(key)) as [Cell, Cell, Cell]),
+    row(
+      "Team outreach (customers / salespeople)",
+      PLAN_COLUMNS.map((key) =>
+        teamOutreachAvailable(key) ? `${teamOutreachContactLimit(key).toLocaleString("en-US")} / ${teamOutreachMemberLimit(key)}` : false
+      ) as [Cell, Cell, Cell]
+    ),
     row("Support", PLAN_COLUMNS.map((key) => supportLabel(key)) as [Cell, Cell, Cell]),
   ];
 

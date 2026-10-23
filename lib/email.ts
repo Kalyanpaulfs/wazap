@@ -153,12 +153,15 @@ export function renderPasswordResetEmail(opts: { name: string | null; resetUrl: 
   </div>`;
 }
 
-export function renderEmailCodeEmail(opts: { code: string; purpose: "login" | "confirm"; minutes: number }): string {
+export function renderEmailCodeEmail(opts: { code: string; purpose: "login" | "confirm" | `outreach:${string}`; minutes: number }): string {
   const code = escapeHtml(opts.code);
-  const title = opts.purpose === "login" ? "Your Wazap sign-in code" : "Confirm this account action";
+  const isOutreach = opts.purpose.startsWith("outreach:");
+  const title = opts.purpose === "login" ? "Your Wazap sign-in code" : isOutreach ? "Your Wazap team code" : "Confirm this account action";
   const intro = opts.purpose === "login"
     ? "Enter this code on the Wazap sign-in page to continue."
-    : "Enter this code in Wazap to confirm the change you requested.";
+    : isOutreach
+      ? "Enter this code to confirm this device for your team's customer list."
+      : "Enter this code in Wazap to confirm the change you requested.";
   return `
   <div style="font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif;max-width:600px;margin:0 auto;background:#0b120d;border-radius:20px;overflow:hidden;border:1px solid #1d3323">
     <div style="background:#0d1710;padding:22px 28px;border-bottom:1px solid #1d3323"><span style="color:#25D366;font-weight:800;font-size:20px">Wazap</span></div>

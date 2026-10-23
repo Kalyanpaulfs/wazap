@@ -36,10 +36,10 @@ describe("normalizePlanKey", () => {
 
 describe("owner-approved plan table (UX-1 step 1: shared link pool)", () => {
   it("matches the signed-off link pool limits (Free-trial restructure: free is 0, nothing grandfathered)", () => {
-    expect(LINK_LIMITS).toEqual({ free: 0, basic: 5, pro: 20, ultimate: 55 });
+    expect(LINK_LIMITS).toEqual({ free: 0, basic: 20, pro: 100, ultimate: 200 });
   });
   it("matches the signed-off numbers-per-rotator limits (Free-trial restructure: free is 0)", () => {
-    expect(NUMBERS_PER_ROTATOR_LIMITS).toEqual({ free: 0, basic: 3, pro: 10, ultimate: 20 });
+    expect(NUMBERS_PER_ROTATOR_LIMITS).toEqual({ free: 0, basic: 10, pro: 50, ultimate: 100 });
   });
   it("ad links are only offered on Growth and Agency", () => {
     expect(AD_LINKS_AVAILABLE).toEqual({ free: false, basic: false, pro: true, ultimate: true });
@@ -111,8 +111,8 @@ describe("numbersPatchAllowed (grandfathering rule #2: numbers per rotator)", ()
 
 describe("nextPlanPoolHint (UX-1 step 2: create-link chooser upgrade copy)", () => {
   it("names the next plan and its link pool total", () => {
-    expect(nextPlanPoolHint("basic")).toBe("Growth for 20");
-    expect(nextPlanPoolHint("pro")).toBe("Agency for 55");
+    expect(nextPlanPoolHint("basic")).toBe("Growth for 100");
+    expect(nextPlanPoolHint("pro")).toBe("Agency for 200");
   });
   it("has nothing to suggest at Agency, or for free", () => {
     expect(nextPlanPoolHint("ultimate")).toBe("");
@@ -122,8 +122,8 @@ describe("nextPlanPoolHint (UX-1 step 2: create-link chooser upgrade copy)", () 
 
 describe("nextPlanNumbersHint (UX-1 step 3: rotator create form salespeople counter)", () => {
   it("names the next plan and its numbers-per-rotator total", () => {
-    expect(nextPlanNumbersHint("basic")).toBe("Growth allows 10");
-    expect(nextPlanNumbersHint("pro")).toBe("Agency allows 20");
+    expect(nextPlanNumbersHint("basic")).toBe("Growth allows 50");
+    expect(nextPlanNumbersHint("pro")).toBe("Agency allows 100");
   });
   it("has nothing to suggest at Agency, or for free", () => {
     expect(nextPlanNumbersHint("ultimate")).toBe("");

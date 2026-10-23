@@ -5,7 +5,7 @@ import Link from "next/link";
 import WazapCardPayment from "./WazapCardPayment";
 import PlanChangeAction from "./PlanChangeAction";
 import { PLAN_PRICES } from "@/lib/billing";
-import { normalizePlanKey, PLAN_DISPLAY_NAME } from "@/lib/plan-limits";
+import { normalizePlanKey, PLAN_DISPLAY_NAME, LINK_LIMITS, NUMBERS_PER_ROTATOR_LIMITS } from "@/lib/plan-limits";
 import { formatLocalPrice, useLocalization, usePricingText } from "@/app/pricing/local-price";
 
 const PLAN_RANK: Record<string, number> = { free: 0, basic: 1, pro: 2, ultimate: 3, business: 4 };
@@ -27,7 +27,7 @@ const PLANS = [
     name: "Solo",
     price: PLAN_PRICES.basic,
     description: "Route leads for one small sales team",
-    features: ["5 links — lead rotator, WhatsApp link or brand link", "Up to 3 salespeople per lead rotator", "Website button", "WhatsApp QR code — unlimited", "Unlimited routed leads", "Basic reports (last 30 days)", "Basic support"],
+    features: [`${LINK_LIMITS.basic} links — lead rotator, WhatsApp link or brand link`, `Up to ${NUMBERS_PER_ROTATOR_LIMITS.basic} salespeople per lead rotator`, "Website button", "WhatsApp QR code — unlimited", "Unlimited routed leads", "Basic reports (last 30 days)", "Basic support"],
     highlighted: false,
     salesOnly: false,
   },
@@ -36,7 +36,7 @@ const PLANS = [
     name: "Growth",
     price: PLAN_PRICES.pro,
     description: "Run multiple campaigns and sales teams",
-    features: ["20 links, any type — including ad links", "Up to 10 salespeople per lead rotator", "Everything in Solo, plus ad links", "Full reports — sources, campaigns & date range", "Audience — device, OS, country & city", "Standard support"],
+    features: [`${LINK_LIMITS.pro} links, any type — including ad links`, `Up to ${NUMBERS_PER_ROTATOR_LIMITS.pro} salespeople per lead rotator`, "Everything in Solo, plus ad links", "Full reports — sources, campaigns & date range", "Audience — device, OS, country & city", "Team outreach — 5,000 customers, 25 salespeople", "Standard support"],
     highlighted: true,
     salesOnly: false,
   },
@@ -45,7 +45,7 @@ const PLANS = [
     name: "Agency",
     price: PLAN_PRICES.ultimate,
     description: "High-volume routing for agencies and larger teams",
-    features: ["55 links, any type", "Up to 20 salespeople per lead rotator", "Everything in Growth", "Full reports", "Priority support"],
+    features: [`${LINK_LIMITS.ultimate} links, any type`, `Up to ${NUMBERS_PER_ROTATOR_LIMITS.ultimate} salespeople per lead rotator`, "Everything in Growth", "Full reports", "Team outreach — 50,000 customers, 300 salespeople", "Priority support"],
     highlighted: false,
     salesOnly: false,
   },

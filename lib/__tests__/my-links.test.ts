@@ -133,14 +133,14 @@ describe("mergeLinks marks every row paused the instant the plan/trial lapses, b
 
 describe("formatUsageLine / poolFullMessage", () => {
   it("formats the plan + usage line", () => {
-    expect(formatUsageLine("Solo", 3, 5)).toBe("Solo plan · 3 of 5 links used");
+    expect(formatUsageLine("Solo", 3, 20)).toBe("Solo plan · 3 of 20 links used");
   });
   it("suggests the next plan's total when the pool is full", () => {
-    expect(poolFullMessage("basic", 5, 5)).toBe("5 of 5 links used · Upgrade to Growth for 20.");
-    expect(poolFullMessage("pro", 20, 20)).toBe("20 of 20 links used · Upgrade to Agency for 55.");
+    expect(poolFullMessage("basic", 20, 20)).toBe("20 of 20 links used · Upgrade to Growth for 100.");
+    expect(poolFullMessage("pro", 100, 100)).toBe("100 of 100 links used · Upgrade to Agency for 200.");
   });
   it("has no upgrade to suggest at Agency's limit", () => {
-    expect(poolFullMessage("ultimate", 55, 55)).toBe("55 of 55 links used.");
+    expect(poolFullMessage("ultimate", 200, 200)).toBe("200 of 200 links used.");
   });
   it("free/no plan points at choosing a plan instead", () => {
     expect(poolFullMessage("free", 0, 0)).toBe("0 of 0 links used · Choose a plan to turn your links back on.");

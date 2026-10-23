@@ -59,6 +59,9 @@ export type AssetDirectoryEntry = {
    * with lib/salesperson-names.ts's salespersonName(), which tolerates
    * non-object/invalid values. */
   numberNames?: unknown;
+  /** Rotator only: digits-only numbers the owner paused individually (see
+   * RotatorLink.pausedNumbers / lib/rotator-routing.ts). */
+  pausedNumbers?: string[];
 };
 
 /**
@@ -71,7 +74,7 @@ export async function getAssetDirectory(ownerId: string) {
   const [rotators, shortLinks, adLinks] = await Promise.all([
     prisma.rotatorLink.findMany({
       where: { userId: ownerId },
-      select: { id: true, name: true, code: true, numbers: true, numberNames: true, totalClicks: true, planPausedAt: true },
+      select: { id: true, name: true, code: true, numbers: true, numberNames: true, pausedNumbers: true, totalClicks: true, planPausedAt: true },
       orderBy: { createdAt: "desc" },
     }),
     prisma.shortLink.findMany({
@@ -88,7 +91,7 @@ export async function getAssetDirectory(ownerId: string) {
 
   const base = originBase();
   const index = new Map<string, AssetDirectoryEntry>();
-  for (const r of rotators) index.set(r.id, { type: "rotator", typeLabel: TYPE_LABELS.rotator, name: r.name, publicUrl: `${base}/r/${r.code}`, numberNames: r.numberNames });
+  for (const r of rotators) index.set(r.id, { type: "rotator", typeLabel: TYPE_LABELS.rotator, name: r.name, publicUrl: `${base}/r/${r.code}`, numberNames: r.numberNames, pausedNumbers: r.pausedNumbers });
   for (const s of shortLinks) index.set(s.id, { type: "short_link", typeLabel: TYPE_LABELS.short_link, name: s.name, publicUrl: `${base}/w/${s.code}` });
   for (const a of adLinks) index.set(a.id, { type: "ad_link", typeLabel: TYPE_LABELS.ad_link, name: a.name, publicUrl: `${base}/a/${a.id}` });
 

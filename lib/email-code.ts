@@ -6,7 +6,14 @@ import { sendEmail, renderEmailCodeEmail } from "./email";
 // Passwordless sign-in and step-up confirmation via a 6-digit email code.
 // Codes are single-use, expire after 10 minutes, allow 5 wrong guesses, and
 // only an HMAC of the code is stored.
-export type EmailCodePurpose = "login" | "confirm";
+//
+// FEAT-QUEUE reuses this whole module for a team-outreach salesperson's
+// first-device login code, via the templated `outreach:${memberId}` purpose
+// (lib/outreach/login.ts) - the memberId is folded into the purpose string
+// so two different members who happen to share the same stored email never
+// share a code or a rate-limit bucket. This never changes behaviour for the
+// plain "login"/"confirm" purposes used by normal customer sign-in.
+export type EmailCodePurpose = "login" | "confirm" | `outreach:${string}`;
 
 export const EMAIL_CODE_TTL_MINUTES = 10;
 const MAX_ATTEMPTS = 5;
@@ -57,7 +64,11 @@ export async function issueEmailCode(email: string, purpose: EmailCodePurpose, i
     return { ok: true };
   }
 
-  const subject = purpose === "login" ? `${code} is your Wazap sign-in code` : `${code} is your Wazap confirmation code`;
+  const subject = purpose === "login"
+    ? `${code} is your Wazap sign-in code`
+    : purpose.startsWith("outreach:")
+      ? `${code} is your Wazap team code`
+      : `${code} is your Wazap confirmation code`;
   const sent = await sendEmail({ to: email, subject, html: renderEmailCodeEmail({ code, purpose, minutes: EMAIL_CODE_TTL_MINUTES }), channel: "support" });
   if (!sent.accepted) {
     await prisma.emailCode.update({ where: { id: record.id }, data: { usedAt: new Date() } });

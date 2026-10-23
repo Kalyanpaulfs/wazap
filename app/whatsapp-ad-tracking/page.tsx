@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Megaphone } from "lucide-react";
 import ProductLandingPage, { type ProductLandingContent } from "@/app/components/ProductLandingPage";
+import { LINK_LIMITS } from "@/lib/plan-limits";
 
 export const metadata: Metadata = {
   title: "WhatsApp Ad Tracking — See Which Ad Brings Clicks",
@@ -56,7 +57,7 @@ const content: ProductLandingContent = {
     "Works alongside the free WhatsApp link builder and QR maker for anything not tied to a specific campaign.",
   ],
   qa: [
-    { q: "How many ad links can I create?", a: "Ad links start on Growth ($19) and Agency ($49). They share your link total with rotators and brand links: 20 links on Growth, 55 on Agency. Solo doesn't include ad links." },
+    { q: "How many ad links can I create?", a: `Ad links start on Growth ($19) and Agency ($49). They share your link total with rotators and brand links: ${LINK_LIMITS.pro} links on Growth, ${LINK_LIMITS.ultimate} on Agency. Solo doesn't include ad links.` },
     { q: "What do source, medium and campaign mean?", a: "They're the fields you fill in when creating the link — for example source=facebook, medium=cpc, campaign=summer-sale — so Reports can tell campaigns apart." },
     { q: "Can I see full reports with dates?", a: "Growth and Agency include full reports with sources, campaigns and a date range. Solo includes basic reports; Free doesn't include reports." },
     { q: "Does this replace my ad platform's own analytics?", a: "No — it tracks what happens after someone clicks through to WhatsApp, which your ad platform usually can't see." },

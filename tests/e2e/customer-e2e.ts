@@ -431,9 +431,9 @@ async function main() {
     // the one exception: owner decision, free and unlimited for every plan
     // (including free/anonymous) - see lib/plan-limits.ts WIDGET_AVAILABLE.
     { key: "free", linkLimit: 0, numbersLimit: 0, adAvailable: false, widget: true },
-    { key: "basic", linkLimit: 5, numbersLimit: 3, adAvailable: false, widget: true },
-    { key: "pro", linkLimit: 20, numbersLimit: 10, adAvailable: true, widget: true },
-    { key: "ultimate", linkLimit: 55, numbersLimit: 20, adAvailable: true, widget: true },
+    { key: "basic", linkLimit: 20, numbersLimit: 10, adAvailable: false, widget: true },
+    { key: "pro", linkLimit: 100, numbersLimit: 50, adAvailable: true, widget: true },
+    { key: "ultimate", linkLimit: 200, numbersLimit: 100, adAvailable: true, widget: true },
   ];
 
   const planJars = new Map<string, Jar>();
@@ -624,48 +624,52 @@ async function main() {
     assertTrue(qrResult.text.includes("/links/new"), "logged-in /qr should show the 'Create a link' back-link");
   });
 
-  // --- D. Solo: create 5 mixed links through the real POST APIs (not direct
-  // DB inserts), confirm all 5 succeed, then the 6th of either type is
-  // refused - and ad links are refused outright on Solo regardless of room.
-  await check("D", "solo: creating 5 mixed links (rotators + short links) via the real APIs fills the pool, 6th of either type refused", async () => {
+  // --- D. Solo: create linkLimit mixed links through the real POST APIs (not
+  // direct DB inserts), confirm all of them succeed, then one more of either
+  // type is refused - and ad links are refused outright on Solo regardless
+  // of room.
+  await check("D", "solo: creating a full pool of mixed links (rotators + short links) via the real APIs fills the pool, one more of either type refused", async () => {
     const jar = planJars.get("basic");
     const user = planUsers.get("basic")!;
     assertTrue(!!jar, "need a logged-in solo user");
+    const basicLimit = PLANS.find((p) => p.key === "basic")!.linkLimit;
+    const rotatorCount = Math.ceil(basicLimit / 2);
+    const shortLinkCount = basicLimit - rotatorCount;
     const createdIds: Array<{ model: "rotatorLink" | "shortLink"; id: string }> = [];
     try {
-      for (let i = 0; i < 3; i++) {
+      for (let i = 0; i < rotatorCount; i++) {
         const r = await http(jar!, "/api/rotator", {
           method: "POST",
           headers: await getOrigin(jar),
           body: JSON.stringify({ name: `mix rotator ${i}`, numbers: [`91980010${String(i).padStart(4, "0")}`] }),
         });
-        assertEqual(r.status, 200, `rotator ${i}/5 should be created: ${JSON.stringify(r.body)}`);
+        assertEqual(r.status, 200, `rotator ${i}/${rotatorCount} should be created: ${JSON.stringify(r.body)}`);
         createdIds.push({ model: "rotatorLink", id: r.body.id });
       }
-      for (let i = 0; i < 2; i++) {
+      for (let i = 0; i < shortLinkCount; i++) {
         const r = await http(jar!, "/api/shortlinks", {
           method: "POST",
           headers: await getOrigin(jar),
           body: JSON.stringify({ name: `mix shortlink ${i}`, phone: `91980011${String(i).padStart(4, "0")}` }),
         });
-        assertEqual(r.status, 200, `short link ${i}/5 should be created: ${JSON.stringify(r.body)}`);
+        assertEqual(r.status, 200, `short link ${i}/${shortLinkCount} should be created: ${JSON.stringify(r.body)}`);
         createdIds.push({ model: "shortLink", id: r.body.id });
       }
-      assertEqual(createdIds.length, 5, "5 mixed links should now exist, filling Solo's pool of 5");
+      assertEqual(createdIds.length, basicLimit, `${basicLimit} mixed links should now exist, filling Solo's pool of ${basicLimit}`);
 
-      const sixthRotator = await http(jar!, "/api/rotator", {
+      const oneMoreRotator = await http(jar!, "/api/rotator", {
         method: "POST",
         headers: await getOrigin(jar),
-        body: JSON.stringify({ name: "6th", numbers: ["919800129999"] }),
+        body: JSON.stringify({ name: "one too many", numbers: ["919800129999"] }),
       });
-      assertEqual(sixthRotator.status, 403, "6th link (rotator) should be refused once the pool of 5 is full");
+      assertEqual(oneMoreRotator.status, 403, `one more link (rotator) should be refused once the pool of ${basicLimit} is full`);
 
-      const sixthShortlink = await http(jar!, "/api/shortlinks", {
+      const oneMoreShortlink = await http(jar!, "/api/shortlinks", {
         method: "POST",
         headers: await getOrigin(jar),
-        body: JSON.stringify({ name: "6th", phone: "919800139999" }),
+        body: JSON.stringify({ name: "one too many", phone: "919800139999" }),
       });
-      assertEqual(sixthShortlink.status, 403, "6th link (short link) should be refused once the pool of 5 is full");
+      assertEqual(oneMoreShortlink.status, 403, `one more link (short link) should be refused once the pool of ${basicLimit} is full`);
 
       const adAttempt = await http(jar!, "/api/adlinks", {
         method: "POST",
@@ -713,13 +717,14 @@ async function main() {
   await check("D", "growth: PATCH adding a salesperson past the plan's numbers-per-rotator limit is refused; same-count reorder is allowed", async () => {
     const jar = planJars.get("pro");
     assertTrue(!!jar, "need a logged-in pro user");
-    const numbers = Array.from({ length: 10 }, (_, i) => `9198017${String(i).padStart(4, "0")}`); // pro's limit is 10
+    const proNumbersLimit = PLANS.find((p) => p.key === "pro")!.numbersLimit;
+    const numbers = Array.from({ length: proNumbersLimit }, (_, i) => `9198017${String(i).padStart(4, "0")}`); // pro's limit
     const createResult = await http(jar!, "/api/rotator", {
       method: "POST",
       headers: await getOrigin(jar),
       body: JSON.stringify({ name: "salespeople limit probe", numbers }),
     });
-    assertEqual(createResult.status, 200, `create with exactly 10 numbers should succeed: ${JSON.stringify(createResult.body)}`);
+    assertEqual(createResult.status, 200, `create with exactly ${proNumbersLimit} numbers should succeed: ${JSON.stringify(createResult.body)}`);
     const id = createResult.body.id as string;
     try {
       const reorderPatch = await http(jar!, "/api/rotator", {
@@ -734,7 +739,7 @@ async function main() {
         headers: await getOrigin(jar),
         body: JSON.stringify({ id, numbers: [...numbers, "919801799999"] }),
       });
-      assertEqual(overLimitPatch.status, 403, "PATCH adding an 11th number past Growth's limit of 10 should be refused");
+      assertEqual(overLimitPatch.status, 403, `PATCH adding one more number past Growth's limit of ${proNumbersLimit} should be refused`);
     } finally {
       await prisma.rotatorLink.deleteMany({ where: { id } });
     }
@@ -862,7 +867,8 @@ async function main() {
     const basicUser = planUsers.get("basic")!;
     const basicJar = planJars.get("basic");
     assertTrue(!!basicJar, "need a logged-in basic user");
-    const legacyNumbers = Array.from({ length: 5 }, (_, i) => `9198009${String(i).padStart(5, "0")}`); // 5 > basic's limit of 3
+    const basicNumbersLimit = PLANS.find((p) => p.key === "basic")!.numbersLimit;
+    const legacyNumbers = Array.from({ length: basicNumbersLimit + 1 }, (_, i) => `9198009${String(i).padStart(5, "0")}`); // one over basic's limit
     const legacy = await prisma.rotatorLink.create({
       data: { userId: basicUser.id, code: `E2ELEGACY${RUN}`, name: "legacy over-limit", numbers: legacyNumbers, fallbackNumber: legacyNumbers[0] },
     });
@@ -887,7 +893,7 @@ async function main() {
     const increasePatch = await http(basicJar!, "/api/rotator", {
       method: "PATCH",
       headers: await getOrigin(basicJar),
-      body: JSON.stringify({ id: legacy.id, numbers: legacyNumbers }), // back up to 5, > limit of 3
+      body: JSON.stringify({ id: legacy.id, numbers: legacyNumbers }), // back up past the plan limit
     });
     assertEqual(increasePatch.status, 403, "PATCH increasing the count past the plan limit should be refused");
   });
@@ -1200,7 +1206,7 @@ async function main() {
       // an un-paused link, however long ago their trial ended.
       const trialEndedUser = await createDbUser("trial-ended-pause", {
         plan: "free",
-        trialPlan: "basic", // Solo-level link pool (5) while the trial ran
+        trialPlan: "basic", // Solo-level link pool while the trial ran
         trialStartedAt: new Date(Date.now() - 4 * 86_400_000),
         trialEndsAt: new Date(Date.now() - 1 * 86_400_000),
       });

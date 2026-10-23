@@ -473,11 +473,17 @@ export default async function ResultsPage({
                             <div className="flex items-center justify-between gap-3 text-sm">
                               {row.salespersonName ? (
                                 <span>
-                                  <span className="block font-semibold text-white">{row.salespersonName}</span>
+                                  <span className="block font-semibold text-white">
+                                    {row.salespersonName}
+                                    {row.paused && <span className="ml-2 rounded-full border border-amber-400/30 bg-amber-400/10 px-2 py-0.5 text-[10px] font-semibold text-amber-300">Paused</span>}
+                                  </span>
                                   <span className="block font-mono text-xs text-slate-500">+{row.destination}</span>
                                 </span>
                               ) : (
-                                <span className="font-mono text-slate-300">+{row.destination}</span>
+                                <span className="font-mono text-slate-300">
+                                  +{row.destination}
+                                  {row.paused && <span className="ml-2 rounded-full border border-amber-400/30 bg-amber-400/10 px-2 py-0.5 text-[10px] font-semibold text-amber-300">Paused</span>}
+                                </span>
                               )}
                               <div className="flex items-center gap-2">
                                 <strong className="text-white">

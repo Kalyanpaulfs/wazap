@@ -10,7 +10,7 @@ const items=[
  ['Customers','/admin/crm/customers',Users,(p:string)=>p.startsWith('/admin/crm/customers')||p.startsWith('/admin/crm/billing')],
  ['Support','/admin/crm/support',MessageCircle,(p:string)=>p.startsWith('/admin/crm/support')],
  ['Email','/admin/crm/broadcast',Mail,(p:string)=>p.startsWith('/admin/crm/broadcast')||p==='/admin/crm'],
- ['Reports','/admin/crm/reports',BarChart3,(p:string)=>p.startsWith('/admin/crm/reports')||p.startsWith('/admin/crm/health')],
+ ['Reports','/admin/crm/reports',BarChart3,(p:string)=>p.startsWith('/admin/crm/reports')||p.startsWith('/admin/crm/health')||p.startsWith('/admin/crm/short-links')],
 ] as const;
 // Server-side count of open/investigating support tickets, polled for the
 // red badge next to Support. Kept to its own tiny endpoint (see

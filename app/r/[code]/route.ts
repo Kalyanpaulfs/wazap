@@ -6,6 +6,7 @@ import { rateLimit } from "@/lib/rate-limit";
 import { requestIp } from "@/lib/request-ip";
 import { canRouteLinks, OWNER_ENTITLEMENT_SELECT } from "@/lib/router-entitlements";
 import { captureAudience } from "@/lib/audience-capture";
+import { allNumbersPaused, pickRotatorNumber } from "@/lib/rotator-routing";
 
 // Bot protection (FEAT-PLAN-LIMITS): a per-IP+code speed limit of ~10 hits/
 // minute. A real visitor is never blocked from the redirect itself — once
@@ -18,7 +19,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ code: st
   const normalizedCode = code.toUpperCase();
   const ip = requestIp(req.headers);
   const withinSpeedLimit = rateLimit(`redirect:r:${normalizedCode}:${ip}`, 10, 60_000);
-  let rotator: { id?: string; userId?: string; name?: string; code: string; numbers: string[]; fallbackNumber?: string | null; message?: string | null; currentIdx: number; planPausedAt?: Date | null; pausedAt?: Date | null } | null = null;
+  let rotator: { id?: string; userId?: string; name?: string; code: string; numbers: string[]; pausedNumbers?: string[]; fallbackNumber?: string | null; message?: string | null; currentIdx: number; planPausedAt?: Date | null; pausedAt?: Date | null } | null = null;
   let ownerBlocked = false;
   try {
     const row = await Promise.race([
@@ -33,12 +34,16 @@ export async function GET(req: Request, { params }: { params: Promise<{ code: st
       // pause-sync cron has run and regardless of the speed limit/metering
       // availability below.
       ownerBlocked = !canRouteLinks(owner);
+      // Every salesperson paused behaves just like a manually-paused link
+      // (see the pausedAt check below) - never leave THAT cached for the
+      // outage fallback either.
+      const allPaused = allNumbersPaused(link.numbers, link.pausedNumbers);
       // Never leave a paused/blocked rotator cached for the outage fallback
       // - this covers BOTH the plan pause and the customer's own manual
       // pause (pausedAt), so the degraded-cache path can never serve a
       // paused link either.
-      if (link.planPausedAt || link.pausedAt || ownerBlocked) await removeCachedRoute(link.code);
-      else await cacheRoute({ code: link.code, numbers: link.numbers, fallbackNumber: link.fallbackNumber, message: link.message, currentIdx: link.currentIdx }).catch(() => {});
+      if (link.planPausedAt || link.pausedAt || ownerBlocked || allPaused) await removeCachedRoute(link.code);
+      else await cacheRoute({ code: link.code, numbers: link.numbers, pausedNumbers: link.pausedNumbers, fallbackNumber: link.fallbackNumber, message: link.message, currentIdx: link.currentIdx }).catch(() => {});
     }
   } catch {
     rotator = await readCachedRoute(normalizedCode);
@@ -52,11 +57,20 @@ export async function GET(req: Request, { params }: { params: Promise<{ code: st
   // metering/counting below.
   if (rotator.pausedAt) redirect("/link-paused?type=rotator&reason=owner");
   if (ownerBlocked) redirect(`/router-limit?code=${encodeURIComponent(normalizedCode)}`);
+  // Every salesperson paused = the link is paused: same page and same "never
+  // count a click" as the owner's manual link-level pause above. The hidden
+  // fallbackNumber (set to the first salesperson on create) is NOT used here.
+  if (allNumbersPaused(rotator.numbers, rotator.pausedNumbers || [])) {
+    redirect("/link-paused?type=rotator&reason=owner");
+  }
 
   const validNumbers = rotator.numbers.map(number => number.replace(/\D/g, "")).filter(number => number.length >= 8);
   const fallback = (rotator.fallbackNumber || process.env.WAZAP_DEFAULT_WHATSAPP_NUMBER || validNumbers[0] || "").replace(/\D/g, "");
   if (!validNumbers.length && !fallback) redirect("/");
-  let number=validNumbers[rotator.currentIdx % (validNumbers.length||1)]||fallback;
+  // Paused numbers are skipped (lib/rotator-routing.ts) - this is just the
+  // best-effort guess before the real atomic claim below overwrites it, and
+  // the only number actually used on the degraded-cache path (DB down).
+  let number=pickRotatorNumber(rotator.numbers, rotator.pausedNumbers||[], rotator.currentIdx)||fallback;
   let blocked=false;
   if(rotator.id&&rotator.userId){
     if(withinSpeedLimit){

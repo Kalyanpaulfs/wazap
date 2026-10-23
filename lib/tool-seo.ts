@@ -35,4 +35,8 @@ export const TOOL_SEO: Record<string, ToolSeoData> = {
     name: "WhatsApp Branded Short Links", href: "/tools/shortlink",
     appDesc: "Branded short links that open a WhatsApp chat, with live click analytics.",
   },
+  "link-shortener": {
+    name: "Link Shortener", href: "/tools/link-shortener",
+    appDesc: "Shorten any website link, with a QR code and click counts. Free and unlimited.",
+  },
 };

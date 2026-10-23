@@ -1,3 +1,5 @@
+import { LINK_LIMITS } from "./plan-limits";
+
 export type GrowthArticle = { category: string; slug: string; reviewedAt?: string; title: string; description: string; sections: { heading: string; paragraphs: string[] }[]; related: string[]; sources: { label: string; url: string }[] };
 export const growthArticles: GrowthArticle[] = [
   {
@@ -81,7 +83,7 @@ export const growthArticles: GrowthArticle[] = [
       {
         "heading": "Choose a plan for the workflow you manage",
         "paragraphs": [
-          "The public plans are Solo $9/month, Growth $19/month and Agency $49/month. Agency includes up to 55 links and a shared workspace for up to five members; confirm current details on the pricing page before proposing a package.",
+          `The public plans are Solo $9/month, Growth $19/month and Agency $49/month. Agency includes up to ${LINK_LIMITS.ultimate} links and a shared workspace for up to five members; confirm current details on the pricing page before proposing a package.`,
           "Every account gets a 3-day free trial with 100 routed handoffs across all rotators. After the trial, a paid plan is required to keep routing. Never promise a client autonomous message sending or delivery confirmation from a simple routing link."
         ]
       }
@@ -292,7 +294,7 @@ export const growthArticles: GrowthArticle[] = [
         "heading": "Compare paid plans and the operational workflow",
         "paragraphs": [
           "At review, WasepJe advertised Pro at $7.50 per month when billed annually at $90. Wazap’s public monthly plans are Solo $9, Growth $19 and Agency $49. Compare billing intervals and cancellation terms rather than treating these headline prices as identical offers.",
-          "For Wazap, evaluate the router alongside links, QR codes and optional workspace workflows. Agency includes up to 55 links and a shared workspace for up to five members. Choose additional features only when you need them."
+          `For Wazap, evaluate the router alongside links, QR codes and optional workspace workflows. Agency includes up to ${LINK_LIMITS.ultimate} links and a shared workspace for up to five members. Choose additional features only when you need them.`
         ]
       },
       {

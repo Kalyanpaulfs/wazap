@@ -22,29 +22,29 @@ describe("describeLinkPoolCreateCheck (pure pool create-check, UX-1 step 1)", ()
   });
 
   it("allows creating while under the pool limit, any mix of kinds", () => {
-    expect(describeLinkPoolCreateCheck("basic", "rotator", 4, "Solo")).toEqual({ ok: true });
-    expect(describeLinkPoolCreateCheck("basic", "shortlink", 4, "Solo")).toEqual({ ok: true });
+    expect(describeLinkPoolCreateCheck("basic", "rotator", 19, "Solo")).toEqual({ ok: true });
+    expect(describeLinkPoolCreateCheck("basic", "shortlink", 19, "Solo")).toEqual({ ok: true });
   });
 
   it("blocks once the shared pool is full, suggesting the next plan up", () => {
-    expect(describeLinkPoolCreateCheck("basic", "rotator", 5, "Solo")).toEqual({
+    expect(describeLinkPoolCreateCheck("basic", "rotator", 20, "Solo")).toEqual({
       ok: false,
-      error: "You've used 5 of 5 links on your plan. Upgrade to Growth for 20.",
+      error: "You've used 20 of 20 links on your plan. Upgrade to Growth for 100.",
     });
-    expect(describeLinkPoolCreateCheck("pro", "shortlink", 20, "Growth")).toEqual({
+    expect(describeLinkPoolCreateCheck("pro", "shortlink", 100, "Growth")).toEqual({
       ok: false,
-      error: "You've used 20 of 20 links on your plan. Upgrade to Agency for 55.",
+      error: "You've used 100 of 100 links on your plan. Upgrade to Agency for 200.",
     });
   });
 
   it("blocks at Agency's limit with no further upgrade to suggest", () => {
-    expect(describeLinkPoolCreateCheck("ultimate", "rotator", 55, "Agency")).toEqual({
+    expect(describeLinkPoolCreateCheck("ultimate", "rotator", 200, "Agency")).toEqual({
       ok: false,
-      error: "You've used 55 of 55 links on your plan.",
+      error: "You've used 200 of 200 links on your plan.",
     });
   });
 
   it("the pool is shared across kinds: a rotator-only count still blocks a new short link", () => {
-    expect(describeLinkPoolCreateCheck("basic", "shortlink", 5, "Solo").ok).toBe(false);
+    expect(describeLinkPoolCreateCheck("basic", "shortlink", 20, "Solo").ok).toBe(false);
   });
 });

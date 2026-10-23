@@ -106,6 +106,9 @@ export type SalespersonDestinationRow = {
   count: number;
   pct: number;
   change: Change;
+  /** True when the owner has individually paused this salesperson - they
+   * still show up here with their past numbers, just flagged. */
+  paused: boolean;
 };
 export type SalespersonGroup = { id: string; name: string; curTotal: number; prevTotal: number; destinations: SalespersonDestinationRow[] };
 export type LinkOption = { value: string; label: string; typeLabel: string };
@@ -271,6 +274,7 @@ export async function getResultsPageData(
     .map((id) => {
       const name = linkMeta.get(id)?.name ?? "Lead rotator";
       const numberNames = assetIndex.get(id)?.numberNames;
+      const pausedNumbers = assetIndex.get(id)?.pausedNumbers ?? [];
       const curRows = currentStarts.filter((item) => item.assetType === "rotator" && item.assetId === id);
       const prevRows = previousStarts.filter((item) => item.assetType === "rotator" && item.assetId === id);
       const curTotal = curRows.length;
@@ -287,6 +291,7 @@ export async function getResultsPageData(
             count,
             pct: computeShare(count, curTotal),
             change: computeChange(count, prevCount),
+            paused: pausedNumbers.includes(destination),
           };
         })
         .sort((a, b) => b.count - a.count);

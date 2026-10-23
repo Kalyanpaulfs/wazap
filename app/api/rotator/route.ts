@@ -11,6 +11,7 @@ import { checkLinkPoolForCreate } from "@/lib/link-pool";
 import { accountPlanLabel } from "@/lib/entitlements";
 import { normalizeNumberNames } from "@/lib/salesperson-names";
 import { isPlausibleE164Digits } from "@/lib/phone";
+import { allNumbersPaused } from "@/lib/rotator-routing";
 
 function genCode() { return randomBytes(5).toString("hex").toUpperCase(); }
 async function uniqueCode(): Promise<string> {
@@ -90,7 +91,7 @@ export async function POST(req: Request) {
   const cleanNumberNames = normalizeNumberNames(numberNames, cleanNumbers);
   const code = await uniqueCode();
   const rotator = await prisma.rotatorLink.create({ data: { userId, name: String(name).slice(0, 100), numbers: cleanNumbers, numberNames: cleanNumberNames, fallbackNumber: cleanFallback.length >= 8 ? cleanFallback : cleanNumbers[0], message: typeof message === "string" ? message.slice(0, 2000) : null, code } });
-  await cacheRoute({ code: rotator.code, numbers: rotator.numbers, fallbackNumber: rotator.fallbackNumber, currentIdx: rotator.currentIdx, message: rotator.message });
+  await cacheRoute({ code: rotator.code, numbers: rotator.numbers, pausedNumbers: rotator.pausedNumbers, fallbackNumber: rotator.fallbackNumber, currentIdx: rotator.currentIdx, message: rotator.message });
   await recordFunnelEvent("first_tool_success", { userId, source: "rotator" });
   return NextResponse.json(rotator);
 }
@@ -117,7 +118,7 @@ export async function PATCH(req: Request) {
   if (!body || typeof body.id !== "string") return NextResponse.json({ error: "Choose a lead rotator." }, { status: 400 });
   const existing = await prisma.rotatorLink.findFirst({ where: { id: body.id, userId } });
   if (!existing) return NextResponse.json({ error: "Lead rotator not found." }, { status: 404 });
-  const data: { name?: string; numbers?: string[]; numberNames?: Record<string, string>; fallbackNumber?: string; message?: string; pausedAt?: Date | null } = {};
+  const data: { name?: string; numbers?: string[]; numberNames?: Record<string, string>; pausedNumbers?: string[]; fallbackNumber?: string; message?: string; pausedAt?: Date | null } = {};
   // Manual pause (owner feature, distinct from planPausedAt): customer
   // controls this themselves, independent of the plan-pause engine, which
   // never reads/writes this field. A paused rotator still counts toward the
@@ -160,6 +161,24 @@ export async function PATCH(req: Request) {
     // that belonged to numbers no longer on this rotator.
     data.numberNames = normalizeNumberNames(existing.numberNames, data.numbers);
   }
+  // Per-salesperson pause/resume (distinct from `paused` above, which pauses
+  // the WHOLE link): start from the existing pausedNumbers, pruned to
+  // whatever numbers this request leaves the rotator with (mirrors the
+  // numberNames pruning above - e.g. editing numbers drops a removed
+  // salesperson's pause along with their name), then apply one toggle if
+  // asked for.
+  if (data.numbers || body.pauseNumber !== undefined) {
+    const effectiveNumbers = data.numbers || existing.numbers;
+    let pausedNumbers = existing.pausedNumbers.filter((n) => effectiveNumbers.includes(n));
+    if (body.pauseNumber !== undefined) {
+      if (typeof body.pauseNumber !== "string") return NextResponse.json({ error: "Invalid number." }, { status: 400 });
+      if (typeof body.numberPaused !== "boolean") return NextResponse.json({ error: "Invalid paused value." }, { status: 400 });
+      const digits = body.pauseNumber.replace(/\D/g, "");
+      if (!digits || !effectiveNumbers.includes(digits)) return NextResponse.json({ error: "That number isn't on this rotator." }, { status: 400 });
+      pausedNumbers = body.numberPaused ? [...new Set([...pausedNumbers, digits])] : pausedNumbers.filter((n) => n !== digits);
+    }
+    data.pausedNumbers = pausedNumbers;
+  }
   if (body.message !== undefined) {
     if (typeof body.message !== "string" || body.message.length > 2000) return NextResponse.json({ error: "Messages may contain up to 2,000 characters." }, { status: 400 });
     data.message = body.message;
@@ -172,10 +191,12 @@ export async function PATCH(req: Request) {
   // On pause, drop the cache entry and stop (never leave a paused rotator
   // servable via the degraded-cache fallback). On resume (or any other
   // edit), re-cache as before - but only when it's actually live; a
-  // rotator that's still plan-paused must not get re-cached either.
+  // rotator that's still plan-paused, or has every salesperson paused, must
+  // not get re-cached either.
   await removeCachedRoute(updated.code);
-  if (!updated.pausedAt && !updated.planPausedAt) {
-    await cacheRoute({ code: updated.code, numbers: updated.numbers, fallbackNumber: updated.fallbackNumber, message: updated.message, currentIdx: updated.currentIdx });
+  const allPaused = allNumbersPaused(updated.numbers, updated.pausedNumbers);
+  if (!updated.pausedAt && !updated.planPausedAt && !allPaused) {
+    await cacheRoute({ code: updated.code, numbers: updated.numbers, pausedNumbers: updated.pausedNumbers, fallbackNumber: updated.fallbackNumber, message: updated.message, currentIdx: updated.currentIdx });
   }
   return NextResponse.json(updated);
 }

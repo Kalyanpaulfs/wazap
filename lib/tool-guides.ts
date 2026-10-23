@@ -68,4 +68,17 @@ export const TOOL_GUIDES: Record<string, ToolGuide> = {
       "qr"
     ]
   },
+  "link-shortener": {
+    "title": "How to shorten a website link",
+    "steps": [
+      "Paste any website address (not a WhatsApp number) and, if you like, pick a custom name instead of a random code.",
+      "Sign in to create the short link - it only takes a moment, and your free account also saves every link you make.",
+      "Copy the short link or download its QR code, then share it. Clicks are counted automatically."
+    ],
+    "note": "Free and unlimited within fair-use limits. Every link is checked against Google Safe Browsing and against a short block-list before it's created, to keep wazap.lt links trustworthy.",
+    "related": [
+      "qr",
+      "shortlink"
+    ]
+  },
 };

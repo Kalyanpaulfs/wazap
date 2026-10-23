@@ -1,4 +1,4 @@
-import { Users, MessageCircle, Fingerprint, Megaphone, QrCode, Globe2, Type, MapPin, type LucideIcon } from "lucide-react";
+import { Users, MessageCircle, Fingerprint, Megaphone, QrCode, Globe2, Type, MapPin, Send, Scissors, type LucideIcon } from "lucide-react";
 import type { ToolIconKey } from "@/lib/tool-catalog";
 
 // Maps lib/tool-catalog.ts's string iconKey to an actual lucide icon -
@@ -13,4 +13,6 @@ export const TOOL_ICONS: Record<ToolIconKey, LucideIcon> = {
   globe: Globe2,
   type: Type,
   "map-pin": MapPin,
+  send: Send,
+  scissors: Scissors,
 };

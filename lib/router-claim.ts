@@ -2,7 +2,8 @@ import {prisma} from "./prisma";
 import {ensurePersonalWorkspace} from "./workspaces";
 import {routerQuota, TRIAL_METERED_ASSET_TYPES} from "./router-entitlements";
 import {clean, type AudienceFields} from "./conversations";
-type Router={id:string;userId:string;name?:string;code:string;numbers:string[];fallbackNumber?:string|null;message?:string|null;currentIdx:number};
+import {pickRotatorNumber} from "./rotator-routing";
+type Router={id:string;userId:string;name?:string;code:string;numbers:string[];pausedNumbers?:string[];fallbackNumber?:string|null;message?:string|null;currentIdx:number};
 export async function claimRouterHandoff(router:Router,now=new Date(),audience?:AudienceFields){
  const membership=await ensurePersonalWorkspace(router.userId);
  return prisma.$transaction(async tx=>{
@@ -17,7 +18,11 @@ export async function claimRouterHandoff(router:Router,now=new Date(),audience?:
   const fallback=(router.fallbackNumber||numbers[0]||process.env.WAZAP_DEFAULT_WHATSAPP_NUMBER||"").replace(/\D/g,"");
   if(!numbers.length&&!fallback)return {allowed:false as const,invalid:true};
   const claimed=await tx.rotatorLink.update({where:{id:router.id},data:{currentIdx:{increment:1},totalClicks:{increment:1}},select:{currentIdx:true}});
-  const destination=numbers.length?numbers[(claimed.currentIdx-1)%numbers.length]:fallback;
+  // Paused numbers are skipped - rotation stays fair among whatever's left
+  // (lib/rotator-routing.ts). Every number paused = link paused:
+  // app/r/[code]/route.ts redirects to the "paused" page before reaching
+  // here, so fallback only covers a pause landing mid-click.
+  const destination=pickRotatorNumber(router.numbers,router.pausedNumbers||[],claimed.currentIdx-1)||fallback;
   await tx.conversationStart.create({data:{userId:router.userId,workspaceId:membership.workspaceId,assetType:"rotator",assetId:router.id,assetName:router.name||null,source:"Wazap rotator",destination,createdAt:now,device:clean(audience?.device,20),os:clean(audience?.os,20),country:clean(audience?.country,2),city:clean(audience?.city,80)}});
   return {allowed:true as const,destination};
  },{timeout:3000});

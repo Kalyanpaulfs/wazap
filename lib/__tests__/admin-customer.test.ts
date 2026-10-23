@@ -51,8 +51,8 @@ describe("admin-customer helpers", () => {
         shortLinks: 1,
         adLinks: 0,
       });
-      expect(res.links).toEqual({ current: 3, limit: 5, label: "3 of 5" });
-      expect(res.maxSalespeoplePerRotator).toEqual({ current: 3, limit: 3, label: "3 of 3" });
+      expect(res.links).toEqual({ current: 3, limit: 20, label: "3 of 20" });
+      expect(res.maxSalespeoplePerRotator).toEqual({ current: 3, limit: 10, label: "3 of 10" });
       expect(res.adLinksAvailable).toEqual({ available: false, label: "Not available on this plan" });
       expect(res.widget.available).toBe(true);
     });
@@ -64,8 +64,8 @@ describe("admin-customer helpers", () => {
         shortLinks: 8,
         adLinks: 3,
       });
-      expect(res.links).toEqual({ current: 16, limit: 55, label: "16 of 55" });
-      expect(res.maxSalespeoplePerRotator).toEqual({ current: 12, limit: 20, label: "12 of 20" });
+      expect(res.links).toEqual({ current: 16, limit: 200, label: "16 of 200" });
+      expect(res.maxSalespeoplePerRotator).toEqual({ current: 12, limit: 100, label: "12 of 100" });
       expect(res.adLinksAvailable).toEqual({ available: true, label: "Available" });
       expect(res.widget.available).toBe(true);
     });

@@ -64,12 +64,12 @@ describe("buildRotatorNumbers", () => {
 
 describe("salespeopleCounterText", () => {
   it("includes the upgrade hint when not on the top plan", () => {
-    expect(salespeopleCounterText(2, 3, "Solo", "Growth allows 10")).toBe(
-      "2 of 3 salespeople (Solo). Need more? Growth allows 10.",
+    expect(salespeopleCounterText(2, 10, "Solo", "Growth allows 50")).toBe(
+      "2 of 10 salespeople (Solo). Need more? Growth allows 50.",
     );
   });
   it("omits the upgrade hint on the top plan", () => {
-    expect(salespeopleCounterText(5, 20, "Agency", "")).toBe("5 of 20 salespeople (Agency).");
+    expect(salespeopleCounterText(5, 100, "Agency", "")).toBe("5 of 100 salespeople (Agency).");
   });
 });
 

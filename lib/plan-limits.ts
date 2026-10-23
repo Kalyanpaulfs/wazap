@@ -67,10 +67,10 @@ export const PLAN_DISPLAY_NAME: Record<PlanKey, string> = {
 
 // Shared pool: lead rotators + brand (short) links + ad links, any mix, per
 // user. See lib/link-pool.ts countLiveLinks.
-export const LINK_LIMITS: Record<PlanKey, number> = { free: 0, basic: 5, pro: 20, ultimate: 55 };
+export const LINK_LIMITS: Record<PlanKey, number> = { free: 0, basic: 20, pro: 100, ultimate: 200 };
 
 // Numbers (salespeople) allowed per rotator.
-export const NUMBERS_PER_ROTATOR_LIMITS: Record<PlanKey, number> = { free: 0, basic: 3, pro: 10, ultimate: 20 };
+export const NUMBERS_PER_ROTATOR_LIMITS: Record<PlanKey, number> = { free: 0, basic: 10, pro: 50, ultimate: 100 };
 
 // Routed leads: unlimited on every paid plan, capped at 100
 // (TRIAL_ROUTED_LEADS) during an active Free trial; zero (blocked) for
@@ -104,6 +104,17 @@ export const LOCATION_DEVICE_TRACKING: Record<PlanKey, TrackingAvailability> = {
 
 export const SUPPORT_LABEL: Record<PlanKey, string> = { free: "Basic", basic: "Basic", pro: "Standard", ultimate: "Priority" };
 
+// FEAT-QUEUE: Team outreach (salesperson customer queue, kalyan.md 7c),
+// Growth/Agency only - same gating shape as LOCATION_DEVICE_TRACKING/
+// audienceAvailable above. Limits are per-owner: dailyCap/speedLimitSeconds
+// are per-team settings (OutreachTeam), not plan-driven, so they live on the
+// row itself rather than here.
+export const TEAM_OUTREACH_AVAILABLE: Record<PlanKey, boolean> = { free: false, basic: false, pro: true, ultimate: true };
+// Total contacts across every list the team has (not just the running one).
+export const TEAM_OUTREACH_CONTACT_LIMITS: Record<PlanKey, number> = { free: 0, basic: 0, pro: 5_000, ultimate: 50_000 };
+// Active (non-removed) members.
+export const TEAM_OUTREACH_MEMBER_LIMITS: Record<PlanKey, number> = { free: 0, basic: 0, pro: 25, ultimate: 300 };
+
 export function linkLimit(plan: string | null | undefined): number {
   return LINK_LIMITS[normalizePlanKey(plan)];
 }
@@ -125,6 +136,15 @@ export function audienceAvailable(plan: string | null | undefined): boolean {
 export function supportLabel(plan: string | null | undefined): string {
   return SUPPORT_LABEL[normalizePlanKey(plan)];
 }
+export function teamOutreachAvailable(plan: string | null | undefined): boolean {
+  return TEAM_OUTREACH_AVAILABLE[normalizePlanKey(plan)];
+}
+export function teamOutreachContactLimit(plan: string | null | undefined): number {
+  return TEAM_OUTREACH_CONTACT_LIMITS[normalizePlanKey(plan)];
+}
+export function teamOutreachMemberLimit(plan: string | null | undefined): number {
+  return TEAM_OUTREACH_MEMBER_LIMITS[normalizePlanKey(plan)];
+}
 
 // Grandfathering rule #1 (counts: the shared link pool, or any other
 // per-plan count): only blocks CREATING a new item once the current count
@@ -144,8 +164,8 @@ export function numbersPatchAllowed(previousCount: number, nextCount: number, li
   return nextCount <= limit;
 }
 
-// Next plan's name + its link pool total, e.g. "Growth for 20" / "Agency for
-// 55" - "" on Agency (nothing higher) or free (upgradeHint/the free-specific
+// Next plan's name + its link pool total, e.g. "Growth for 100" / "Agency for
+// 200" - "" on Agency (nothing higher) or free (upgradeHint/the free-specific
 // copy covers that case instead). Shared by lib/link-pool.ts's create-check
 // message and app/links/new (UX-1 step 2) so the two never drift.
 export function nextPlanPoolHint(plan: string | null | undefined): string {
@@ -155,8 +175,8 @@ export function nextPlanPoolHint(plan: string | null | undefined): string {
   return "";
 }
 
-// Next plan's name + its numbers-per-rotator total, e.g. "Growth allows 10" /
-// "Agency allows 20" - "" on Agency (nothing higher) or free. Mirrors
+// Next plan's name + its numbers-per-rotator total, e.g. "Growth allows 50" /
+// "Agency allows 100" - "" on Agency (nothing higher) or free. Mirrors
 // nextPlanPoolHint's shape but for the numbers-per-rotator limit. Used by the
 // in-app rotator create form's salespeople counter (UX-1 step 3).
 export function nextPlanNumbersHint(plan: string | null | undefined): string {

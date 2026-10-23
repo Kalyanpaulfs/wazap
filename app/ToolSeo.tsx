@@ -17,7 +17,7 @@ export default function ToolSeo({ k, children }: { k: string; children?: React.R
     description: d.appDesc,
     applicationCategory: "BusinessApplication",
     operatingSystem: "Web",
-    offers: ["link", "qr", "formatter"].includes(k) ? { "@type": "Offer", price: "0", priceCurrency: "USD" } : publicOffers,
+    offers: ["link", "qr", "formatter", "link-shortener"].includes(k) ? { "@type": "Offer", price: "0", priceCurrency: "USD" } : publicOffers,
   };
   const breadcrumbLd = {
     "@context": "https://schema.org",

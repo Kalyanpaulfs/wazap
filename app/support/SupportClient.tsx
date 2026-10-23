@@ -15,6 +15,7 @@ import {
   Search,
   ChevronRight,
 } from "lucide-react";
+import { LINK_LIMITS, NUMBERS_PER_ROTATOR_LIMITS } from "@/lib/plan-limits";
 
 interface WhatsappInfo { available: boolean; url?: string; reason?: "plan" | "unavailable" }
 
@@ -69,11 +70,11 @@ const QUICK_ANSWERS: { group: AnswerGroup; q: string; a: React.ReactNode }[] = [
     q: "What does each plan include?",
     a: (
       <>
-        <strong className="text-white">Free trial (3 days):</strong> everything in Solo — 5 links, 3 salespeople per rotator, 100 leads, website button, basic reports. After the trial, links pause until you choose a plan.{" "}
+        <strong className="text-white">Free trial (3 days):</strong> everything in Solo — {LINK_LIMITS.basic} links, {NUMBERS_PER_ROTATOR_LIMITS.basic} salespeople per rotator, 100 leads, website button, basic reports. After the trial, links pause until you choose a plan.{" "}
         <strong className="text-white">Solo ($9/mo):</strong> same, ongoing — no 3-day limit.{" "}
-        <strong className="text-white">Growth ($19/mo):</strong> 20 links (incl. ad links), 10 salespeople per rotator,
+        <strong className="text-white">Growth ($19/mo):</strong> {LINK_LIMITS.pro} links (incl. ad links), {NUMBERS_PER_ROTATOR_LIMITS.pro} salespeople per rotator,
         full reports.{" "}
-        <strong className="text-white">Agency ($49/mo):</strong> 55 links (any type), 20 salespeople per rotator,
+        <strong className="text-white">Agency ($49/mo):</strong> {LINK_LIMITS.ultimate} links (any type), {NUMBERS_PER_ROTATOR_LIMITS.ultimate} salespeople per rotator,
         full reports. See{" "}
         <Link href="/billing#plans" className="text-[#25D366] underline">Plans</Link> for the full comparison.
       </>

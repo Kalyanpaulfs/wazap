@@ -26,6 +26,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${BASE}/tools/link`, lastModified: "2026-10-10", changeFrequency: "monthly", priority: 0.8 },
     { url: `${BASE}/tools/formatter`, lastModified: "2026-10-21", changeFrequency: "monthly", priority: 0.8 },
     { url: `${BASE}/tools/shortlink`, lastModified: "2026-10-10", changeFrequency: "monthly", priority: 0.8 },
+    { url: `${BASE}/tools/link-shortener`, lastModified: "2026-10-22", changeFrequency: "monthly", priority: 0.8 },
     { url: `${BASE}/whatsapp-lead-routing`, lastModified: "2026-10-16", changeFrequency: "monthly", priority: 0.8 },
     { url: `${BASE}/whatsapp-ad-tracking`, lastModified: "2026-10-16", changeFrequency: "monthly", priority: 0.8 },
     { url: `${BASE}/whatsapp-short-links`, lastModified: "2026-10-16", changeFrequency: "monthly", priority: 0.8 },

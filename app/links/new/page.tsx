@@ -33,7 +33,10 @@ export default async function NewLinkPage() {
   // Both groups (the four pool-counted link types + the free tools) now
   // come from the shared catalog (lib/tool-catalog.ts) - see
   // app/tools/AllTools.tsx for the other page that renders the same list.
-  const { paid: linkCards, free: freeCards } = getToolCatalog({ plan, used, limit });
+  const { paid, features, free: freeCards } = getToolCatalog({ plan, used, limit });
+  // Everything under "Links" is paid, so Team outreach (it hands out a team
+  // link) sits there too. Audience is a report, so it stays on All tools only.
+  const linkCards = [...paid, ...features.filter((card) => card.id === "team-outreach")];
 
   const includedChips = [
     { Icon: QrCode, label: "Free QR code" },
@@ -87,7 +90,7 @@ export default async function NewLinkPage() {
             <h2 className="text-sm font-semibold text-white">Free tools</h2>
             <p className="text-sm text-slate-400">Never counted against your plan.</p>
           </div>
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {freeCards.map((card) => (
               <ToolCardLink key={card.id} card={card} Icon={TOOL_ICONS[card.iconKey]} />
             ))}

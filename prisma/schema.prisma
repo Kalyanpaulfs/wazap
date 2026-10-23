@@ -36,8 +36,10 @@ model User {
   adLinks                    AdLink[]
   linktreePages              LinktreePage[]
   contactLists               ContactList[]
+  outreachTeam               OutreachTeam?
   scheduledSends             ScheduledSend[]
   shortLinks                 ShortLink[]
+  shortUrls                  ShortUrl[]
   catalogPages               CatalogPage[]
   catalogOrders              CatalogOrder[]
   funnelEvents               FunnelEvent[]
@@ -1276,6 +1278,13 @@ model RotatorLink {
   // (lib/link-pool.ts countLiveLinks only looks at planPausedAt), so pausing
   // can't be used to dodge the plan limit.
   pausedAt       DateTime?
+  // Per-salesperson pause (owner feature request): digits-only numbers from
+  // `numbers` that the customer paused individually, same format as
+  // `numbers` itself. The click router (lib/rotator-routing.ts) skips these
+  // but rotation stays fair among the rest; they still appear in
+  // `numbers`/`numberNames` so past performance keeps showing them. Not
+  // read or written by lib/plan-limit-sync.ts, same as pausedAt.
+  pausedNumbers  String[]  @default([])
   user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
@@ -1459,6 +1468,133 @@ model ContactList {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+}
+
+// FEAT-QUEUE (Team outreach, Growth/Agency only - see lib/plan-limits.ts
+// teamOutreachAvailable): reverse of the lead rotator - instead of sending a
+// customer to the next salesperson, this hands a salesperson the next free
+// customer. One team per owner, reached at /team/<code>. See kalyan.md
+// section 7c and lib/outreach/*.ts for the server-side logic.
+model OutreachTeam {
+  id                String           @id @default(cuid())
+  userId            String           @unique
+  code              String           @unique
+  // Seconds a member must wait between two claimed customers (owner
+  // setting, default 20s) - see lib/outreach/speed.ts.
+  speedLimitSeconds Int              @default(20)
+  // Optional max customers a member may be given per calendar day (owner's
+  // timezone is not tracked per-team here - UTC day boundary, phase 1).
+  // null = off.
+  dailyCap          Int?
+  // ISO2 country used to complete phone numbers with no country code on
+  // member/contact CSV import - see lib/outreach/phone.ts.
+  defaultCountry    String?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  user              User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  members           OutreachMember[]
+  lists             OutreachList[]
+
+  @@index([userId])
+}
+
+// A salesperson on the team. Removing a member (removedAt set, active:
+// false) blocks every device of theirs immediately - lib/outreach/claim.ts
+// and lib/outreach/device.ts both check this on every request, not just at
+// login.
+model OutreachMember {
+  id          String           @id @default(cuid())
+  teamId      String
+  name        String
+  // Digits only, no leading "+" - same shape as RotatorLink.numbers.
+  phone       String
+  email       String
+  active      Boolean          @default(true)
+  removedAt   DateTime?
+  // Set by claimNextContact on every successful claim - read back by the
+  // speed-limit check (lib/outreach/speed.ts) and by giveBack (lib/outreach/
+  // claim.ts) to find "the member's last contact" without a second table.
+  lastGivenAt DateTime?
+  // Lifetime count of this member's give-backs (incremented by
+  // lib/outreach/claim.ts giveBack) - the per-contact give-back history
+  // itself isn't kept (overwritten on reclaim), but the owner's report
+  // needs a running total to flag members with many give-backs.
+  giveBackCount Int            @default(0)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  team        OutreachTeam     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  devices     OutreachDevice[]
+
+  @@unique([teamId, phone])
+  @@index([teamId, active])
+}
+
+// A remembered device (~90 days) for one member, created after their first
+// email-code verification on this device. Only a hash of the random cookie
+// token is ever stored - see lib/outreach/device.ts.
+model OutreachDevice {
+  id         String         @id @default(cuid())
+  memberId   String
+  tokenHash  String         @unique
+  createdAt  DateTime       @default(now())
+  lastSeenAt DateTime?
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  member     OutreachMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([memberId])
+}
+
+// One uploaded customer list. Lists run one at a time in position order;
+// when the running list has no free contact left it is marked "finished"
+// and the next "waiting" list starts - see lib/outreach/claim.ts.
+model OutreachList {
+  id         String            @id @default(cuid())
+  teamId     String
+  name       String
+  position   Int
+  // waiting | running | paused | finished
+  status     String            @default("waiting")
+  // Privacy (owner requirement): upload requires the caller to confirm
+  // "these customers agreed to be contacted" - required, not optional.
+  consentAt  DateTime
+  totalCount Int               @default(0)
+  givenCount Int               @default(0)
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+  team       OutreachTeam      @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  contacts   OutreachContact[]
+
+  @@index([teamId, position])
+  @@index([teamId, status, position])
+}
+
+// One customer row inside a list. `teamId` is denormalized (no relation,
+// same pattern as ConversationStart.assetId) purely so the owner's report
+// and the duplicate-on-upload check can query across every list for the
+// team in one pass, without a join through OutreachList for every row.
+// Deleting the list hard-deletes its contacts (owner privacy requirement).
+model OutreachContact {
+  id                  String       @id @default(cuid())
+  listId              String
+  teamId              String
+  phone               String
+  name                String?
+  notes               String?
+  // Free == givenToMemberId is null (also true again after a give-back).
+  givenToMemberId     String?
+  givenAt             DateTime?
+  givenBackAt         DateTime?
+  givenBackByMemberId String?
+  createdAt           DateTime     @default(now())
+  list                OutreachList @relation(fields: [listId], references: [id], onDelete: Cascade)
+
+  // Fast "next free contact in this list" lookup (claimNextContact).
+  @@index([listId, givenToMemberId])
+  // Report queries (per member, per team) and the "already given out in an
+  // older list" duplicate check on upload.
+  @@index([teamId, phone])
+  @@index([teamId, givenToMemberId, givenAt])
 }
 
 model ScheduledSend {
@@ -1794,4 +1930,41 @@ model SecurityPaymentReconciliation {
   original           Json
   reason             String
   createdAt          DateTime @default(now()) @db.Timestamptz(6)
+}
+
+// TOOL-FREE-2: Link shortener - free tool for ANY website URL (not
+// WhatsApp; that's ShortLink/RotatorLink/AdLink via /w, /r, /a). Does NOT
+// count toward the shared link pool (lib/link-pool.ts) - see
+// lib/short-url-safety.ts for the create-time safety checks and
+// lib/short-url-reports.ts for the report/auto-disable flow.
+model ShortUrl {
+  id             String           @id @default(cuid())
+  userId         String
+  code           String           @unique
+  targetUrl      String
+  title          String?
+  clicks         Int              @default(0)
+  createdAt      DateTime         @default(now())
+  disabledAt     DateTime?
+  disabledReason String?
+  reportCount    Int              @default(0)
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reports        ShortUrlReport[]
+
+  @@index([userId])
+  @@index([userId, createdAt])
+}
+
+model ShortUrlReport {
+  id         String   @id @default(cuid())
+  shortUrlId String
+  reason     String
+  // Hash of the reporter's IP (never the raw IP) - just enough to rate
+  // limit repeat reports without storing a visitor's real address.
+  reporterIp String
+  details    String?
+  createdAt  DateTime @default(now())
+  shortUrl   ShortUrl @relation(fields: [shortUrlId], references: [id], onDelete: Cascade)
+
+  @@index([shortUrlId])
 }

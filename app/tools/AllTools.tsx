@@ -59,7 +59,7 @@ export default async function AllTools({ userId }: { userId: string }) {
             <h2 className="text-sm font-semibold text-white">Free tools</h2>
             <p className="text-sm text-slate-400">Free and unlimited on every plan</p>
           </div>
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {free.map((card) => (
               <ToolCardLink key={card.id} card={card} Icon={TOOL_ICONS[card.iconKey]} />
             ))}

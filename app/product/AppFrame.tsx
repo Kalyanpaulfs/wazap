@@ -12,7 +12,7 @@ import SignOutButton from "../dashboard/SignOutButton";
 // (its own top-level route) - but /tools/widget and /qr still get their
 // own specific top-bar titles from the dictionary below, since the title
 // lookup uses `titleTest` (exact /tools only), not this broader `activeTest`.
-const allToolsActive = (path: string) => path === "/tools" || path.startsWith("/tools/") || path === "/qr" || path.startsWith("/qr/");
+const allToolsActive = (path: string) => path === "/tools" || path.startsWith("/tools/") || path === "/qr" || path.startsWith("/qr/") || path === "/outreach";
 
 const destinations = [
   {label:"Home",href:"/dashboard",icon:LayoutDashboard},
@@ -20,7 +20,7 @@ const destinations = [
   {label:"All tools",href:"/tools",icon:LayoutGrid,activeTest:allToolsActive,titleTest:(path:string)=>path==="/tools"},
   {label:"Results",href:"/results",icon:BarChart3},
 ];
-const privateRoutes = /^\/(dashboard|account|admin|workspace|reports|analytics|operations|partners|performance|plans|billing|links|results)(\/|$)/;
+const privateRoutes = /^\/(dashboard|account|admin|workspace|reports|analytics|operations|partners|performance|plans|billing|links|results|outreach)(\/|$)/;
 
 // Private routes and Help & support pages pick their frame on the server
 // (app/product/WorkspaceFrame.tsx, app/support/SupportFrame.tsx), so a
@@ -55,7 +55,7 @@ export function AppShell({children,user}:{children:React.ReactNode;user?:ShellUs
   // customer's profile - same path segment (crmSegments[3]), so tell them
   // apart by whether there's a 4th segment before falling back to crmTitles.
   const crmTitle = crmSegments[3]==="customers" ? (crmSegments[4] ? "Customer" : "Customers") : (crmTitles[crmSegments[3]]||"Contacts");
-  const title = path.startsWith("/admin/crm") ? crmTitle : destinations.find(navTitleMatch)?.label || ({"/account":"Account & data","/operations":"Operations","/analytics":"Analytics","/partners":"Partners","/plans":"Plan & billing","/billing":"Plan & billing","/qr":"WhatsApp QR code","/tools/widget":"Website button","/contact":"Contact us","/support":"Help & support","/support/tickets":"My tickets","/refund":"Refund policy","/privacy":"Privacy policy","/terms":"Terms","/about":"About Wazap","/acceptable-use":"Acceptable use"}[path]) || "Workspace";
+  const title = path.startsWith("/admin/crm") ? crmTitle : destinations.find(navTitleMatch)?.label || ({"/account":"Account & data","/operations":"Operations","/analytics":"Analytics","/partners":"Partners","/plans":"Plan & billing","/billing":"Plan & billing","/qr":"WhatsApp QR code","/tools/widget":"Website button","/outreach":"Team outreach","/contact":"Contact us","/support":"Help & support","/support/tickets":"My tickets","/refund":"Refund policy","/privacy":"Privacy policy","/terms":"Terms","/about":"About Wazap","/acceptable-use":"Acceptable use"}[path]) || "Workspace";
   const customerLinks = <><p className="wp-nav-label">WORKSPACE</p>{destinations.map(item=><Link key={item.href} href={isAdmin&&item.href==="/dashboard"?"/dashboard?workspace=1":item.href} aria-current={navActive(item)?"page":undefined} className={`wp-nav-link ${navActive(item)?"is-active":""}`} onClick={event=>event.currentTarget.closest("details")?.removeAttribute("open")}><item.icon size={18}/>{item.label}{navActive(item)&&<ChevronRight size={14}/>}</Link>)}<p className="wp-nav-label wp-nav-manage">MANAGE</p><Link className={`wp-nav-link ${active("/billing")||active("/plans")?"is-active":""}`} href="/billing" aria-current={active("/billing")||active("/plans")?"page":undefined}><CreditCard size={18}/>Plan & billing</Link><Link className={`wp-nav-link ${active("/account")?"is-active":""}`} href="/account" aria-current={active("/account")?"page":undefined}><Settings size={18}/>Account & data</Link>{isAdmin&&<Link prefetch={false} className={`wp-nav-link ${path.startsWith("/admin/crm")?"is-active":""}`} href="/admin/crm/overview" aria-current={path.startsWith("/admin/crm")?"page":undefined}><Users size={18}/>Wazap CRM</Link>}<Link className="wp-nav-link" href="/support"><Headphones size={18}/>Help & support</Link></>;
   const staffLinks=<><p className="wp-nav-label">ADMIN</p><CrmNavigation/><div className="wp-nav-quiet"><Link className="wp-nav-link wp-nav-link-quiet" href="/dashboard?workspace=1"><LayoutDashboard size={16}/>Preview my workspace</Link><Link className="wp-nav-link wp-nav-link-quiet" href="/account"><Settings size={16}/>My account</Link></div></>;
   const links=staffRoute?staffLinks:customerLinks;

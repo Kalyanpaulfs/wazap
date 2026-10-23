@@ -16,9 +16,10 @@ const groups:Group[]=[
   {label:'Broadcasts',href:'/admin/crm/broadcast',match:p=>p.startsWith('/admin/crm/broadcast')},
   {label:'Contacts',href:'/admin/crm',match:p=>p==='/admin/crm'},
  ]},
- {match:p=>p.startsWith('/admin/crm/reports')||p.startsWith('/admin/crm/health'),tabs:[
+ {match:p=>p.startsWith('/admin/crm/reports')||p.startsWith('/admin/crm/health')||p.startsWith('/admin/crm/short-links'),tabs:[
   {label:'Reports',href:'/admin/crm/reports',match:p=>p.startsWith('/admin/crm/reports')},
   {label:'System health',href:'/admin/crm/health',match:p=>p.startsWith('/admin/crm/health')},
+  {label:'Short links',href:'/admin/crm/short-links',match:p=>p.startsWith('/admin/crm/short-links')},
  ]},
 ];
 

@@ -9,6 +9,7 @@ vi.mock("@/lib/dodo", () => buildDodoMock());
 import { chargeOnce as recordVerifiedCharge, lifecycleOnce as applyVerifiedLifecycle } from "./typed-calls";
 import { syncPlanLimits } from "@/lib/plan-limit-sync";
 import { downgradeIfExpired } from "@/lib/billing-expiry";
+import { LINK_LIMITS } from "@/lib/plan-limits";
 import { prisma } from "@/lib/prisma";
 import {
   assertLifecycleApplied, assertNotDuplicate, cleanupUser, createTestUser, daysFromNow, getUser, getWorkspaceId, uid, withEnv,
@@ -72,8 +73,11 @@ describe("Case 16: plan-limit pausing engine", () => {
 
     const { subscriptionId: S0 } = await bootstrapLiveSubscription({ provider: "paypal", userId, plan: "pro", amount: 19 });
 
-    // 6 rotators (shared link pool: pro 20, basic 5): scores 50 > 40 > 30 > 20 > 10 > 5.
-    const rotators = await makeRotators(userId, [50, 40, 30, 20, 10, 5]);
+    // LINK_LIMITS.basic + 1 rotators (shared link pool: pro 100, basic 20),
+    // descending scores - the new (lower) basic limit keeps the top
+    // LINK_LIMITS.basic and pauses the single least-used overflow rotator.
+    const rotatorScores = Array.from({ length: LINK_LIMITS.basic + 1 }, (_, i) => LINK_LIMITS.basic + 1 - i);
+    const rotators = await makeRotators(userId, rotatorScores);
     // 5 automations (pro limit 10, basic limit 3): 4 active with distinct
     // lastRunAt, plus one the user paused themselves (status "paused",
     // never touched by the plan-limit engine).
@@ -110,7 +114,7 @@ describe("Case 16: plan-limit pausing engine", () => {
       expect(freshUser.plan).toBe("basic");
 
       const rotatorRows = await prisma.rotatorLink.findMany({ where: { id: { in: rotators.map((r) => r.id) } }, orderBy: { totalClicks: "desc" } });
-      expect(rotatorRows.map((r) => r.planPausedAt !== null)).toEqual([false, false, false, false, false, true]); // top 5 (basic link pool) kept
+      expect(rotatorRows.map((r) => r.planPausedAt !== null)).toEqual([...Array(LINK_LIMITS.basic).fill(false), true]); // top (basic link pool) kept, 1 overflow paused
 
       const automationRows = await prisma.automationRule.findMany({ where: { id: { in: automations.map((a) => a.id) } } });
       const selfPaused = automationRows.find((a) => a.id === selfPausedId)!;
@@ -144,7 +148,7 @@ describe("Case 16: plan-limit pausing engine", () => {
       expect(othersAfterUpgrade.every((a) => a.planPausedAt === null && a.status === "active")).toBe(true);
 
       // Nothing was ever deleted.
-      expect(await prisma.rotatorLink.count({ where: { id: { in: rotators.map((r) => r.id) } } })).toBe(6);
+      expect(await prisma.rotatorLink.count({ where: { id: { in: rotators.map((r) => r.id) } } })).toBe(rotatorScores.length);
       expect(await prisma.automationRule.count({ where: { id: { in: automations.map((a) => a.id) } } })).toBe(5);
     });
   });
@@ -173,9 +177,9 @@ describe("Case 16: plan-limit pausing engine", () => {
     userId = user0.id; email = user0.email;
     const { subscriptionId: S0 } = await bootstrapLiveSubscription({ provider: "paypal", userId, plan: "pro", amount: 19 });
 
-    // Pro's shared link pool is 20 (lib/plan-limits.ts LINK_LIMITS) - 14 is
-    // within it, but that shouldn't matter: a same-plan renewal never pauses
-    // regardless of pool room.
+    // Pro's shared link pool is LINK_LIMITS.pro (lib/plan-limits.ts) - 14 is
+    // well within it, but that shouldn't matter: a same-plan renewal never
+    // pauses regardless of pool room.
     const shortLinks = await makeShortLinks(userId, [70, 60, 50, 40, 30, 20, 10]);
     const adLinks = await makeAdLinks(userId, [70, 60, 50, 40, 30, 20, 10]);
 
@@ -203,11 +207,12 @@ describe("Case 16: plan-limit pausing engine", () => {
     userId = user0.id; email = user0.email;
     const { subscriptionId: S0 } = await bootstrapLiveSubscription({ provider: "paypal", userId, plan: "pro", amount: 19 });
 
-    // New basic (Solo) link pool is 5 (lib/plan-limits.ts LINK_LIMITS) - 3
-    // rotators + 3 short links is 6, one over. Ad links aren't offered on
-    // Solo at all (AD_LINKS_AVAILABLE.basic is false), so both are paused
-    // regardless of pool room, and never occupy a pool slot.
-    const rotators = await makeRotators(userId, [80, 70, 60]);
+    // New basic (Solo) link pool is LINK_LIMITS.basic (lib/plan-limits.ts) -
+    // (basic - 2) rotators + 3 short links is one over it. Ad links aren't
+    // offered on Solo at all (AD_LINKS_AVAILABLE.basic is false), so they're
+    // paused regardless of pool room, and never occupy a pool slot.
+    const rotatorScores = Array.from({ length: LINK_LIMITS.basic - 2 }, (_, i) => 1000 - i); // all outscore every short link
+    const rotators = await makeRotators(userId, rotatorScores);
     const shortLinks = await makeShortLinks(userId, [50, 40, 30]);
     const adLinks = await makeAdLinks(userId, [50, 40]);
 
@@ -235,10 +240,10 @@ describe("Case 16: plan-limit pausing engine", () => {
     expect(freshUser.plan).toBe("basic");
 
     const rotatorRows = await prisma.rotatorLink.findMany({ where: { id: { in: rotators.map((r) => r.id) } } });
-    expect(rotatorRows.every((r) => r.planPausedAt === null)).toBe(true); // all 3 rotators outscore every short link - none paused
+    expect(rotatorRows.every((r) => r.planPausedAt === null)).toBe(true); // all rotators outscore every short link - none paused
 
     const shortLinkRows = await prisma.shortLink.findMany({ where: { id: { in: shortLinks.map((r) => r.id) } }, orderBy: { clicks: "desc" } });
-    expect(shortLinkRows.map((r) => r.planPausedAt !== null)).toEqual([false, false, true]); // pool is 3 rotators + 2 short links = 5; the lowest-scoring short link is the 6th and gets paused
+    expect(shortLinkRows.map((r) => r.planPausedAt !== null)).toEqual([false, false, true]); // pool is (basic-2) rotators + 2 short links = basic; the lowest-scoring short link overflows and gets paused
 
     const adLinkRows = await prisma.adLink.findMany({ where: { id: { in: adLinks.map((r) => r.id) } } });
     expect(pausedIds(adLinkRows).sort()).toEqual(adLinks.map((r) => r.id).sort()); // ad links aren't offered on Solo - all paused
@@ -296,8 +301,9 @@ describe("Case 16: plan-limit pausing engine", () => {
   it("an unresolvable previous plan never pauses, even when the plan just went down and is now over the new limit", async () => {
     const user0 = await createTestUser({ plan: "pro" });
     userId = user0.id; email = user0.email;
-    // New basic link pool is 5 - 6 short links is one over it.
-    const shortLinks = await makeShortLinks(userId, [60, 50, 40, 30, 20, 10]);
+    // New basic link pool is LINK_LIMITS.basic - one more short link than that is one over it.
+    const shortLinkScores = Array.from({ length: LINK_LIMITS.basic + 1 }, (_, i) => LINK_LIMITS.basic + 1 - i);
+    const shortLinks = await makeShortLinks(userId, shortLinkScores);
 
     await withEnv({ PLAN_LIMIT_PAUSING_ENABLED: "true" }, async () => {
       await prisma.user.update({ where: { id: userId }, data: { plan: "basic" } });
@@ -357,7 +363,7 @@ describe("Case 16: plan-limit pausing engine", () => {
     const user0 = await createTestUser({ plan: "free", trialStartedAt, trialEndsAt, trialPlan: "pro" });
     userId = user0.id; email = user0.email;
 
-    // Solo (basic) link pool is 5, ad links not offered at all. These were
+    // Solo (basic) link pool is LINK_LIMITS.basic, ad links not offered at all. These were
     // never blocked at creation time in this test (it writes rows directly),
     // but buying Solo is a same-rank move from the trial's own Solo-equivalent
     // limits, not a downgrade - so none of them get paused by this purchase.
@@ -397,7 +403,7 @@ describe("Case 16: plan-limit pausing engine", () => {
     const user0 = await createTestUser({ plan: "free", trialStartedAt, trialEndsAt, trialPlan: "pro" });
     userId = user0.id; email = user0.email;
 
-    // Growth (pro) shared link pool is 20, ad links offered - all well within.
+    // Growth (pro) shared link pool is LINK_LIMITS.pro, ad links offered - all well within.
     const rotators = await makeRotators(userId, [10, 9, 8]);
     const shortLinks = await makeShortLinks(userId, [10, 9]);
     const adLinks = await makeAdLinks(userId, [10]);

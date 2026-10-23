@@ -45,8 +45,10 @@ function slugify(name: string) {
 type RotatorData = {
   numbers: string[];
   numberNames: Record<string, string>;
+  pausedNumbers: string[];
+  fallbackNumber: string | null;
   message: string | null;
-  salespeople: { number: string; name: string | null; last30Days: number }[];
+  salespeople: { number: string; name: string | null; last30Days: number; paused: boolean }[];
   numbersLimit: number;
   nextPlanHint: string;
 };
@@ -95,6 +97,11 @@ export default function LinkDetailsClient({
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [qrError, setQrError] = useState("");
   const [name, setName] = useState(initialName);
+  // Salesperson pause clicks show at once; the server value takes over after router.refresh().
+  const [pausedOverride, setPausedOverride] = useState<Record<string, boolean>>({});
+  const pausedNow = (sp: { number: string; paused: boolean }) => pausedOverride[sp.number] ?? sp.paused;
+  // Every salesperson paused = the link is paused (app/r/[code]/route.ts shows the paused page).
+  const allSalespeoplePaused = kind === "rotator" && !!rotator?.salespeople.length && rotator.salespeople.every(pausedNow);
 
   useEffect(() => {
     let cancelled = false;
@@ -130,7 +137,7 @@ export default function LinkDetailsClient({
     a.remove();
   }
 
-  const createdLabel = new Date(createdAt).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+  const createdLabel = new Date(createdAt).toLocaleDateString("en-GB", { year: "numeric", month: "short", day: "numeric", timeZone: "UTC" });
 
   return (
     <main className="px-4 py-7 sm:px-7 sm:py-9">
@@ -146,8 +153,8 @@ export default function LinkDetailsClient({
             <p className="mt-1 text-sm text-slate-500">Created {createdLabel}</p>
           </div>
           <div className="flex flex-col items-end gap-2">
-            {paused ? (
-              <span className="rounded-full border border-amber-400/30 bg-amber-400/10 px-3 py-1.5 text-xs font-semibold text-amber-300">{statusText}</span>
+            {paused || allSalespeoplePaused ? (
+              <span className="rounded-full border border-amber-400/30 bg-amber-400/10 px-3 py-1.5 text-xs font-semibold text-amber-300">{paused ? statusText : "Paused"}</span>
             ) : (
               <span className="rounded-full border border-[#25D366]/30 bg-[#25D366]/10 px-3 py-1.5 text-xs font-semibold text-[#25D366]">● Live</span>
             )}
@@ -228,12 +235,32 @@ export default function LinkDetailsClient({
 
         {kind === "rotator" && rotator && rotator.salespeople.length > 0 && (
           <section className="rounded-3xl border border-slate-800 bg-[#111811] p-5 sm:p-7">
-            <h2 className="text-sm font-semibold text-white">Salespeople - last 30 days</h2>
+            <h2 className="text-sm font-semibold text-white">Salespeople</h2>
+            <p className="mt-1 text-xs text-slate-500">Clicks in the last 30 days. Pause a salesperson to stop sending them new chats - the rest keep rotating fairly.</p>
+            {allSalespeoplePaused && (
+              <p className="mt-3 rounded-xl border border-amber-400/30 bg-amber-400/10 px-3 py-2 text-xs text-amber-300">
+                All salespeople are paused, so the link is paused. Resume someone to start getting chats again.
+              </p>
+            )}
             <div className="mt-3 space-y-2">
               {rotator.salespeople.map((sp) => (
-                <div key={sp.number} className="flex items-center justify-between rounded-xl bg-slate-900 px-4 py-2.5 text-sm">
-                  <span className="text-slate-200">{sp.name || sp.number}</span>
-                  <span className="text-slate-400">{sp.last30Days.toLocaleString()} clicks</span>
+                <div
+                  key={sp.number}
+                  className={`flex items-center justify-between gap-3 rounded-xl px-4 py-2.5 text-sm ${pausedNow(sp) ? "bg-slate-900/50" : "bg-slate-900"}`}
+                >
+                  <span className={pausedNow(sp) ? "text-slate-500" : "text-slate-200"}>
+                    {sp.name || sp.number}
+                    {pausedNow(sp) && <span className="ml-2 rounded-full border border-amber-400/30 bg-amber-400/10 px-2 py-0.5 text-[10px] font-semibold text-amber-300">Paused</span>}
+                  </span>
+                  <div className="flex items-center gap-3">
+                    <span className="text-slate-400">{sp.last30Days.toLocaleString()} clicks</span>
+                    <SalespersonPauseButton
+                      rotatorId={id}
+                      number={sp.number}
+                      paused={pausedNow(sp)}
+                      onChange={(paused) => setPausedOverride((prev) => ({ ...prev, [sp.number]: paused }))}
+                    />
+                  </div>
                 </div>
               ))}
             </div>
@@ -785,6 +812,55 @@ function PauseResumeButton({ kind, id, manuallyPaused }: { kind: LinkKind; id: s
       >
         {manuallyPaused ? <Play className="h-3.5 w-3.5" /> : <PauseIcon className="h-3.5 w-3.5" />}
         {saving ? "Saving…" : manuallyPaused ? "Resume" : "Pause"}
+      </button>
+      {error && <span className="text-xs text-red-400">{error}</span>}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Per-salesperson pause/resume (distinct from the link-level Pause/Resume
+// above): pauses just this one number - their traffic simply skips them and
+// rotates fairly among the rest, so no "visitors will see a paused page"
+// warning is needed here.
+// ---------------------------------------------------------------------------
+function SalespersonPauseButton({ rotatorId, number, paused, onChange }: { rotatorId: string; number: string; paused: boolean; onChange: (paused: boolean) => void }) {
+  const router = useRouter();
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  // The row flips the moment it's clicked (onChange); reverted if the save fails.
+  async function toggle() {
+    const next = !paused;
+    onChange(next);
+    setSaving(true);
+    setError("");
+    try {
+      const res = await fetch("/api/rotator", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: rotatorId, pauseNumber: number, numberPaused: next }),
+      });
+      if (!res.ok) throw new Error("Could not update this salesperson. Please try again.");
+      router.refresh();
+    } catch (e) {
+      onChange(!next);
+      setError(e instanceof Error ? e.message : "Could not update this salesperson.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="flex items-center gap-2">
+      <button
+        type="button"
+        onClick={toggle}
+        disabled={saving}
+        className="inline-flex items-center gap-1.5 rounded-full border border-slate-700 px-3 py-1 text-xs font-semibold text-slate-200 hover:border-[#25D366] hover:text-white disabled:opacity-50"
+      >
+        {paused ? <Play className="h-3.5 w-3.5" /> : <PauseIcon className="h-3.5 w-3.5" />}
+        {paused ? "Resume" : "Pause"}
       </button>
       {error && <span className="text-xs text-red-400">{error}</span>}
     </div>

@@ -21,10 +21,10 @@
 //   href and iconKey, plus the "Free · unlimited" badge.
 // Map any new iconKey to a lucide icon in app/components/tool-icons.tsx too.
 
-import { adLinksAvailable, audienceAvailable, numbersPerRotatorLimit, normalizePlanKey } from "./plan-limits";
+import { adLinksAvailable, audienceAvailable, teamOutreachAvailable, numbersPerRotatorLimit, normalizePlanKey } from "./plan-limits";
 import { poolFullMessage } from "./my-links";
 
-export type ToolIconKey = "users" | "message-circle" | "fingerprint" | "megaphone" | "qr-code" | "globe" | "type" | "map-pin";
+export type ToolIconKey = "users" | "message-circle" | "fingerprint" | "megaphone" | "qr-code" | "globe" | "type" | "map-pin" | "send" | "scissors";
 
 export type ToolCard = {
   id: string;
@@ -145,6 +145,7 @@ export function getToolCatalog({ plan, used, limit }: ToolCatalogInput): ToolCat
   // app/links/new entirely (there's nothing to create). See audienceAvailable
   // in lib/plan-limits.ts (Growth/Agency only).
   const audienceOn = audienceAvailable(plan);
+  const teamOutreachOn = teamOutreachAvailable(plan);
   const features: ToolCard[] = [
     {
       id: "audience",
@@ -155,6 +156,18 @@ export function getToolCatalog({ plan, used, limit }: ToolCatalogInput): ToolCat
       iconKey: "map-pin",
       locked: !audienceOn,
       lockReason: audienceOn ? undefined : (planLapsed ? "Choose a plan" : "Available on Growth"),
+    },
+    {
+      id: "team-outreach",
+      name: "Team outreach",
+      question: "Give my salespeople customers to message",
+      description: teamOutreachOn
+        ? "Upload your customer list. Your salespeople tap one link and get the next customer on WhatsApp."
+        : "Available on Growth",
+      href: teamOutreachOn ? "/outreach" : "/billing#plans",
+      iconKey: "send",
+      locked: !teamOutreachOn,
+      lockReason: teamOutreachOn ? undefined : (planLapsed ? "Choose a plan" : "Available on Growth"),
     },
   ];
 
@@ -189,6 +202,16 @@ export function getToolCatalog({ plan, used, limit }: ToolCatalogInput): ToolCat
       description: "Add bold, italic, strikethrough and monospace to a WhatsApp message, see a preview, then copy it.",
       href: "/tools/formatter",
       iconKey: "type",
+      locked: false,
+      badge: "Free · unlimited",
+    },
+    {
+      id: "link-shortener",
+      name: "Link shortener",
+      question: "Shorten any website link",
+      description: "Turn any website address into a short link with a QR code and click counts. Not for WhatsApp links - use WhatsApp link above for that.",
+      href: "/tools/link-shortener",
+      iconKey: "scissors",
       locked: false,
       badge: "Free · unlimited",
     },

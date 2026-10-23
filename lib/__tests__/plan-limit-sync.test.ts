@@ -115,9 +115,9 @@ describe("selectPauseResume", () => {
 describe("linkLimitValue (lib/plan-limits.ts numbers, not the stale TOOL_LIMITS ones)", () => {
   it("reads the shared link pool cap per plan (UX-1 step 1; Free-trial restructure: free is 0)", () => {
     expect(linkLimitValue(LINK_LIMITS, "free")).toBe(0);
-    expect(linkLimitValue(LINK_LIMITS, "basic")).toBe(5);
-    expect(linkLimitValue(LINK_LIMITS, "pro")).toBe(20);
-    expect(linkLimitValue(LINK_LIMITS, "ultimate")).toBe(55);
+    expect(linkLimitValue(LINK_LIMITS, "basic")).toBe(20);
+    expect(linkLimitValue(LINK_LIMITS, "pro")).toBe(100);
+    expect(linkLimitValue(LINK_LIMITS, "ultimate")).toBe(200);
   });
 
   it("maps a legacy 'business' plan onto ultimate's numbers", () => {
@@ -134,25 +134,23 @@ describe("selectLinkPoolPauseResume (shared link pool ranking)", () => {
     return { model, id, score, createdAt: new Date(createdAt), planPausedAt: planPausedAt ? new Date(planPausedAt) : null };
   }
 
-  it("(a) Growth -> Solo: 4 rotators + 3 short links rank as ONE pool of 7 against the new limit of 5 - busiest 5 stay live, 2 paused", () => {
-    const candidates = [
-      poolItem("rotatorLink", "r1", 40, "2026-01-01"),
-      poolItem("rotatorLink", "r2", 30, "2026-01-02"),
-      poolItem("rotatorLink", "r3", 20, "2026-01-03"),
-      poolItem("rotatorLink", "r4", 5, "2026-01-04"), // least used rotator
-      poolItem("shortLink", "s1", 35, "2026-01-05"),
-      poolItem("shortLink", "s2", 25, "2026-01-06"),
-      poolItem("shortLink", "s3", 1, "2026-01-07"), // least used short link
-    ];
+  it("(a) Growth -> Solo: rotators + short links rank as ONE pool against the new Solo limit - busiest stay live, the rest paused", () => {
+    // Build LINK_LIMITS.basic + 2 candidates with distinct descending
+    // scores, alternating model, so exactly the 2 least-used ones overflow
+    // the limit regardless of what the owner-approved Solo number is.
+    const total = LINK_LIMITS.basic + 2;
+    const candidates: LinkPoolCandidate[] = Array.from({ length: total }, (_, i) =>
+      poolItem(i % 2 === 0 ? "rotatorLink" : "shortLink", `id${i}`, total - i, `2026-01-${String(i + 1).padStart(2, "0")}`)
+    );
     const selection = selectLinkPoolPauseResume(candidates, LINK_LIMITS.basic);
-    expect(selection.rotatorLink.pauseIds).toEqual(["r4"]);
-    expect(selection.shortLink.pauseIds).toEqual(["s3"]);
+    const pausedIds = [...selection.rotatorLink.pauseIds, ...selection.shortLink.pauseIds].sort();
+    expect(pausedIds).toEqual([`id${total - 2}`, `id${total - 1}`].sort()); // the 2 least-used (lowest score) candidates
     expect(selection.rotatorLink.resumeIds).toEqual([]);
     expect(selection.shortLink.resumeIds).toEqual([]);
     expect(selection.adLink).toEqual({ pauseIds: [], resumeIds: [] }); // ad links aren't in this call at all - synced separately with limit 0
   });
 
-  it("(b) upgrade Solo -> Growth: previously pool-paused rotator/short-link AND separately-paused ad links all resume once ad links rejoin the pool under 20", () => {
+  it("(b) upgrade Solo -> Growth: previously pool-paused rotator/short-link AND separately-paused ad links all resume once ad links rejoin the pool under the new Growth limit", () => {
     const candidates = [
       poolItem("rotatorLink", "r1", 40, "2026-01-01"),
       poolItem("rotatorLink", "r2", 30, "2026-01-02"),

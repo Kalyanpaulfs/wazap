@@ -1,6 +1,8 @@
 // FAQ shown on the public landing page (app/page.tsx + app/design/HomeExperience.tsx)
 // and used to build the page's FAQPage JSON-LD. This is the only FAQ on the site —
 // keep it in sync with app/pricing/PricingPlans.tsx and lib/billing.ts for plan facts.
+import { LINK_LIMITS, NUMBERS_PER_ROTATOR_LIMITS } from "./plan-limits";
+
 export interface LandingFaq {
   q: string;
   a: string;
@@ -25,7 +27,7 @@ export const landingFaqs: LandingFaq[] = [
   },
   {
     q: "What plans are available?",
-    a: "Every account gets a 3-day free trial with everything in Solo — 5 links, 3 salespeople per rotator, 100 routed leads — no card required. After the trial, paid plans are Solo ($9/month, 5 links), Growth ($19/month, 20 links) and Agency ($49/month, 55 links).",
+    a: `Every account gets a 3-day free trial with everything in Solo — ${LINK_LIMITS.basic} links, ${NUMBERS_PER_ROTATOR_LIMITS.basic} salespeople per rotator, 100 routed leads — no card required. After the trial, paid plans are Solo ($9/month, ${LINK_LIMITS.basic} links), Growth ($19/month, ${LINK_LIMITS.pro} links) and Agency ($49/month, ${LINK_LIMITS.ultimate} links).`,
   },
   {
     q: "Is there a free trial?",

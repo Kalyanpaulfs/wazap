@@ -45,3 +45,45 @@ describe("getToolCatalog - Audience feature card", () => {
     expect(paid.some((card) => card.id === "audience")).toBe(false);
   });
 });
+
+describe("getToolCatalog - Team outreach feature card", () => {
+  it("is locked on Solo (basic), pointing at billing", () => {
+    const { features } = getToolCatalog({ plan: "basic", used: 1, limit: 5 });
+    const card = features.find((c) => c.id === "team-outreach")!;
+    expect(card.locked).toBe(true);
+    expect(card.href).toBe("/billing#plans");
+    expect(card.description).toBe("Available on Growth");
+  });
+
+  it("is locked when the plan has lapsed (free)", () => {
+    const { features } = getToolCatalog({ plan: "free", used: 0, limit: 0 });
+    const card = features.find((c) => c.id === "team-outreach")!;
+    expect(card.locked).toBe(true);
+    expect(card.lockReason).toBe("Choose a plan");
+  });
+
+  it("is unlocked on Growth (pro), pointing at /outreach", () => {
+    const { features } = getToolCatalog({ plan: "pro", used: 3, limit: 20 });
+    const card = features.find((c) => c.id === "team-outreach")!;
+    expect(card.locked).toBe(false);
+    expect(card.href).toBe("/outreach");
+  });
+
+  it("is unlocked on Agency (ultimate)", () => {
+    const { features } = getToolCatalog({ plan: "ultimate", used: 0, limit: 55 });
+    const card = features.find((c) => c.id === "team-outreach")!;
+    expect(card.locked).toBe(false);
+  });
+
+  it("is NOT locked by a full shared link pool - not a link", () => {
+    const { paid, features } = getToolCatalog({ plan: "pro", used: 20, limit: 20 });
+    expect(paid.every((card) => card.locked)).toBe(true);
+    const card = features.find((c) => c.id === "team-outreach")!;
+    expect(card.locked).toBe(false);
+  });
+
+  it("is never part of the `paid` (link-pool) list used by app/links/new", () => {
+    const { paid } = getToolCatalog({ plan: "ultimate", used: 0, limit: 55 });
+    expect(paid.some((card) => card.id === "team-outreach")).toBe(false);
+  });
+});
