@@ -40,13 +40,28 @@ export default function OutreachClient({
   memberLimit: number;
   planLabel: string;
 }) {
-  const [tab, setTab] = useState<Tab>("link");
+  // BUG B: the team link is only any use once there's at least one active
+  // salesperson AND one customer list with at least one contact in it - see
+  // LinkTab's SetupChecklist. The default tab on first load follows the
+  // same rule: land on the first incomplete step, or Link once both are
+  // done. Computed once from the server-rendered initial props (not
+  // re-derived on every render) so finishing a step mid-session doesn't
+  // yank the owner off whatever tab they're looking at.
+  const [tab, setTab] = useState<Tab>(() => {
+    if (initialMemberCount < 1) return "team";
+    if (!initialLists.some((l) => l.totalCount > 0)) return "lists";
+    return "link";
+  });
   const [team, setTeam] = useState(initialTeam);
   const [teamLink, setTeamLink] = useState(initialTeamLink);
   const [members, setMembers] = useState(initialMembers);
   const [lists, setLists] = useState(initialLists);
   const [memberCount, setMemberCount] = useState(initialMemberCount);
   const [contactTotal, setContactTotal] = useState(initialContactTotal);
+
+  const hasSalesperson = memberCount >= 1;
+  const hasCustomers = lists.some((l) => l.totalCount > 0);
+  const setupComplete = hasSalesperson && hasCustomers;
 
   return (
     <main className="px-4 py-7 sm:px-7 sm:py-9">
@@ -83,6 +98,10 @@ export default function OutreachClient({
               setTeam((t) => ({ ...t, code }));
               setTeamLink(link);
             }}
+            setupComplete={setupComplete}
+            hasSalesperson={hasSalesperson}
+            hasCustomers={hasCustomers}
+            onGoToTab={setTab}
           />
         )}
 

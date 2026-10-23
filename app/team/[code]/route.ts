@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { getTeamByCode, teamIsPaused } from "@/lib/outreach/team";
 import { OUTREACH_DEVICE_COOKIE, verifyDeviceToken } from "@/lib/outreach/device";
 import { claimNextContact } from "@/lib/outreach/claim";
+import { publicUrl } from "@/lib/my-links";
 
 // FEAT-QUEUE phase 3: this is the raw link shared to the team. A signed-in
 // device that successfully claims a contact gets an instant 302 straight to
@@ -14,10 +15,10 @@ import { claimNextContact } from "@/lib/outreach/claim";
 // the team/device up again, so this route only needs to forward the CLAIM-
 // blocked reason (speed_limit/daily_cap/no_contacts) - the one thing only a
 // claim attempt here can determine.
-export async function GET(req: Request, { params }: { params: Promise<{ code: string }> }) {
+export async function GET(_req: Request, { params }: { params: Promise<{ code: string }> }) {
   const { code } = await params;
   const homeUrl = (search?: Record<string, string>) => {
-    const url = new URL(`/team/${code}/home`, req.url);
+    const url = new URL(publicUrl(`/team/${code}/home`));
     for (const [k, v] of Object.entries(search ?? {})) url.searchParams.set(k, v);
     return url;
   };

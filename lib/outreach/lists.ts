@@ -4,6 +4,7 @@
 // -> finished as contacts run out.
 import { prisma } from "@/lib/prisma";
 import { parseContactsCsv, type ContactImportRow } from "./csv";
+import { cleanOutreachPhone } from "./phone";
 import { canUploadContacts } from "./plan";
 
 export async function listLists(teamId: string) {
@@ -115,6 +116,97 @@ export async function confirmListUpload(
     return list;
   });
   return { ok: true, listId: result.id, created: rows.length, skippedDuplicates };
+}
+
+export type AddContactInput = {
+  phone: string;
+  name: string | null;
+  notes: string | null;
+  // Exactly one of these must be given - an existing list's id, or a name
+  // for a brand new one.
+  listId?: string;
+  newListName?: string;
+};
+
+export type AddContactResult =
+  | { ok: true; listId: string; listName: string; alreadyContactedElsewhere: boolean }
+  | { ok: false; error: string; upgrade?: boolean };
+
+/**
+ * BUG C: owner adds ONE customer by hand (the "Add one customer" form on the
+ * Customer lists tab, mirroring "Add one salesperson" on Team). Reuses the
+ * same rules as the CSV upload path above:
+ * - phone cleaned with cleanOutreachPhone (same helper parseContactsCsv uses)
+ * - the plan contact limit, with the exact same error wording confirmListUpload uses
+ * - consent is required every time (CSV's rule), but consentAt is only
+ *   stamped when a brand NEW list is created here - an existing list already
+ *   has one from when it was created.
+ * - a duplicate phone already in the SAME list is rejected
+ * - a phone already given out in an OLDER list is allowed, just flagged back
+ *   (`alreadyContactedElsewhere`) - same information the CSV dry-run preview
+ *   surfaces before upload, not a block.
+ * - a 'finished' list is reopened ('running' if nothing else is running,
+ *   else 'waiting') - lib/outreach/claim.ts only ever claims from a
+ *   'running' list, so without this the new contact would never be handed
+ *   out. 'waiting'/'running'/'paused' lists keep their current status.
+ */
+export async function addContact(
+  teamId: string,
+  input: AddContactInput,
+  defaultCountry: string | null,
+  consent: boolean,
+  contactLimit: number
+): Promise<AddContactResult> {
+  if (!consent) return { ok: false, error: "Confirm that this customer agreed to be contacted." };
+  if (!input.listId && !input.newListName?.trim()) return { ok: false, error: "Choose a list, or name a new one." };
+  const phoneResult = cleanOutreachPhone(input.phone, defaultCountry);
+  if (!phoneResult.ok) return { ok: false, error: phoneResult.error };
+  const name = input.name?.trim().slice(0, 100) || null;
+  const notes = input.notes?.trim().slice(0, 500) || null;
+
+  const currentTotal = await teamContactTotal(teamId);
+  if (!canUploadContacts(currentTotal, 1, contactLimit)) {
+    return { ok: false, error: `This would exceed your plan's ${contactLimit.toLocaleString()}-contact limit.`, upgrade: true };
+  }
+
+  // Informational only (not a block) - same signal the CSV dry-run preview
+  // gives before upload.
+  const alreadyGivenElsewhere = await prisma.outreachContact.findFirst({
+    where: { teamId, phone: phoneResult.digits, givenToMemberId: { not: null } },
+    select: { id: true },
+  });
+
+  try {
+    const result = await prisma.$transaction(async (tx) => {
+      let list;
+      if (input.listId) {
+        list = await tx.outreachList.findFirst({ where: { id: input.listId, teamId } });
+        if (!list) throw new Error("List not found.");
+        const duplicate = await tx.outreachContact.findFirst({ where: { listId: list.id, phone: phoneResult.digits }, select: { id: true } });
+        if (duplicate) throw new Error("This customer is already in this list.");
+        if (list.status === "finished") {
+          const runningExists = await tx.outreachList.findFirst({ where: { teamId, status: "running" }, select: { id: true } });
+          list = await tx.outreachList.update({ where: { id: list.id }, data: { status: runningExists ? "waiting" : "running" } });
+        }
+      } else {
+        const listName = (input.newListName || "").trim().slice(0, 100) || "Untitled list";
+        const [{ _max }, runningExists] = await Promise.all([
+          tx.outreachList.aggregate({ where: { teamId }, _max: { position: true } }),
+          tx.outreachList.findFirst({ where: { teamId, status: "running" }, select: { id: true } }),
+        ]);
+        const position = (_max.position ?? 0) + 1;
+        list = await tx.outreachList.create({
+          data: { teamId, name: listName, position, status: runningExists ? "waiting" : "running", consentAt: new Date(), totalCount: 0 },
+        });
+      }
+      await tx.outreachContact.create({ data: { listId: list.id, teamId, phone: phoneResult.digits, name, notes } });
+      const updated = await tx.outreachList.update({ where: { id: list.id }, data: { totalCount: { increment: 1 } } });
+      return { listId: updated.id, listName: updated.name };
+    });
+    return { ok: true, listId: result.listId, listName: result.listName, alreadyContactedElsewhere: Boolean(alreadyGivenElsewhere) };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Could not add this customer." };
+  }
 }
 
 export async function pauseList(teamId: string, listId: string, paused: boolean) {

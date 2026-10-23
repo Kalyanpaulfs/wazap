@@ -3,8 +3,9 @@
 // confirm), and manage existing lists (pause/resume, reorder, delete).
 import { useState } from "react";
 import Link from "next/link";
-import { ChevronUp, ChevronDown, Pause as PauseIcon, Play, Trash2 } from "lucide-react";
+import { ChevronUp, ChevronDown, Pause as PauseIcon, Play, Plus, Trash2 } from "lucide-react";
 import { COUNTRIES } from "@/lib/countries";
+import PhoneInput, { type PhoneInputValue } from "@/app/components/PhoneInput";
 import type { OutreachListData, ListUploadPreview } from "./types";
 
 function downloadCsv(filename: string, rows: string[][]) {
@@ -72,6 +73,8 @@ export default function ListsTab({
         {contactTotal.toLocaleString()} of {contactLimit.toLocaleString()} contacts
       </p>
 
+      <AddContactForm lists={lists} defaultCountry={defaultCountry} onAdded={reloadLists} />
+
       <UploadList
         defaultCountry={defaultCountry}
         contactTotal={contactTotal}
@@ -82,6 +85,143 @@ export default function ListsTab({
 
       <ListsTable lists={lists} onChanged={reloadLists} onListsChange={onListsChange} />
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Add one customer (BUG C) - like TeamTab's "Add a salesperson" form.
+// ---------------------------------------------------------------------------
+const NEW_LIST_CHOICE = "__new__";
+
+function AddContactForm({
+  lists,
+  defaultCountry,
+  onAdded,
+}: {
+  lists: OutreachListData[];
+  defaultCountry: string | null;
+  onAdded: () => void;
+}) {
+  const sortedLists = [...lists].sort((a, b) => a.position - b.position);
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState<PhoneInputValue>({ e164Digits: "", valid: false });
+  const [notes, setNotes] = useState("");
+  const [listChoice, setListChoice] = useState<string>(sortedLists[0]?.id ?? NEW_LIST_CHOICE);
+  const [newListName, setNewListName] = useState("");
+  const [consent, setConsent] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [resetKey, setResetKey] = useState(0);
+
+  const isNewList = listChoice === NEW_LIST_CHOICE;
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+    setSuccess("");
+    if (!phone.valid) return setError("Add a valid WhatsApp number.");
+    if (isNewList && !newListName.trim()) return setError("Name the new list.");
+    if (!consent) return setError("Confirm that this customer agreed to be contacted.");
+    setSaving(true);
+    try {
+      const res = await fetch("/api/outreach/lists/contacts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          phone: "+" + phone.e164Digits,
+          name: name.trim() || null,
+          notes: notes.trim() || null,
+          consent: true,
+          ...(isNewList ? { newListName: newListName.trim() } : { listId: listChoice }),
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Could not add this customer.");
+      setSuccess(
+        data.alreadyContactedElsewhere
+          ? `Added to "${data.listName}". Heads up: this phone was already given out in an older list.`
+          : `Added to "${data.listName}".`
+      );
+      setName("");
+      setPhone({ e164Digits: "", valid: false });
+      setNotes("");
+      setNewListName("");
+      setConsent(false);
+      setResetKey((k) => k + 1);
+      onAdded();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not add this customer.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <form onSubmit={submit} className="space-y-4 rounded-2xl border border-slate-800 bg-[#111811] p-5 sm:p-6">
+      <h2 className="text-sm font-semibold text-white">Add one customer</h2>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Name (optional)"
+          aria-label="Name"
+          maxLength={100}
+          className="rounded-xl bg-slate-900 border border-slate-700 px-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#25D366]"
+        />
+        <PhoneInput key={resetKey} defaultCountry={defaultCountry} onChange={setPhone} required placeholder="WhatsApp number" />
+      </div>
+      <input
+        value={notes}
+        onChange={(e) => setNotes(e.target.value)}
+        placeholder="Notes (optional)"
+        aria-label="Notes"
+        maxLength={500}
+        className="w-full rounded-xl bg-slate-900 border border-slate-700 px-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#25D366]"
+      />
+      <div className="grid gap-3 sm:grid-cols-2">
+        <select
+          value={listChoice}
+          onChange={(e) => setListChoice(e.target.value)}
+          aria-label="Add to list"
+          className="rounded-xl bg-slate-900 border border-slate-700 px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#25D366]"
+        >
+          {sortedLists.map((l) => (
+            <option key={l.id} value={l.id}>
+              {l.name}
+            </option>
+          ))}
+          <option value={NEW_LIST_CHOICE}>+ New list</option>
+        </select>
+        {isNewList && (
+          <input
+            value={newListName}
+            onChange={(e) => setNewListName(e.target.value)}
+            placeholder="New list name"
+            aria-label="New list name"
+            maxLength={100}
+            className="rounded-xl bg-slate-900 border border-slate-700 px-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#25D366]"
+          />
+        )}
+      </div>
+
+      <label className="flex items-start gap-2 text-sm text-slate-300">
+        <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-0.5" required />
+        This customer agreed to be contacted.
+      </label>
+
+      <div className="flex flex-wrap items-center gap-3">
+        <button
+          type="submit"
+          disabled={saving}
+          className="inline-flex items-center gap-1.5 rounded-full bg-[#25D366] px-5 py-2.5 text-sm font-bold text-black hover:bg-[#1fba58] disabled:opacity-50"
+        >
+          <Plus className="h-4 w-4" /> {saving ? "Adding…" : "Add customer"}
+        </button>
+        {success && <span className="text-sm font-semibold text-[#25D366]">{success}</span>}
+        {error && <p role="alert" className="text-sm text-red-400">{error}</p>}
+      </div>
+    </form>
   );
 }
 

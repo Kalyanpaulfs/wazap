@@ -47,6 +47,21 @@ export function originBase(): string {
   return new URL(process.env.NEXTAUTH_URL || "https://wazap.lt").origin;
 }
 
+/**
+ * Absolute, externally-reachable URL for an app-relative path (e.g.
+ * "/team/AB12/home" or "/s/unavailable?reason=notfound"), built from the
+ * configured public origin (NEXTAUTH_URL) - NEVER from a request's own
+ * `req.url`/`request.nextUrl`. In production the app sits behind a reverse
+ * proxy bound to an internal address (e.g. 127.0.0.1:5000); `req.url`
+ * reflects that internal bind address, not the public hostname, so any
+ * redirect Location built with `new URL(path, req.url)` leaks
+ * "http://localhost:5000/..." to real visitors. Use this helper for every
+ * redirect/absolute URL a route hands back to a client.
+ */
+export function publicUrl(path: string): string {
+  return new URL(path, originBase()).toString();
+}
+
 /** Full public URL for a link, given its kind and identifying fields. */
 export function buildPublicUrl(
   origin: string,

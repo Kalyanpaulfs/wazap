@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { rateLimit } from "@/lib/rate-limit";
 import { requestIp } from "@/lib/request-ip";
+import { publicUrl } from "@/lib/my-links";
 
 // TOOL-FREE-2 Link shortener redirect. Deliberately simpler than app/w's
 // WhatsApp-link redirect: no ConversationStart/Audience capture (owner
@@ -15,9 +16,9 @@ import { requestIp } from "@/lib/request-ip";
 export async function GET(req: Request, { params }: { params: Promise<{ code: string }> }) {
   const { code } = await params;
   const link = await prisma.shortUrl.findUnique({ where: { code: code.toLowerCase() } });
-  if (!link) return NextResponse.redirect(new URL(`/s/unavailable?reason=notfound`, req.url), 302);
+  if (!link) return NextResponse.redirect(publicUrl(`/s/unavailable?reason=notfound`), 302);
   if (link.disabledAt) {
-    return NextResponse.redirect(new URL(`/s/unavailable?reason=disabled&code=${encodeURIComponent(link.code)}`, req.url), 302);
+    return NextResponse.redirect(publicUrl(`/s/unavailable?reason=disabled&code=${encodeURIComponent(link.code)}`), 302);
   }
 
   const ip = requestIp(req.headers);

@@ -43,7 +43,12 @@ export default function TeamTab({
       <AddMemberForm
         defaultCountry={defaultCountry}
         onAdded={(member) => {
-          onMembersChange((prev) => [...prev, member]);
+          // Re-adding a previously removed member reactivates the SAME row
+          // server-side (lib/outreach/members.ts addMember) - replace its
+          // stale "Removed" entry in place rather than appending a second
+          // row with the same id (duplicate React key + a ghost removed row
+          // sitting next to the now-active one).
+          onMembersChange((prev) => (prev.some((m) => m.id === member.id) ? prev.map((m) => (m.id === member.id ? member : m)) : [...prev, member]));
           onMemberCountChange((prev) => prev + 1);
         }}
       />

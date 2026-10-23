@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, afterEach } from "vitest";
 import {
   addressDisplay,
   buildPublicUrl,
@@ -13,7 +13,35 @@ import {
   renameLinkTypeLabel,
   linkKindFromFilterParam,
   linkDetailsHref,
+  publicUrl,
 } from "@/lib/my-links";
+
+describe("publicUrl", () => {
+  const originalNextAuthUrl = process.env.NEXTAUTH_URL;
+  afterEach(() => {
+    process.env.NEXTAUTH_URL = originalNextAuthUrl;
+  });
+
+  it("builds an absolute URL from the configured NEXTAUTH_URL origin, never a bind address", () => {
+    process.env.NEXTAUTH_URL = "https://wazap.lt";
+    expect(publicUrl("/team/AB12/home")).toBe("https://wazap.lt/team/AB12/home");
+    expect(publicUrl("/s/unavailable?reason=notfound")).toBe("https://wazap.lt/s/unavailable?reason=notfound");
+  });
+
+  it("ignores any internal bind address NEXTAUTH_URL might be missing and falls back to the default origin", () => {
+    delete process.env.NEXTAUTH_URL;
+    expect(publicUrl("/support?chat=expired")).toBe("https://wazap.lt/support?chat=expired");
+  });
+
+  it("is independent of whatever host a request came in on - a reverse-proxied request bound to 127.0.0.1:5000 still resolves to the public origin", () => {
+    process.env.NEXTAUTH_URL = "https://wazap.lt";
+    // Simulates the production setup: the app listens on an internal
+    // address, but publicUrl must never leak it into a redirect Location.
+    expect(publicUrl("/team/XY99/home")).not.toContain("localhost");
+    expect(publicUrl("/team/XY99/home")).not.toContain("127.0.0.1");
+    expect(publicUrl("/team/XY99/home")).not.toContain(":5000");
+  });
+});
 
 describe("linkDetailsHref (UX-1 step 4)", () => {
   it("builds the details route for each kind using the URL-friendly type", () => {

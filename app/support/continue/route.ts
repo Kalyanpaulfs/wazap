@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { verifyContinueToken, createSupportTokenFor, SUPPORT_COOKIE, supportCookieOptions } from "@/lib/support-session";
+import { publicUrl } from "@/lib/my-links";
 
 export const runtime = "nodejs";
 
@@ -24,9 +25,9 @@ export async function GET(req: Request) {
   const url = new URL(req.url);
   const token = url.searchParams.get("t") || "";
   const visitorId = token ? verifyContinueToken(token) : null;
-  if (!visitorId) return NextResponse.redirect(new URL("/support?chat=expired", req.url));
+  if (!visitorId) return NextResponse.redirect(publicUrl("/support?chat=expired"));
 
-  const response = NextResponse.redirect(new URL(`/support?chat=open&visitor=${encodeURIComponent(visitorId)}`, req.url));
+  const response = NextResponse.redirect(publicUrl(`/support?chat=open&visitor=${encodeURIComponent(visitorId)}`));
   response.cookies.set(SUPPORT_COOKIE, createSupportTokenFor(visitorId), supportCookieOptions);
   return response;
 }

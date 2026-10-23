@@ -3,14 +3,101 @@
 // their next free customer. Copy/share it, or make a new one (invalidates
 // the old one - same inline-confirm pattern as LinkDetailsClient.tsx).
 import { useState } from "react";
-import { Copy, Check } from "lucide-react";
+import { Copy, Check, Lock } from "lucide-react";
 
-export default function LinkTab({ teamLink, onNewLink }: { teamLink: string; onNewLink: (code: string, link: string) => void }) {
+// BUG B: until the team has at least one active salesperson AND at least
+// one customer list with at least one contact, there's nothing a shared
+// team link could do yet - showing it right away (the old behavior) just
+// invites a confused salesperson tapping a link with no customers behind
+// it. Show a 3-step setup checklist instead; the link only appears once
+// both steps are done.
+function SetupChecklist({
+  hasSalesperson,
+  hasCustomers,
+  onGoToTab,
+}: {
+  hasSalesperson: boolean;
+  hasCustomers: boolean;
+  onGoToTab: (tab: "team" | "lists") => void;
+}) {
+  return (
+    <section className="space-y-4 rounded-3xl border border-slate-800 bg-[#111811] p-5 sm:p-7">
+      <div>
+        <h2 className="text-sm font-semibold text-white">Finish setup to get your team link</h2>
+        <p className="mt-1 text-xs text-slate-500">Your team link needs at least one salesperson and one customer before it&apos;s any use.</p>
+      </div>
+
+      <ol className="space-y-2.5">
+        <ChecklistStep done={hasSalesperson} label="Add your salespeople" buttonLabel="Add salespeople" onGo={() => onGoToTab("team")} />
+        <ChecklistStep done={hasCustomers} label="Add your customers" buttonLabel="Add customers" onGo={() => onGoToTab("lists")} />
+        <li className="flex items-center justify-between gap-3 rounded-2xl border border-slate-800/70 bg-slate-950/30 p-4 opacity-60">
+          <span className="flex items-center gap-2 text-sm text-slate-400">
+            <Lock className="h-4 w-4 flex-none" /> Share your team link
+          </span>
+        </li>
+      </ol>
+    </section>
+  );
+}
+
+function ChecklistStep({
+  done,
+  label,
+  buttonLabel,
+  onGo,
+}: {
+  done: boolean;
+  label: string;
+  buttonLabel: string;
+  onGo: () => void;
+}) {
+  return (
+    <li className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-800 bg-slate-950/40 p-4">
+      <span className="flex items-center gap-2 text-sm">
+        {done ? (
+          <Check className="h-4 w-4 flex-none text-[#25D366]" />
+        ) : (
+          <span className="h-4 w-4 flex-none rounded-full border border-slate-600" aria-hidden="true" />
+        )}
+        <span className={done ? "text-slate-300" : "font-semibold text-white"}>{label}</span>
+      </span>
+      {!done && (
+        <button
+          type="button"
+          onClick={onGo}
+          className="rounded-full border border-slate-700 px-3.5 py-1.5 text-xs font-semibold text-slate-200 hover:border-[#25D366] hover:text-white"
+        >
+          {buttonLabel}
+        </button>
+      )}
+    </li>
+  );
+}
+
+export default function LinkTab({
+  teamLink,
+  onNewLink,
+  setupComplete,
+  hasSalesperson,
+  hasCustomers,
+  onGoToTab,
+}: {
+  teamLink: string;
+  onNewLink: (code: string, link: string) => void;
+  setupComplete: boolean;
+  hasSalesperson: boolean;
+  hasCustomers: boolean;
+  onGoToTab: (tab: "team" | "lists") => void;
+}) {
   const [link, setLink] = useState(teamLink);
   const [copied, setCopied] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+
+  if (!setupComplete) {
+    return <SetupChecklist hasSalesperson={hasSalesperson} hasCustomers={hasCustomers} onGoToTab={onGoToTab} />;
+  }
 
   async function copyLink() {
     try {
